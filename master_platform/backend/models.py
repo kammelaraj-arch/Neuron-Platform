@@ -249,6 +249,23 @@ FEATURE_STATUSES = (
 )
 FEATURE_PRIORITIES = ("low", "normal", "high", "critical")
 
+# ─── Reusable function / library registry ───────────────────────────────────
+# Catalog of every reusable function/library in the platform with its
+# inputs, outputs, API surface, and source location. Admin UI at
+# /ui/functions. See CLAUDE.md for the rules.
+FUNCTION_STATUSES = ("draft", "stable", "deprecated")
+FUNCTION_LANGUAGES = (
+    "python",
+    "micropython",
+    "typescript",
+    "javascript",
+    "sql",
+    "shell",
+    "yaml",
+    "json",
+    "other",
+)
+
 
 class FeatureRequest(Base):
     __tablename__ = "feature_requests"
@@ -265,5 +282,29 @@ class FeatureRequest(Base):
     git_sha_prod: Mapped[str | None] = mapped_column(String(40))
     deployed_dev_at: Mapped[datetime | None] = mapped_column()
     deployed_prod_at: Mapped[datetime | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class CodeFunction(Base):
+    """A reusable function or library catalogued for repurpose.
+
+    inputs / outputs are stored as JSON arrays of
+        [{"name": str, "type": str, "required": bool, "description": str}, ...]
+    so the UI can render a structured spec without us hard-coding columns.
+    """
+    __tablename__ = "code_functions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    language: Mapped[str] = mapped_column(String(20), default="python", nullable=False)
+    inputs_json: Mapped[list] = mapped_column(JSON, default=list)
+    outputs_json: Mapped[list] = mapped_column(JSON, default=list)
+    api_endpoint: Mapped[str | None] = mapped_column(String(200))
+    source_path: Mapped[str | None] = mapped_column(String(300))
+    tags_json: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(16), default="stable", nullable=False, index=True)
+    example: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)

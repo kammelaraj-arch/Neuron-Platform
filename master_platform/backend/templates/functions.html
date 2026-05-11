@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Functions{% endblock %}
+{% block content %}
+  {% set status_colors = {
+    'draft':       'bg-amber-500/15 text-amber-300',
+    'stable':      'bg-emerald-500/15 text-emerald-300',
+    'deprecated':  'bg-slate-700 text-slate-400 line-through',
+  } %}
+
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Reusable functions</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Every reusable function or library in the platform — inputs,
+        outputs, API surface, source location.
+      </p>
+    </div>
+    <a href="/ui/functions/new"
+       class="rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+      + New function
+    </a>
+  </header>
+
+  <section class="mt-6 flex flex-wrap gap-2 text-xs">
+    {% set _all = 'rounded-full border border-slate-700 px-3 py-1 ' + ('bg-slate-800 text-white' if not filter_status else 'text-slate-300 hover:bg-slate-800') %}
+    <a href="/ui/functions" class="{{ _all }}">All <span class="ml-1 text-slate-500">{{ counts.values() | sum }}</span></a>
+    {% for s in STATUSES %}
+      {% set sel = (filter_status == s) %}
+      {% set cls = ('ring-1 ring-inset ring-white/20 ' if sel else '') + status_colors.get(s, 'bg-slate-700 text-slate-200') %}
+      <a href="/ui/functions?status={{ s }}" class="rounded-full border border-transparent px-3 py-1 {{ cls }}">
+        {{ s }} <span class="ml-1 opacity-60">{{ counts.get(s, 0) }}</span>
+      </a>
+    {% endfor %}
+  </section>
+
+  <form method="get" action="/ui/functions" class="mt-4 flex flex-wrap gap-2">
+    {% if filter_status %}<input type="hidden" name="status" value="{{ filter_status }}">{% endif %}
+    <select name="language"
+            class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+      <option value="">all languages</option>
+      {% for l in LANGUAGES %}<option value="{{ l }}" {% if l == filter_language %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+    <input name="q" value="{{ filter_q }}"
+           placeholder="Search name / desc / source / endpoint…"
+           class="flex-1 min-w-[12rem] rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm placeholder-slate-500" />
+    <button class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Search</button>
+    {% if filter_q or filter_status or filter_language %}
+      <a href="/ui/functions" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:bg-slate-800">Clear</a>
+    {% endif %}
+  </form>
+
+  <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+        <tr>
+          <th class="px-4 py-3">Name</th>
+          <th class="px-4 py-3">Language</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">API endpoint</th>
+          <th class="px-4 py-3">Source</th>
+          <th class="px-4 py-3">Tags</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/70">
+        {% for r in rows %}
+          <tr class="hover:bg-slate-900/60 cursor-pointer" onclick="window.location='/ui/functions/{{ r.name }}'">
+            <td class="px-4 py-3">
+              <div class="font-mono text-emerald-300">{{ r.name }}</div>
+              {% if r.description %}
+                <div class="text-xs text-slate-500 line-clamp-2">{{ r.description }}</div>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-xs"><span class="rounded bg-slate-800 px-2 py-0.5 font-mono">{{ r.language }}</span></td>
+            <td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-[11px] {{ status_colors.get(r.status, 'bg-slate-700') }}">{{ r.status }}</span></td>
+            <td class="px-4 py-3 font-mono text-xs text-cyan-300">{{ r.api_endpoint or '—' }}</td>
+            <td class="px-4 py-3 font-mono text-[11px] text-slate-400">{{ r.source_path or '—' }}</td>
+            <td class="px-4 py-3 text-xs">
+              {% for t in (r.tags_json or [])[:4] %}<span class="mr-1 rounded bg-slate-800 px-1.5 py-0.5 text-[10px]">{{ t }}</span>{% endfor %}
+              {% if (r.tags_json or []) | length > 4 %}<span class="text-slate-500">+{{ (r.tags_json | length) - 4 }}</span>{% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 italic">
+            {% if filter_q or filter_status or filter_language %}No matches.{% else %}No functions catalogued yet — <a class="text-emerald-300 underline" href="/ui/functions/new">add the first</a>.{% endif %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}New function{% endblock %}
+{% block content %}
+  <header>
+    <nav class="text-xs text-slate-500"><a href="/ui/functions" class="hover:underline">Functions</a> · new</nav>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Catalog a reusable function</h1>
+  </header>
+
+  <form method="post" action="/ui/functions/new" class="mt-6 grid gap-4 max-w-3xl">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Name (kebab-case)</label>
+        <input name="name" required maxlength="120" pattern="[a-z0-9-_./]+"
+               placeholder="e.g. pin-allocator.allocate"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Language / runtime</label>
+        <select name="language" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+          {% for l in LANGUAGES %}<option value="{{ l }}" {% if l == 'python' %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">Description</label>
+      <textarea name="description" rows="3"
+                placeholder="What does it do? Edge cases? Performance notes?"
+                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm"></textarea>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">Inputs (JSON array)</label>
+      <textarea name="inputs_json" rows="6"
+                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono"
+                placeholder='[{"name": "device_dna", "type": "str", "required": true, "description": "20-char device DNA"}]'></textarea>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">Outputs (JSON array)</label>
+      <textarea name="outputs_json" rows="6"
+                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono"
+                placeholder='[{"name": "pinmap", "type": "dict", "description": "compute pin → board pin map"}]'></textarea>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">API endpoint (optional)</label>
+        <input name="api_endpoint" maxlength="200"
+               placeholder="e.g. POST /api/devices/{dna}/pinmap/auto"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Source path</label>
+        <input name="source_path" maxlength="300"
+               placeholder="e.g. master_platform/backend/pin_allocator.py"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Tags (comma or space separated)</label>
+        <input name="tags" placeholder="pin-mapping pico2w utility"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Status</label>
+        <select name="status" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+          {% for s in STATUSES %}<option value="{{ s }}" {% if s == 'stable' %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">Example usage (optional)</label>
+      <textarea name="example" rows="6"
+                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono"
+                placeholder="Code snippet showing a typical call"></textarea>
+    </div>
+
+    <div class="flex gap-3">
+      <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">Catalog it</button>
+      <a href="/ui/functions" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Cancel</a>
+    </div>
+  </form>
+{% endblock %}
