@@ -25,6 +25,37 @@
 
 ## Architecture rules
 
+### Device-registration flow (step-wise wizard)
+
+Current device-creation form is a single flat page (pick Edge → Compute →
+multi-select Components → versions → Register). Product owner wants a
+**step-wise wizard** instead, with this hierarchy:
+
+```
+Edge system  (already exists)
+  └─ Group       (NEW — logical sub-section of an edge,
+                   e.g. "Heater bank", "Production Line A")
+       └─ Board(s)   (one or more per group; search-and-select from the
+                       control_board_library, e.g. L297 stepper driver,
+                       SSR relay, ADC HAT, IO expander)
+            └─ Component(s)  (one or more per board; search-and-select
+                                from components_library — sensors,
+                                motors, actuators wired to that board)
+                 └─ GPIO pin map  (compute module pins ↔ board pins,
+                                     auto-allocated by the pin
+                                     allocator, with manual override)
+```
+
+Implementation rule:
+- New tables: `edge_groups`, `board_instances`, `component_instances`.
+- `Device.board_stable_id` deprecated in favour of an FK list to
+  `board_instances`.
+- The current pin allocator already exists in
+  `backend/pin_allocator.py` — it runs **per board** now, not per device.
+- UI is a multi-step wizard at `/ui/devices/new` (replaces the flat form).
+- Backward-compat: existing devices keep working; migration backfills
+  one default group + one default board per legacy device.
+
 ### Hierarchy flexibility (Root / Node / Edge / Device)
 
 The 4-level hierarchy described in `docs/PROJECT_MEMORY.md` is the
