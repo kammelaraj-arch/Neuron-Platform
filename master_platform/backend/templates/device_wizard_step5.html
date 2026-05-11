@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Device wizard · Pin Map{% endblock %}
+{% block content %}
+  {% include "_wizard_header.html" %}
+
+  <section class="space-y-6">
+    <div class="flex flex-wrap items-baseline justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold">5. GPIO pin map</h2>
+        <p class="mt-1 text-sm text-slate-400">
+          Auto-allocated by the pin allocator. Tick the lock to pin a
+          row before re-running auto-allocate; edit compute/board pin
+          inline to override.
+        </p>
+      </div>
+      <a href="/ui/devices/wizard/{{ group.id }}/pinmap?auto=true"
+         class="rounded-md border border-emerald-500/40 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10">
+        ⟳ Re-run auto-allocate
+      </a>
+    </div>
+
+    {% if conflicts %}
+      <div class="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm text-amber-300">
+        <strong>Allocator warnings:</strong>
+        <ul class="mt-2 list-disc pl-5 space-y-1 text-xs">
+          {% for c in conflicts %}<li>{{ c }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% for b, pins in boards_pins %}
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+        <header class="flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h3 class="font-semibold text-emerald-300">{{ b.label }}</h3>
+            <div class="text-xs font-mono text-cyan-300">{{ b.board_stable_id }}</div>
+          </div>
+          <div class="text-xs text-slate-500">{{ pins | length }} pin(s)</div>
+        </header>
+
+        {% if pins %}
+          <!-- Digital-twin split: compute pins (left) ─── board pins (right) -->
+          <div class="mt-5 grid gap-2 sm:grid-cols-[1fr_auto_1fr] items-center text-xs">
+            {% for m in pins %}
+              <form method="post" action="/ui/devices/wizard/{{ group.id }}/pinmap/lock"
+                    class="contents">
+                <input type="hidden" name="mapping_id" value="{{ m.id }}">
+
+                <!-- compute side -->
+                <div class="flex items-center gap-2 sm:justify-end">
+                  <input name="compute_pin" value="{{ m.compute_pin }}"
+                         class="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-emerald-300 text-right" />
+                  <span class="hidden sm:inline text-slate-500">compute</span>
+                </div>
+
+                <!-- connector -->
+                <div class="relative flex items-center justify-center">
+                  <svg viewBox="0 0 80 20" class="w-20 h-5">
+                    <line x1="0" y1="10" x2="80" y2="10"
+                          stroke="{% if m.locked_by_operator %}#fbbf24{% else %}#10b981{% endif %}"
+                          stroke-width="1.5"
+                          stroke-dasharray="{% if m.locked_by_operator %}0{% else %}6 3{% endif %}">
+                      {% if not m.locked_by_operator %}
+                        <animate attributeName="stroke-dashoffset"
+                                 values="9;0" dur="1.6s" repeatCount="indefinite"/>
+                      {% endif %}
+                    </line>
+                    <circle cx="0" cy="10" r="2.5"
+                            fill="{% if m.locked_by_operator %}#fbbf24{% else %}#34d399{% endif %}"/>
+                    <circle cx="80" cy="10" r="2.5"
+                            fill="{% if m.locked_by_operator %}#fbbf24{% else %}#22d3ee{% endif %}"/>
+                  </svg>
+                </div>
+
+                <!-- board side -->
+                <div class="flex items-center gap-2">
+                  <span class="hidden sm:inline text-slate-500">board</span>
+                  <input name="board_pin" value="{{ m.board_pin }}"
+                         class="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-cyan-300" />
+                  <input name="signal_name" value="{{ m.signal_name or '' }}"
+                         placeholder="signal"
+                         class="flex-1 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 font-mono text-slate-300" />
+                  <label class="flex items-center gap-1 text-[11px] text-slate-400">
+                    <input type="checkbox" name="locked" value="on"
+                           {% if m.locked_by_operator %}checked{% endif %}
+                           class="h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-amber-500">
+                    lock
+                  </label>
+                  <button class="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800">save</button>
+                </div>
+              </form>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="mt-4 text-sm text-slate-500 italic">
+            No pins allocated yet. <a class="text-emerald-300 underline"
+               href="/ui/devices/wizard/{{ group.id }}/pinmap?auto=true">Run the auto-allocator</a>.
+          </p>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div class="flex gap-3">
+      <a href="/ui/devices/wizard/{{ group.id }}/components"
+         class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">← Back</a>
+      <a href="/ui/devices/wizard/{{ group.id }}/review"
+         class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+        Review →
+      </a>
+    </div>
+  </section>
+{% endblock %}

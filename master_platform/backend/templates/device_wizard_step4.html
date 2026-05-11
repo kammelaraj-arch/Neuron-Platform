@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Device wizard · Components{% endblock %}
+{% block content %}
+  {% include "_wizard_header.html" %}
+
+  <section class="space-y-6">
+    <div>
+      <h2 class="text-lg font-semibold">4. Wire components to each board</h2>
+      <p class="mt-1 text-sm text-slate-400">
+        For every board, pick the sensors / actuators / motors it physically
+        drives. Component-to-pin mapping happens in the next step.
+      </p>
+    </div>
+
+    {% if not boards_with_components %}
+      <p class="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm text-amber-300">
+        No boards in this group yet. <a href="/ui/devices/wizard/{{ group.id }}/boards" class="underline">Go back to step 3</a> first.
+      </p>
+    {% endif %}
+
+    {% for b, comps in boards_with_components %}
+      {% set bdef = catalog.get(b.board_stable_id) %}
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+        <header class="flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h3 class="font-semibold text-emerald-300">{{ b.label }}</h3>
+            <div class="text-xs font-mono text-cyan-300">{{ b.board_stable_id }}</div>
+          </div>
+          <div class="text-xs text-slate-500">{{ comps | length }} component(s)</div>
+        </header>
+
+        <!-- already-attached components -->
+        {% if comps %}
+          <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {% for c in comps %}
+              {% set cdef = catalog.get(c.component_stable_id) %}
+              <div class="relative rounded-md border border-emerald-500/30 bg-slate-950 p-3
+                          shadow-[0_0_18px_-10px_rgba(16,185,129,0.5)]">
+                <div class="flex items-baseline justify-between gap-2">
+                  <div class="font-mono text-xs text-emerald-300">{{ c.instance_id }}</div>
+                  <form method="post" action="/ui/devices/wizard/{{ group.id }}/components/{{ c.id }}/delete"
+                        onsubmit="return confirm('Remove component {{ c.instance_id }}?');">
+                    <button class="text-[11px] text-red-400 hover:text-red-300">remove</button>
+                  </form>
+                </div>
+                <div class="mt-1 text-sm text-slate-200">{{ cdef.name if cdef else c.component_stable_id }}</div>
+                <div class="mt-1 font-mono text-[10px] text-slate-500">{{ c.component_stable_id }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- add new -->
+        <details class="mt-4">
+          <summary class="cursor-pointer text-xs text-slate-300 hover:text-white">+ Add component to this board</summary>
+          <form method="post" action="/ui/devices/wizard/{{ group.id }}/components/add"
+                class="mt-3 grid gap-3 sm:grid-cols-4 text-sm">
+            <input type="hidden" name="board_instance_id" value="{{ b.id }}">
+            <select name="component_stable_id" required
+                    class="sm:col-span-2 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+              {% for c in available_components %}
+                <option value="{{ c.stable_id }}">{{ c.name }} — {{ c.stable_id }}</option>
+              {% else %}
+                <option value="">— components_library is empty —</option>
+              {% endfor %}
+            </select>
+            <input name="instance_id" placeholder="instance id (auto)"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+            <button class="rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+              Wire it
+            </button>
+          </form>
+        </details>
+      </div>
+    {% endfor %}
+
+    <div class="flex gap-3">
+      <a href="/ui/devices/wizard/{{ group.id }}/boards"
+         class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">← Back</a>
+      <a href="/ui/devices/wizard/{{ group.id }}/pinmap?auto=true"
+         class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+        Auto-allocate GPIO →
+      </a>
+    </div>
+  </section>
+{% endblock %}

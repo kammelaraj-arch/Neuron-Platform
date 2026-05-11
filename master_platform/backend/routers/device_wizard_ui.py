@@ -27,6 +27,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import delete as sa_delete
+
 from ..db import get_session
 from ..library_loader import load_catalog
 from ..models import (
@@ -37,6 +39,7 @@ from ..models import (
     EdgeSystem,
     GpioMapping,
 )
+from ..pin_allocator import PinAllocationError, auto_allocate
 from ..security.audit import record
 from ..security.ui_auth import ui_require_login
 
@@ -291,4 +294,344 @@ async def wizard_delete_board(
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/boards", status_code=303)
 
 
-# Step 4-6 land in the next commit (components, pin-map, review+build).
+# ─── Step 4: components per board ───────────────────────────────────────────
+@router.get("/ui/devices/wizard/{group_id}/components", response_class=HTMLResponse)
+async def wizard_step_components(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    catalog = load_catalog()
+    boards = (
+        await session.execute(
+            select(BoardInstance).where(BoardInstance.group_id == group.id)
+            .order_by(BoardInstance.position)
+        )
+    ).scalars().all()
+    boards_with_components = []
+    for b in boards:
+        comps = (
+            await session.execute(
+                select(ComponentInstance).where(ComponentInstance.board_instance_id == b.id)
+                .order_by(ComponentInstance.position)
+            )
+        ).scalars().all()
+        boards_with_components.append((b, comps))
+    available_components = catalog.list_library("components_library")
+    return templates.TemplateResponse(
+        "device_wizard_step4.html",
+        {
+            "request": request,
+            "group": group,
+            "boards_with_components": boards_with_components,
+            "available_components": available_components,
+            "catalog": catalog,
+            "steps": WIZARD_STEPS,
+            "step_idx": 3,
+        },
+    )
+
+
+@router.post("/ui/devices/wizard/{group_id}/components/add")
+async def wizard_add_component(
+    group_id: str,
+    request: Request,
+    board_instance_id: str = Form(...),
+    component_stable_id: str = Form(...),
+    instance_id: str = Form(""),
+    label: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    board = await session.get(BoardInstance, board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "board not in this group")
+    catalog = load_catalog()
+    cdef = catalog.get(component_stable_id)
+    if cdef is None or cdef.library != "components_library":
+        raise HTTPException(404, f"component {component_stable_id} not in components_library")
+
+    instance_id = (instance_id or "").strip() or component_stable_id.split(".")[-1]
+    # Auto-uniquify instance_id within the board.
+    base_iid = instance_id
+    i = 2
+    while True:
+        clash = (
+            await session.execute(
+                select(ComponentInstance).where(
+                    ComponentInstance.board_instance_id == board.id,
+                    ComponentInstance.instance_id == instance_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if clash is None:
+            break
+        instance_id = f"{base_iid}_{i}"
+        i += 1
+
+    pos = (
+        await session.scalar(
+            select(ComponentInstance.position)
+            .where(ComponentInstance.board_instance_id == board.id)
+            .order_by(ComponentInstance.position.desc())
+        )
+    ) or 0
+    comp = ComponentInstance(
+        board_instance_id=board.id,
+        component_stable_id=component_stable_id,
+        instance_id=instance_id,
+        label=(label or "").strip() or None,
+        position=pos + 1,
+    )
+    session.add(comp)
+    await session.flush()
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="component.add", target_kind="component_instance", target_id=comp.id,
+        detail={"board_id": board.id, "component": component_stable_id, "instance_id": instance_id},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/components/{comp_id}/delete")
+async def wizard_delete_component(
+    group_id: str,
+    comp_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    comp = await session.get(ComponentInstance, comp_id)
+    if comp is None:
+        raise HTTPException(404, "component not found")
+    board = await session.get(BoardInstance, comp.board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "component not in this group")
+    await session.delete(comp)
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="component.delete", target_kind="component_instance", target_id=comp_id,
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
+
+
+# ─── Step 5: GPIO pin map ───────────────────────────────────────────────────
+async def _allocate_pins_for_group(
+    session: AsyncSession,
+    group: EdgeGroup,
+    catalog,
+) -> tuple[list[tuple[BoardInstance, list[GpioMapping]]], list[str]]:
+    """Run the pin allocator per-board for a group, preserving any
+    operator-locked rows. Returns ([(board, mappings), ...], conflicts)."""
+    if not group.compute_stable_id:
+        raise HTTPException(400, "compute_stable_id not set on group")
+
+    out: list[tuple[BoardInstance, list[GpioMapping]]] = []
+    all_conflicts: list[str] = []
+
+    boards = (
+        await session.execute(
+            select(BoardInstance).where(BoardInstance.group_id == group.id)
+            .order_by(BoardInstance.position)
+        )
+    ).scalars().all()
+
+    for b in boards:
+        comps = (
+            await session.execute(
+                select(ComponentInstance)
+                .where(ComponentInstance.board_instance_id == b.id)
+                .order_by(ComponentInstance.position)
+            )
+        ).scalars().all()
+        if not comps:
+            out.append((b, []))
+            continue
+
+        existing = (
+            await session.execute(
+                select(GpioMapping).where(GpioMapping.board_instance_id == b.id)
+            )
+        ).scalars().all()
+        locked = {m.compute_pin: m for m in existing if m.locked_by_operator}
+
+        assignments = [
+            {
+                "component_stable_id": c.component_stable_id,
+                "instance_id": c.instance_id,
+            }
+            for c in comps
+        ]
+        try:
+            result = auto_allocate(
+                compute_stable_id=group.compute_stable_id,
+                component_assignments=assignments,
+                catalog=catalog,
+                device_dna=group.device_dna or f"GROUP-{b.id[:8]}",
+                board_stable_id=b.board_stable_id,
+            )
+        except PinAllocationError as exc:
+            all_conflicts.append(f"{b.label}: {exc}")
+            out.append((b, list(existing)))
+            continue
+
+        # Drop existing non-locked rows; keep locked ones.
+        await session.execute(
+            sa_delete(GpioMapping).where(
+                GpioMapping.board_instance_id == b.id,
+                GpioMapping.locked_by_operator.is_(False),
+            )
+        )
+
+        for assn in result.get("assignments", []):
+            for pin in assn.get("pins", []):
+                compute_pin = pin.get("compute_pin") or pin.get("pin")
+                if not compute_pin or compute_pin in locked:
+                    continue
+                m = GpioMapping(
+                    board_instance_id=b.id,
+                    compute_pin=compute_pin,
+                    board_pin=pin.get("board_pin", "—"),
+                    signal_name=pin.get("function") or pin.get("signal"),
+                    direction=pin.get("direction"),
+                    locked_by_operator=False,
+                )
+                session.add(m)
+        for c in result.get("conflicts", []):
+            all_conflicts.append(f"{b.label}: {c}")
+
+        await session.flush()
+        refreshed = (
+            await session.execute(
+                select(GpioMapping).where(GpioMapping.board_instance_id == b.id)
+                .order_by(GpioMapping.compute_pin)
+            )
+        ).scalars().all()
+        out.append((b, list(refreshed)))
+
+    return out, all_conflicts
+
+
+@router.get("/ui/devices/wizard/{group_id}/pinmap", response_class=HTMLResponse)
+async def wizard_step_pinmap(
+    group_id: str,
+    request: Request,
+    auto: bool = False,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    catalog = load_catalog()
+    conflicts: list[str] = []
+    if auto:
+        boards_pins, conflicts = await _allocate_pins_for_group(session, group, catalog)
+        await session.commit()
+    else:
+        boards_pins = []
+        boards = (
+            await session.execute(
+                select(BoardInstance).where(BoardInstance.group_id == group.id)
+                .order_by(BoardInstance.position)
+            )
+        ).scalars().all()
+        for b in boards:
+            mappings = (
+                await session.execute(
+                    select(GpioMapping).where(GpioMapping.board_instance_id == b.id)
+                    .order_by(GpioMapping.compute_pin)
+                )
+            ).scalars().all()
+            boards_pins.append((b, list(mappings)))
+
+    return templates.TemplateResponse(
+        "device_wizard_step5.html",
+        {
+            "request": request,
+            "group": group,
+            "boards_pins": boards_pins,
+            "conflicts": conflicts,
+            "catalog": catalog,
+            "steps": WIZARD_STEPS,
+            "step_idx": 4,
+        },
+    )
+
+
+@router.post("/ui/devices/wizard/{group_id}/pinmap/lock")
+async def wizard_lock_pin(
+    group_id: str,
+    request: Request,
+    mapping_id: str = Form(...),
+    compute_pin: str = Form(...),
+    board_pin: str = Form(""),
+    signal_name: str = Form(""),
+    locked: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    m = await session.get(GpioMapping, mapping_id)
+    if m is None:
+        raise HTTPException(404, "mapping not found")
+    b = await session.get(BoardInstance, m.board_instance_id)
+    if b is None or b.group_id != group.id:
+        raise HTTPException(404, "mapping not in this group")
+
+    m.compute_pin = compute_pin.strip() or m.compute_pin
+    if board_pin.strip():
+        m.board_pin = board_pin.strip()
+    if signal_name.strip():
+        m.signal_name = signal_name.strip()
+    m.locked_by_operator = (locked.lower() in ("on", "true", "1", "yes"))
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/pinmap", status_code=303)
+
+
+# ─── Step 6: review + build ─────────────────────────────────────────────────
+@router.get("/ui/devices/wizard/{group_id}/review", response_class=HTMLResponse)
+async def wizard_step_review(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    catalog = load_catalog()
+    boards = (
+        await session.execute(
+            select(BoardInstance).where(BoardInstance.group_id == group.id)
+            .order_by(BoardInstance.position)
+        )
+    ).scalars().all()
+    detail = []
+    for b in boards:
+        comps = (
+            await session.execute(
+                select(ComponentInstance).where(ComponentInstance.board_instance_id == b.id)
+                .order_by(ComponentInstance.position)
+            )
+        ).scalars().all()
+        pins = (
+            await session.execute(
+                select(GpioMapping).where(GpioMapping.board_instance_id == b.id)
+                .order_by(GpioMapping.compute_pin)
+            )
+        ).scalars().all()
+        detail.append({"board": b, "components": comps, "pins": pins})
+    return templates.TemplateResponse(
+        "device_wizard_step6.html",
+        {
+            "request": request,
+            "group": group,
+            "detail": detail,
+            "catalog": catalog,
+            "steps": WIZARD_STEPS,
+            "step_idx": 5,
+        },
+    )
