@@ -291,6 +291,115 @@ class FeatureRequest(Base):
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
 
+# ─── Device-registration wizard (FR-0005) ────────────────────────────────────
+# Hierarchy:
+#   EdgeSystem  →  EdgeGroup  →  BoardInstance  →  ComponentInstance
+#                                       ↑
+#                                  GpioMapping
+# An EdgeGroup is a logical sub-section of an edge ("Heater bank",
+# "Production Line A") with ONE compute module (Pico 2 W, Pi 5, etc.)
+# controlling N boards. Each board has N components.
+class EdgeGroup(Base):
+    __tablename__ = "edge_groups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    edge_id: Mapped[str] = mapped_column(ForeignKey("edge_systems.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    compute_stable_id: Mapped[str | None] = mapped_column(String(120))  # e.g. compute.pico2w
+    hardware_revision: Mapped[str] = mapped_column(String(40), default="rev_a", nullable=False)
+    base_firmware_version: Mapped[str] = mapped_column(String(20), default="1.0.0", nullable=False)
+    app_bundle_version: Mapped[str] = mapped_column(String(20), default="1.0.0", nullable=False)
+    config_schema_version: Mapped[str] = mapped_column(String(20), default="1.0.0", nullable=False)
+    device_dna: Mapped[str | None] = mapped_column(String(40), unique=True)  # filled after DNA generation
+    dna_json: Mapped[dict | None] = mapped_column(JSON)
+    brain_json: Mapped[dict | None] = mapped_column(JSON)
+    firmware_bundle_path: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+    edge: Mapped[EdgeSystem] = relationship()
+    boards: Mapped[list["BoardInstance"]] = relationship(
+        back_populates="group", cascade="all, delete-orphan",
+        order_by="BoardInstance.position",
+    )
+
+    __table_args__ = (UniqueConstraint("edge_id", "name", name="uq_group_per_edge"),)
+
+
+class BoardInstance(Base):
+    """A control board added to a group (L298 stepper driver, SSR relay,
+    ADC HAT, IO expander, etc.). Picked from control_board_library."""
+    __tablename__ = "board_instances"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    group_id: Mapped[str] = mapped_column(ForeignKey("edge_groups.id"), nullable=False, index=True)
+    board_stable_id: Mapped[str] = mapped_column(String(120), nullable=False)  # FK-by-name to library
+    label: Mapped[str] = mapped_column(String(120), nullable=False)  # operator-given name
+    role: Mapped[str | None] = mapped_column(String(80))  # e.g. "main", "redundant"
+    position: Mapped[int] = mapped_column(default=0, nullable=False)  # display order
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    group: Mapped[EdgeGroup] = relationship(back_populates="boards")
+    components: Mapped[list["ComponentInstance"]] = relationship(
+        back_populates="board", cascade="all, delete-orphan",
+        order_by="ComponentInstance.position",
+    )
+    gpio_mappings: Mapped[list["GpioMapping"]] = relationship(
+        back_populates="board", cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (UniqueConstraint("group_id", "label", name="uq_board_per_group"),)
+
+
+class ComponentInstance(Base):
+    """A sensor / actuator / camera wired to a specific board.
+    Picked from components_library."""
+    __tablename__ = "component_instances"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    board_instance_id: Mapped[str] = mapped_column(
+        ForeignKey("board_instances.id"), nullable=False, index=True
+    )
+    component_stable_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    instance_id: Mapped[str] = mapped_column(String(80), nullable=False)  # e.g. "probe_a"
+    label: Mapped[str | None] = mapped_column(String(120))
+    role: Mapped[str | None] = mapped_column(String(80))
+    params_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    position: Mapped[int] = mapped_column(default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    board: Mapped[BoardInstance] = relationship(back_populates="components")
+
+    __table_args__ = (
+        UniqueConstraint("board_instance_id", "instance_id", name="uq_component_per_board"),
+    )
+
+
+class GpioMapping(Base):
+    """A single pin connection: compute pin ↔ board pin.
+    Auto-allocator fills these on first run; operator overrides per row
+    by setting locked_by_operator=True."""
+    __tablename__ = "gpio_mappings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    board_instance_id: Mapped[str] = mapped_column(
+        ForeignKey("board_instances.id"), nullable=False, index=True
+    )
+    compute_pin: Mapped[str] = mapped_column(String(40), nullable=False)  # e.g. "GP2"
+    board_pin: Mapped[str] = mapped_column(String(40), nullable=False)    # e.g. "EN"
+    signal_name: Mapped[str | None] = mapped_column(String(80))
+    direction: Mapped[str | None] = mapped_column(String(20))  # in | out | bidir
+    locked_by_operator: Mapped[bool] = mapped_column(default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    board: Mapped[BoardInstance] = relationship(back_populates="gpio_mappings")
+
+    __table_args__ = (
+        UniqueConstraint("board_instance_id", "compute_pin", name="uq_pin_per_board"),
+    )
+
+
 class CodeFunction(Base):
     """A reusable function or library catalogued for repurpose.
 

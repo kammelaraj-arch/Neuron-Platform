@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from .config import settings
 from .db import SessionLocal, init_db
 from .library_loader import load_catalog
-from .models import APIKey
+from .models import APIKey, FeatureRequest
 from .routers import (
     ai_agent,
     apikeys,
@@ -79,6 +79,81 @@ def _write_bootstrap_key_file(secret: str) -> Path:
     return p
 
 
+async def _seed_feature_requests_if_empty() -> None:
+    """First-run pre-population of the Feature/capability tracker so the
+    /ui/features page reflects what the product owner has asked for so
+    far. Runs once on first startup; idempotent (no-op once the table
+    has any rows). Manual rows added via the UI later are untouched."""
+    from sqlalchemy import func as sa_func
+    async with SessionLocal() as session:
+        count = await session.scalar(select(sa_func.count()).select_from(FeatureRequest))
+        if count and count > 0:
+            return
+
+        seed = [
+            # short_id, title, description, status, priority, sha_dev, sha_prod
+            ("FR-0001", "Webhook-based CI/CD pipeline",
+             "Push to deploy branch → GitHub Actions → POST /deploy → "
+             "neuron-deployer container rebuilds + restarts. No SSH key in "
+             "Actions. Independent /opt/neuron-platform stack.",
+             "deployed_prod", "high", "5f745b5", "5f745b5"),
+            ("FR-0002", "Decouple completely from ShitalEco",
+             "Zero shitaleco references in repo/pipeline. Independent TLS "
+             "cert via standalone certbot. Host nginx vhost auto-restored "
+             "by neuron-vhost-watchdog systemd timer.",
+             "deployed_prod", "high", "00912e5", "00912e5"),
+            ("FR-0003", "Hierarchy flexibility (Root → Edge, all-in-one)",
+             "EdgeSystem.node_id nullable; new root_id FK. Edge can attach "
+             "directly under a Root. System Designer UI offers both "
+             "placements. 'All-in-one quick setup' creates Root + Edge in "
+             "one shot.",
+             "deployed_prod", "normal", "d578985", "d578985"),
+            ("FR-0004", "Feature/capability request tracker",
+             "DB-backed registry (this very table) with /ui/features admin "
+             "page. Status lifecycle: requested → in_dev → deployed_dev → "
+             "deployed_prod. Auto-records SHAs on transition.",
+             "deployed_prod", "normal", "41323fc", "41323fc"),
+            ("FR-0005", "Device-registration step-wise wizard",
+             "Replace the flat /ui/devices/new form with a multi-step "
+             "wizard: Edge → Group → Boards (search/select) → Components "
+             "(per board) → GPIO pin map (auto + override). Sleek "
+             "digital-twin aesthetic — SVG board silhouettes, animated "
+             "connecting lines, dark/neon-emerald accents.",
+             "in_dev", "high", None, None),
+            ("FR-0006", "Reusable function / library registry",
+             "Every reusable function catalogued with inputs, outputs, "
+             "language, source path, API endpoint, tags, status. Admin UI "
+             "at /ui/functions. JSON API at /api/functions for AI Agent "
+             "to consume.",
+             "deployed_prod", "normal", "5c44903", "5c44903"),
+            ("FR-0007", "Function criticality + AI Agent accessibility",
+             "Each function declares a criticality (nominal | advisory | "
+             "critical | life_safety) matching the platform-wide safety "
+             "ladder, and an agent_accessible flag. AI Agent refuses to "
+             "auto-invoke critical/life_safety without human approval.",
+             "deployed_prod", "high", "5ffb8e2", "5ffb8e2"),
+            ("FR-0008", "Mobile-responsive UI + wider desktop layout",
+             "Every page works on 360px. Tables wrapped in overflow-x-auto. "
+             "Main container widened from max-w-6xl to max-w-screen-2xl so "
+             "modern displays aren't crammed.",
+             "deployed_prod", "normal", "7f03c4c", "5ffb8e2"),
+        ]
+        for short_id, title, desc, status, prio, dev_sha, prod_sha in seed:
+            row = FeatureRequest(
+                short_id=short_id,
+                title=title,
+                description=desc,
+                requested_by="kammelaraj",
+                priority=prio,
+                status=status,
+                git_sha_dev=dev_sha,
+                git_sha_prod=prod_sha,
+            )
+            session.add(row)
+        await session.commit()
+        _log.warning("Seeded %d initial feature requests.", len(seed))
+
+
 async def _bootstrap_admin_key_if_needed() -> None:
     async with SessionLocal() as session:
         existing = await session.scalar(select(APIKey).where(APIKey.tier == "admin"))
@@ -110,6 +185,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     load_catalog(force=True)
     await _bootstrap_admin_key_if_needed()
+    await _seed_feature_requests_if_empty()
 
     # Periodic audit retention prune so SQLite doesn't grow unbounded.
     from .security.audit_retention import retention_loop
