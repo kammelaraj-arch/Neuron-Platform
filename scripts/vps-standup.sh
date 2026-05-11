@@ -202,16 +202,15 @@ else
 fi
 
 cd "$INSTALL_DIR/master_platform"
-# Explicit COMPOSE_PROJECT_NAME so we NEVER share a namespace with any
-# other compose stack on this host. Without this, docker compose
-# inherits the project name from the containing directory
-# ("master_platform"), which collides with any previous compose run from
-# the same path and causes orphaned-container management to wreck
-# unrelated containers. Hard-coding "neuron" guarantees isolation.
-export COMPOSE_PROJECT_NAME=neuron
+# Compose project name defaults to the directory basename
+# ("master_platform"). We intentionally don't override it — the
+# webhook deployer container later runs deploy.sh from the same
+# directory and needs to see the same project to find existing
+# containers; forcing a different name here would cause it to try
+# to create duplicates and fail with name conflicts.
 docker compose -f "$COMPOSE_FILE" build
 docker compose -f "$COMPOSE_FILE" up -d
-ok "Stack started (compose project: neuron)"
+ok "Stack started"
 
 # ─── 7. Health check ─────────────────────────────────────────────────────────
 step "[7/7] Health check (parallel port $TEMP_MASTER_PORT)"

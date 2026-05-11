@@ -65,11 +65,12 @@ fi
 
 # cd so docker compose auto-picks up master_platform/.env (NEURON_DEPLOY_SECRET,
 # NEURON_DEPLOY_BRANCH, NEURON_REPO_PATH, optional port/container overrides).
+# The compose project name is intentionally NOT overridden — it defaults to
+# the directory basename ("master_platform"), which matches the project the
+# running stack was first created in. Forcing a different project name here
+# would make compose blind to the existing containers and fail with name
+# conflicts on docker compose up.
 cd "$NEURON_DIR/master_platform"
-
-# Explicit project name so this stack NEVER shares a namespace with any
-# other compose stack on the host, regardless of cwd.
-export COMPOSE_PROJECT_NAME=neuron
 
 # ─── 2. Build ────────────────────────────────────────────────────────────────
 step "[2/4] Building neuron-master image"

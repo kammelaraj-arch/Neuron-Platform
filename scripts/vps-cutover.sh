@@ -118,7 +118,6 @@ ok "Stripped (backup at $ENV_FILE.bak.*)"
 # ─── 6. Restart new stack on canonical ports + names ─────────────────────────
 step "[6/6] Restarting new stack under canonical names + ports"
 cd "$INSTALL_DIR/master_platform"
-export COMPOSE_PROJECT_NAME=neuron
 docker compose -f "$COMPOSE_FILE" down
 docker compose -f "$COMPOSE_FILE" up -d
 
