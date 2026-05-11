@@ -1,15 +1,14 @@
 """
-Neuron-only webhook deployer.
+Neuron webhook deployer.
 
-Listens on :9090 inside the container; bound to 172.17.0.1:8089 on the
-host so the shared nginx can reach it but the public internet cannot.
-The shared nginx exposes it at https://neuron.shital.org.uk/deploy.
+Listens on :9090 inside the container. Bound to 172.17.0.1:8089 on the
+host so the host's reverse proxy can reach it but the public internet
+cannot. The reverse proxy exposes it at
+https://neuron.shital.org.uk/deploy.
 
-This deployer is fully independent from the ShitalEco /deploy endpoint:
- - separate image, separate container, separate Docker volume / socket
- - separate webhook secret (NEURON_DEPLOY_SECRET)
- - only ever invokes /app/deploy.sh inside this container, which only
-   touches the Neuron stack. It cannot start or stop a ShitalEco service.
+Validates X-Deploy-Secret against NEURON_DEPLOY_SECRET, then spawns
+/app/deploy.sh in the background. That script only ever touches the
+Neuron stack (master_platform/docker-compose.yml).
 """
 import os
 import threading
@@ -33,7 +32,6 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        # Tiny liveness ping for the Neuron healthcheck — never deploys.
         if self.path == "/healthz":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

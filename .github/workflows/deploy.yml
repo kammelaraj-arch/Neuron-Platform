@@ -10,8 +10,7 @@
 #
 # This workflow does NOT SSH anywhere. It does NOT have a private key.
 # Compromise of this workflow grants a single capability: trigger a
-# deploy of whatever is on the deploy branch tip. Same trust model as
-# the proven ShitalEco /deploy endpoint.
+# deploy of whatever is on the deploy branch tip.
 #
 # Required GitHub Actions secret:
 #   NEURON_DEPLOY_SECRET   shared with the neuron-deployer container's

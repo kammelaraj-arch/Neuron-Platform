@@ -69,7 +69,7 @@ async def ui_index(
          "href": f"/ui/devices/{first_unbuilt_dna}" if first_unbuilt_dna else "/ui/devices",
          "hint": "Four buttons on the device page do this in order."},
         {"key": "flash",    "label": "Flash a Pico 2 W",            "done": False,
-         "href": "https://github.com/kammelaraj-arch/ShitalEco/blob/claude/shital-erp-platform-iR2UF/neuron-platform/level0-pico2w/provisioning/FLASHING.md",
+         "href": "https://github.com/kammelaraj-arch/neuron-platform/blob/main/level0-pico2w/provisioning/FLASHING.md",
          "external": True,
          "hint": "Bench step — drop the firmware bundle onto a real device."},
     ]

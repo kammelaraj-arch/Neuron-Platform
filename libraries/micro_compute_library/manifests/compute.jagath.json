@@ -1,11 +1,11 @@
 {
   "stable_id": "compute.jagath",
   "name": "Jagath Custom Board (in-house)",
-  "vendor": "Shital / In-house",
+  "vendor": "In-house",
   "version": "0.1.0",
   "library": "micro_compute_library",
   "category": "linux_edge_hosts",
-  "description": "Custom Shital in-house board profile. Linux-class compute, treated as an Edge Runtime host. Specs and pin map are placeholders — update with concrete values when the hardware is finalised.",
+  "description": "Custom in-house board profile. Linux-class compute, treated as an Edge Runtime host. Specs and pin map are placeholders — update with concrete values when the hardware is finalised.",
   "tags": ["custom", "in_house", "jagath", "linux"],
   "image": { "asset": "../linux_edge_hosts/jagath.svg", "alt": "Jagath custom board" },
   "capabilities": ["linux_host", "docker", "mqtt_broker", "ethernet", "wifi"],
@@ -35,7 +35,7 @@
   },
   "metadata": {
     "design_status": "prototype",
-    "owner": "shital-platform",
+    "owner": "neuron-platform",
     "specs_pending": true,
     "note": "Update pin pool in master_platform/backend/pin_allocator.py once the schematic is finalised."
   }

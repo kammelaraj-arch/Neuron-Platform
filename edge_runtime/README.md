@@ -68,8 +68,9 @@ header `X-Client-Cert-SHA256`.
 ## DB isolation
 
 `EDGE_DB_URL` defaults to a private SQLite file in `./data/edge.db`.
-`db.py` refuses to start if the URL ever contains `shital`, `shitaleco`
-or `neuron.db` (the Master Platform's own database).
+`db.py` refuses to start if the URL contains `neuron.db` (the Master
+Platform's own database file) so the Edge can never accidentally
+share storage with the Master.
 
 ## Emergency channel
 

@@ -1,21 +1,17 @@
 # Stand-alone docker-compose for the Neuron Master Platform.
 #
-# Fully INDEPENDENT from any ShitalEco service:
-#   - own image (neuron/master:0.3.0)
-#   - own private volumes (neuron_data, neuron_artifacts) — never shared
-#   - own bridge network (neuron_internal)
-#   - own SQLite file; backend/db.py refuses to start if NEURON_DB_URL ever
-#     contains 'shital' or 'shitaleco'
+# Two services:
+#   neuron-master    — the FastAPI app (Admin + Build + Config UI + API)
+#   neuron-deployer  — webhook listener that re-runs deploy.sh on POST
 #
-# Bound to the docker0 bridge IP (172.17.0.1) on port 8088 so the host's
-# existing nginx can proxy to it via:
-#     proxy_pass http://172.17.0.1:8088
-# but the public internet cannot reach it directly. The same trick is
-# already used elsewhere on this host for dev.shital.org.uk → :8080.
+# Both bind to the docker0 bridge gateway (172.17.0.1) so a host-level
+# reverse proxy can reach them but the public internet cannot reach
+# them directly. The reverse proxy is operator-managed infrastructure;
+# this compose does not configure it.
 #
-# Usage (from neuron-platform/master_platform):
-#   docker compose up -d --build
-# Or run ../deploy.sh which wraps this + reloads the shared nginx.
+# Usage (from the repo root):
+#   docker compose -f master_platform/docker-compose.yml up -d --build
+# Or run deploy.sh which wraps this.
 services:
   neuron-master:
     build:
@@ -33,9 +29,8 @@ services:
       NEURON_BIND_PORT: 8088
       NEURON_LOG_LEVEL: info
     ports:
-      # Bind only on the docker bridge gateway so nginx can reach it but
-      # the public internet cannot. Override to "8088:8088" for direct
-      # access during local development.
+      # Bind only on the docker bridge gateway. Override to "8088:8088"
+      # for direct access during local development.
       - "${NEURON_BIND_IP:-172.17.0.1}:8088:8088"
     volumes:
       - neuron_data:/app/master_platform/data
@@ -49,13 +44,10 @@ services:
       retries: 5
       start_period: 30s
 
-  # ── Neuron-only webhook deployer ───────────────────────────────────────────
-  # Independent from ShitalEco's deployer — separate image, separate
-  # secret, separate port. The shared nginx proxies
-  # https://neuron.shital.org.uk/deploy → 172.17.0.1:8089.
-  # On a webhook hit it runs /app/deploy.sh which only touches the
-  # Neuron stack (this very compose file). It never restarts a ShitalEco
-  # service.
+  # Webhook-driven redeploy listener. The host's reverse proxy forwards
+  # https://neuron.shital.org.uk/deploy → 172.17.0.1:8089 → this
+  # container. POST with header `X-Deploy-Secret: $NEURON_DEPLOY_SECRET`
+  # triggers a background run of deploy.sh.
   neuron-deployer:
     build:
       context: ../deployer
@@ -65,19 +57,17 @@ services:
     restart: unless-stopped
     environment:
       NEURON_DEPLOY_SECRET: ${NEURON_DEPLOY_SECRET:?NEURON_DEPLOY_SECRET must be set}
-      NEURON_DEPLOY_BRANCH: ${NEURON_DEPLOY_BRANCH:-claude/shital-erp-platform-iR2UF}
+      NEURON_DEPLOY_BRANCH: ${NEURON_DEPLOY_BRANCH:-main}
       NEURON_DEPLOYER_PORT: "9090"
     ports:
-      # docker0 bridge gateway only — public internet cannot reach this.
       - "${NEURON_BIND_IP:-172.17.0.1}:8089:9090"
     volumes:
       # Bind-mount the host repo so the deployer can git pull + invoke
-      # neuron-platform/deploy.sh. Path is configurable for hosts that
-      # check the repo out somewhere other than /opt/shitaleco.
-      - ${NEURON_REPO_PATH:-/opt/shitaleco}:/workspace
-      # Docker socket so deploy.sh can `docker compose up -d` the Neuron
-      # stack. The deployer uses the host's docker daemon — same as the
-      # ShitalEco deployer does for its own stack.
+      # deploy.sh. Default path is /opt/neuron-platform; override with
+      # NEURON_REPO_PATH if your checkout lives elsewhere.
+      - ${NEURON_REPO_PATH:-/opt/neuron-platform}:/workspace
+      # Docker socket so deploy.sh can rebuild + restart the Neuron
+      # stack via the host docker daemon.
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - neuron_internal

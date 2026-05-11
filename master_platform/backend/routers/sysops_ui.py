@@ -1,10 +1,8 @@
 """Neuron-scoped sys-ops dashboard.
 
-This page intentionally only reads Neuron's own state (its own SQLite
-DB, its own data dir, its own configured Edges via the
-edge_systems.address). It does NOT call docker, does NOT inspect
-ShitalEco containers or services, does NOT proxy anything outside the
-Neuron stack.
+Reads only Neuron's own state (its own SQLite DB, its own data dir,
+its own configured Edges via edge_systems.address). Does NOT call
+docker and does NOT proxy anything outside the Neuron stack.
 
 Visible to admin-tier sessions only.
 """

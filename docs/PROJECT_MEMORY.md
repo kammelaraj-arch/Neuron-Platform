@@ -9,9 +9,11 @@
 
 ### Decisions (architecture choices)
 
-- **Block-of-ShitalEco deployment**. Neuron lives at
-  `/home/user/ShitalEco/neuron-platform/` and ships through the existing
-  ShitalEco CI/CD/nginx/Render pipeline. Public URL: `neuron.shital.org.uk`.
+- **Standalone deployment**. Neuron lives at `/opt/neuron-platform/`
+  on the production VPS and ships through its own webhook-based CI/CD
+  (see `AUTO_DEPLOY.md`). Public URL: `neuron.shital.org.uk`. The
+  host's reverse proxy is operator-managed (one-time, see
+  `docs/HOST_SETUP.md`) and is not configured by this repo.
 - **Library-first**. Five libraries (components, control boards, micro-compute,
   digital twin controls, ui controls) plus a `shared_schemas/` directory that
   contains every JSON Schema referenced by the rest of the platform.

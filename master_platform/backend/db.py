@@ -17,26 +17,6 @@ class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
 
 
-def _assert_isolated_db_url(url: str) -> None:
-    """Refuse to start if NEURON_DB_URL points at ShitalEco's database.
-
-    Neuron Platform must never share storage with the host monorepo. We
-    look for ShitalEco-specific markers in the URL and fail fast if found.
-    """
-    forbidden_markers = (
-        "shital",       # 'shital', 'shital_db', 'shitaleco_db', etc.
-        "shitaleco",    # explicit
-    )
-    lowered = url.lower()
-    for marker in forbidden_markers:
-        if marker in lowered:
-            raise RuntimeError(
-                "NEURON_DB_URL must point at an isolated Neuron database; "
-                f"refusing to start because the URL contains '{marker}': {url}"
-            )
-
-
-_assert_isolated_db_url(settings.db_url)
 engine = create_async_engine(settings.db_url, future=True, echo=False)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 

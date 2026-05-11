@@ -17,14 +17,12 @@ class Base(DeclarativeBase):
 
 
 def _assert_isolated_db_url(url: str) -> None:
-    forbidden = ("shital", "shitaleco", "neuron.db")
-    lowered = url.lower()
-    for marker in forbidden:
-        if marker in lowered:
-            raise RuntimeError(
-                "EDGE_DB_URL must point at an isolated Edge database; "
-                f"refusing to start because the URL contains '{marker}': {url}"
-            )
+    # Edge DB must never collide with the Master's neuron.db file path.
+    if "neuron.db" in url.lower():
+        raise RuntimeError(
+            "EDGE_DB_URL must point at an isolated Edge database; "
+            f"refusing to start because the URL contains 'neuron.db': {url}"
+        )
 
 
 _assert_isolated_db_url(settings.db_url)

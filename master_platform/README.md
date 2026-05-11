@@ -1,24 +1,6 @@
-# Neuron Platform — Master Platform (Stage 2)
+# Neuron Master Platform
 
 Single unified app: **Admin + Build + Config + Library Registry + API Management**.
-
-## Database isolation
-
-The Neuron Master Platform's database is **fully independent** from
-ShitalEco. There is no shared schema, shared connection, or shared
-volume:
-
-| Aspect              | ShitalEco backend            | Neuron Master            |
-| ------------------- | ---------------------------- | ------------------------ |
-| Engine              | Postgres                     | SQLite (or Postgres)     |
-| Env var             | `DATABASE_URL`               | `NEURON_DB_URL`          |
-| Default URL         | `postgresql+asyncpg://…`     | `sqlite+aiosqlite:///./data/neuron.db` |
-| Docker volume       | `pgdata`                     | `neuron_data`            |
-| Docker network      | ShitalEco compose network    | `neuron_internal`        |
-
-`backend/db.py` actively **refuses to start** if `NEURON_DB_URL` ever
-contains `shital` or `shitaleco`, so a misconfigured deploy can't
-accidentally share storage with the host monorepo.
 
 ## Run locally
 
@@ -29,7 +11,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # from master_platform/, the libraries dir lives one level up
-uvicorn backend.main:app --host 0.0.0.0 --port 8080 --reload
+uvicorn backend.main:app --host 0.0.0.0 --port 8088 --reload
 ```
 
 On first boot the Master auto-issues a **bootstrap admin API key** and
@@ -99,42 +81,40 @@ and renders rich tiles for library cards and devices.
 KEY=neu_...   # the bootstrap admin key
 
 curl -s -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
-  -d '{"name":"Acme Foods"}' http://localhost:8080/api/root-systems
+  -d '{"name":"Acme Foods"}' http://localhost:8088/api/root-systems
 
-ROOT=$(curl -s -H "X-API-Key: $KEY" http://localhost:8080/api/root-systems | jq -r '.[0].id')
+ROOT=$(curl -s -H "X-API-Key: $KEY" http://localhost:8088/api/root-systems | jq -r '.[0].id')
 
 curl -s -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
-  -d "{\"root_id\":\"$ROOT\",\"name\":\"UK\"}" http://localhost:8080/api/node-systems
+  -d "{\"root_id\":\"$ROOT\",\"name\":\"UK\"}" http://localhost:8088/api/node-systems
 
-NODE=$(curl -s -H "X-API-Key: $KEY" http://localhost:8080/api/node-systems | jq -r '.[0].id')
+NODE=$(curl -s -H "X-API-Key: $KEY" http://localhost:8088/api/node-systems | jq -r '.[0].id')
 
 curl -s -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
   -d "{\"node_id\":\"$NODE\",\"name\":\"Wembley\",\"site_id\":\"wembley-1\"}" \
-  http://localhost:8080/api/edge-systems
+  http://localhost:8088/api/edge-systems
 
-EDGE=$(curl -s -H "X-API-Key: $KEY" http://localhost:8080/api/edge-systems | jq -r '.[0].id')
+EDGE=$(curl -s -H "X-API-Key: $KEY" http://localhost:8088/api/edge-systems | jq -r '.[0].id')
 
 curl -s -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
   -d "{\"edge_id\":\"$EDGE\",\"device_type\":\"pico2w\",\"compute_stable_id\":\"compute.pico2w\",\"components\":[
         {\"component_stable_id\":\"sensor.temp.ds18b20\",\"instance_id\":\"probe_a\"},
         {\"component_stable_id\":\"actuator.relay.ssr\",\"instance_id\":\"ssr_main\"},
         {\"component_stable_id\":\"actuator.heater.element\",\"instance_id\":\"element_a\"}]}" \
-  http://localhost:8080/api/devices
+  http://localhost:8088/api/devices
 
-DNA=$(curl -s -H "X-API-Key: $KEY" http://localhost:8080/api/devices | jq -r '.[0].device_dna')
+DNA=$(curl -s -H "X-API-Key: $KEY" http://localhost:8088/api/devices | jq -r '.[0].device_dna')
 
-curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8080/api/devices/$DNA/pinmap/auto
-curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8080/api/devices/$DNA/generate-dna
-curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8080/api/devices/$DNA/generate-brain-config
-curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8080/api/devices/$DNA/build-firmware-bundle
+curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8088/api/devices/$DNA/pinmap/auto
+curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8088/api/devices/$DNA/generate-dna
+curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8088/api/devices/$DNA/generate-brain-config
+curl -s -X POST -H "X-API-Key: $KEY" http://localhost:8088/api/devices/$DNA/build-firmware-bundle
 ```
 
 The bundle ends up under `master_platform/build_artifacts/<DNA>.zip` and can
 be downloaded via `/api/devices/{dna}/firmware-bundle`.
 
-## Deployment in the ShitalEco pipeline
+## Production deploy
 
-The Master Platform is shipped as a Docker image built from
-`neuron-platform/master_platform/Dockerfile`. The existing nginx/Render
-config in the ShitalEco repo can route `neuron.shital.org.uk` to this
-container on port `8080`.
+See the repo-root docs: `DEPLOY.md`, `AUTO_DEPLOY.md`,
+`docs/HOST_SETUP.md`.
