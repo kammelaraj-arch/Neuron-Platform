@@ -18,7 +18,7 @@ services:
       context: ..
       dockerfile: master_platform/Dockerfile
     image: neuron/master:0.3.0
-    container_name: neuron-master
+    container_name: ${NEURON_MASTER_CONTAINER:-neuron-master}
     restart: unless-stopped
     environment:
       NEURON_DB_URL: sqlite+aiosqlite:////app/master_platform/data/neuron.db
@@ -29,9 +29,11 @@ services:
       NEURON_BIND_PORT: 8088
       NEURON_LOG_LEVEL: info
     ports:
-      # Bind only on the docker bridge gateway. Override to "8088:8088"
-      # for direct access during local development.
-      - "${NEURON_BIND_IP:-172.17.0.1}:8088:8088"
+      # Bind on the docker bridge gateway. During parallel-stack standup,
+      # set NEURON_MASTER_BIND_PORT=8090 so the new stack runs alongside
+      # the old container on :8088. At cutover, unset the override and
+      # the new stack takes over :8088 itself.
+      - "${NEURON_BIND_IP:-172.17.0.1}:${NEURON_MASTER_BIND_PORT:-8088}:8088"
     volumes:
       - neuron_data:/app/master_platform/data
       - neuron_artifacts:/app/master_platform/build_artifacts
@@ -53,14 +55,16 @@ services:
       context: ../deployer
       dockerfile: Dockerfile
     image: neuron/deployer:0.3.0
-    container_name: neuron-deployer
+    container_name: ${NEURON_DEPLOYER_CONTAINER:-neuron-deployer}
     restart: unless-stopped
     environment:
       NEURON_DEPLOY_SECRET: ${NEURON_DEPLOY_SECRET:?NEURON_DEPLOY_SECRET must be set}
       NEURON_DEPLOY_BRANCH: ${NEURON_DEPLOY_BRANCH:-main}
       NEURON_DEPLOYER_PORT: "9090"
     ports:
-      - "${NEURON_BIND_IP:-172.17.0.1}:8089:9090"
+      # During parallel standup, set NEURON_DEPLOYER_BIND_PORT=8091 so the
+      # new deployer runs alongside any existing :8089. At cutover, unset.
+      - "${NEURON_BIND_IP:-172.17.0.1}:${NEURON_DEPLOYER_BIND_PORT:-8089}:9090"
     volumes:
       # Bind-mount the host repo so the deployer can git pull + invoke
       # deploy.sh. Default path is /opt/neuron-platform; override with

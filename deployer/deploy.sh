@@ -10,6 +10,12 @@ exec >> "$LOG" 2>&1
 echo "=== Neuron deploy started $(date) ==="
 cd /workspace
 
+# /workspace is bind-mounted from the host where it's owned by UID
+# 1001 (the neuron user), but inside this Alpine container we run as
+# root (UID 0). Without safe.directory, git aborts with "dubious
+# ownership". This is a no-op inside the container; nothing persists.
+git config --global --add safe.directory /workspace
+
 BRANCH="${NEURON_DEPLOY_BRANCH:-main}"
 
 git fetch origin "$BRANCH" --quiet || {

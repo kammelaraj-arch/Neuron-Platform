@@ -63,6 +63,10 @@ if [ ! -d "$NEURON_DIR/master_platform" ]; then
   exit 1
 fi
 
+# cd so docker compose auto-picks up master_platform/.env (NEURON_DEPLOY_SECRET,
+# NEURON_DEPLOY_BRANCH, NEURON_REPO_PATH, optional port/container overrides).
+cd "$NEURON_DIR/master_platform"
+
 # ─── 2. Build ────────────────────────────────────────────────────────────────
 step "[2/4] Building neuron-master image"
 docker compose -f "$COMPOSE" build neuron-master
