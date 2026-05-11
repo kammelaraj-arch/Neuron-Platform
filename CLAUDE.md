@@ -23,6 +23,27 @@
   the deployer container at `/tmp/deploy_key` and copied to
   `/root/.ssh/id_ed25519` at runtime by `deployer/deploy.sh`.
 
+## Architecture rules
+
+### Hierarchy flexibility (Root / Node / Edge / Device)
+
+The 4-level hierarchy described in `docs/PROJECT_MEMORY.md` is the
+**maximum** shape, not the required one. Schema and UI MUST support:
+
+- **Root → Node → Edge → Device** (full hierarchy, multi-site)
+- **Root → Edge → Device** (Node is optional; small / single-region deploys
+  skip it entirely)
+- **All-in-one** — a single host plays Root + Node + Edge simultaneously
+  for tiny deployments or test rigs. UI must let an operator stand this up
+  in one step.
+
+Implementation rule: `EdgeSystem` must accept EITHER a `node_id` OR a
+`root_id` as parent (DB check constraint: exactly one of the two is set).
+`NodeSystem` always requires a `root_id`. `Device.edge_id` stays required.
+
+The System Designer page (`/ui/systems`) must offer both placement
+options when creating an Edge ("under Node X" / "directly under Root Y").
+
 ## Durable feature requirements (from product owner)
 
 ### 1. Feature / capability request tracker
