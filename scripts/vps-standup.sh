@@ -108,12 +108,18 @@ pause
 
 # Verify SSH auth works against github.com
 step "[3/7] Verifying SSH auth to github.com"
-# ssh -T returns 1 on success (GitHub doesn't allow shells). Look for the
-# "successfully authenticated" message in stderr.
-if ssh -T -o BatchMode=yes git@github.com 2>&1 | grep -q "successfully authenticated"; then
+# `ssh -T git@github.com` always exits 1 because GitHub denies shell
+# access — even on a fully successful auth. With pipefail on, piping
+# straight to grep would propagate that 1 and fail this check. So we
+# capture first, then grep without piping.
+SSH_OUT=$(ssh -T -o BatchMode=yes git@github.com 2>&1 || true)
+if echo "$SSH_OUT" | grep -q "successfully authenticated"; then
   ok "GitHub SSH auth working"
 else
   err "GitHub did not accept the deploy key. Did you register it?"
+  err "Server said:"
+  echo "$SSH_OUT" | sed 's/^/    /'
+  err ""
   err "Test manually:  ssh -T git@github.com"
   exit 1
 fi
