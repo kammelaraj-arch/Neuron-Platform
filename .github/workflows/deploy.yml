@@ -1,0 +1,140 @@
+# ─── Neuron Platform — webhook-based auto-deploy ─────────────────────────────
+#
+# On push to a deploy branch, this workflow does ONE thing: POST to the
+# Neuron deployer webhook at https://neuron.shital.org.uk/deploy with the
+# shared secret. The webhook listener (neuron-deployer container on the
+# VPS) then runs neuron-platform/deploy.sh which:
+#   - git-fetches the deploy branch into its bind-mounted /workspace,
+#   - rebuilds + restarts the neuron-master container,
+#   - reloads (never restarts) the shared nginx.
+#
+# This workflow does NOT SSH anywhere. It does NOT have a private key.
+# Compromise of this workflow grants a single capability: trigger a
+# deploy of whatever is on the deploy branch tip. Same trust model as
+# the proven ShitalEco /deploy endpoint.
+#
+# Required GitHub Actions secret:
+#   NEURON_DEPLOY_SECRET   shared with the neuron-deployer container's
+#                          NEURON_DEPLOY_SECRET env var on the VPS.
+#
+# Optional repo/environment vars (vars:, not secrets:):
+#   NEURON_DEPLOY_URL      override webhook URL
+#                          (default https://neuron.shital.org.uk/deploy)
+#   NEURON_HEALTH_URL      override post-deploy health probe URL
+#                          (default https://neuron.shital.org.uk/healthz)
+#
+# Reversal: delete this file. No VPS state changes on revert.
+
+name: neuron-deploy
+
+on:
+  push:
+    branches:
+      - main
+      - claude/init-neuron-platform-YEIak
+    paths:
+      - 'master_platform/**'
+      - 'libraries/**'
+      - 'shared_schemas/**'
+      - 'deployer/**'
+      - 'nginx/**'
+      - 'deploy.sh'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      skip_health_check:
+        description: 'Skip the post-deploy /healthz probe (emergency only)'
+        type: boolean
+        default: false
+
+concurrency:
+  # One in-flight deploy per ref; newer pushes cancel older ones.
+  group: neuron-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Trigger webhook + verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DEPLOY_URL: ${{ vars.NEURON_DEPLOY_URL || 'https://neuron.shital.org.uk/deploy' }}
+      HEALTH_URL: ${{ vars.NEURON_HEALTH_URL || 'https://neuron.shital.org.uk/healthz' }}
+    steps:
+      - name: Guard — NEURON_DEPLOY_SECRET must be set
+        env:
+          NEURON_DEPLOY_SECRET: ${{ secrets.NEURON_DEPLOY_SECRET }}
+        run: |
+          if [ -z "${NEURON_DEPLOY_SECRET:-}" ]; then
+            echo "::error::Repository secret NEURON_DEPLOY_SECRET is not set."
+            echo "Add it at: Settings → Secrets and variables → Actions → New repository secret"
+            echo "Its value must match the neuron-deployer container's NEURON_DEPLOY_SECRET env var on the VPS."
+            exit 1
+          fi
+
+      - name: Trigger /deploy webhook
+        env:
+          NEURON_DEPLOY_SECRET: ${{ secrets.NEURON_DEPLOY_SECRET }}
+        run: |
+          set -euo pipefail
+          echo "POST ${DEPLOY_URL}"
+          # -f makes curl exit non-zero on 4xx/5xx; -S keeps errors visible
+          # under -s. Expecting 202 Accepted from the deployer.
+          http_code=$(curl -sS -o /tmp/deploy.body -w '%{http_code}' \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "${DEPLOY_URL}" \
+            -H "X-Deploy-Secret: ${NEURON_DEPLOY_SECRET}" \
+            -H "X-Trigger: github-actions" \
+            -H "X-Commit: ${GITHUB_SHA}" \
+            -H "X-Ref: ${GITHUB_REF}")
+          echo "HTTP ${http_code}"
+          cat /tmp/deploy.body || true
+          echo ""
+          if [ "${http_code}" != "202" ]; then
+            echo "::error::Webhook returned ${http_code} (expected 202). The deployer rejected the request or is unreachable."
+            exit 1
+          fi
+          echo "✓ Webhook accepted — VPS deployer is running deploy.sh in the background."
+
+      - name: Wait for /healthz to report the new build
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_health_check != true }}
+        run: |
+          set -euo pipefail
+          # The deployer runs git-fetch + docker build + container restart.
+          # Build dominates; 5 minutes is comfortable headroom.
+          deadline=$(( $(date +%s) + 300 ))
+          # 15 s grace before the first probe — deployer's just been kicked.
+          sleep 15
+          attempt=0
+          while [ "$(date +%s)" -lt "${deadline}" ]; do
+            attempt=$(( attempt + 1 ))
+            body=$(curl -sS --connect-timeout 5 --max-time 10 \
+              "${HEALTH_URL}" || true)
+            if echo "${body}" | grep -q '"status":"ok"'; then
+              echo "✓ Healthy after ${attempt} probe(s)"
+              echo "  ${body}"
+              exit 0
+            fi
+            echo "  probe ${attempt}: not ready yet"
+            sleep 10
+          done
+          echo "::error::${HEALTH_URL} never reported status=ok within 5 min."
+          echo "Last response body:"
+          echo "${body:-<empty>}"
+          exit 1
+
+      - name: Summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "### Neuron deploy"
+            echo ""
+            echo "- Webhook: \`${DEPLOY_URL}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Ref: \`${GITHUB_REF}\`"
+            echo "- Health: \`${HEALTH_URL}\`"
+            echo "- Outcome: \`${{ job.status }}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
