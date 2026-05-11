@@ -67,6 +67,10 @@ fi
 # NEURON_DEPLOY_BRANCH, NEURON_REPO_PATH, optional port/container overrides).
 cd "$NEURON_DIR/master_platform"
 
+# Explicit project name so this stack NEVER shares a namespace with any
+# other compose stack on the host, regardless of cwd.
+export COMPOSE_PROJECT_NAME=neuron
+
 # ─── 2. Build ────────────────────────────────────────────────────────────────
 step "[2/4] Building neuron-master image"
 docker compose -f "$COMPOSE" build neuron-master

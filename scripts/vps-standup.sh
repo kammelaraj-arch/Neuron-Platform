@@ -202,10 +202,16 @@ else
 fi
 
 cd "$INSTALL_DIR/master_platform"
-# .env is in CWD so docker compose auto-loads it.
+# Explicit COMPOSE_PROJECT_NAME so we NEVER share a namespace with any
+# other compose stack on this host. Without this, docker compose
+# inherits the project name from the containing directory
+# ("master_platform"), which collides with any previous compose run from
+# the same path and causes orphaned-container management to wreck
+# unrelated containers. Hard-coding "neuron" guarantees isolation.
+export COMPOSE_PROJECT_NAME=neuron
 docker compose -f "$COMPOSE_FILE" build
 docker compose -f "$COMPOSE_FILE" up -d
-ok "Stack started"
+ok "Stack started (compose project: neuron)"
 
 # ─── 7. Health check ─────────────────────────────────────────────────────────
 step "[7/7] Health check (parallel port $TEMP_MASTER_PORT)"
