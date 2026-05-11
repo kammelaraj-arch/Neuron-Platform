@@ -223,3 +223,36 @@ class AuditEvent(Base):
     target_id: Mapped[str | None] = mapped_column(String(120))
     outcome: Mapped[str] = mapped_column(String(20), default="ok")
     detail_json: Mapped[dict | None] = mapped_column(JSON)
+
+
+# ─── Feature/capability request tracker ──────────────────────────────────────
+# Product-owner-facing registry of every requested feature with a
+# lifecycle status (requested → in_dev → deployed_dev → deployed_prod
+# → rejected). Admin UI at /ui/features. See CLAUDE.md for the rules.
+FEATURE_STATUSES = (
+    "requested",
+    "in_dev",
+    "deployed_dev",
+    "deployed_prod",
+    "rejected",
+)
+FEATURE_PRIORITIES = ("low", "normal", "high", "critical")
+
+
+class FeatureRequest(Base):
+    __tablename__ = "feature_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    short_id: Mapped[str] = mapped_column(String(16), unique=True, nullable=False, index=True)  # e.g. FR-0001
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    requested_by: Mapped[str] = mapped_column(String(120), nullable=False)
+    priority: Mapped[str] = mapped_column(String(16), default="normal", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="requested", nullable=False, index=True)
+    notes: Mapped[str | None] = mapped_column(Text)
+    git_sha_dev: Mapped[str | None] = mapped_column(String(40))
+    git_sha_prod: Mapped[str | None] = mapped_column(String(40))
+    deployed_dev_at: Mapped[datetime | None] = mapped_column()
+    deployed_prod_at: Mapped[datetime | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)

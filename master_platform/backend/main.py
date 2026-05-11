@@ -24,6 +24,7 @@ from .routers import (
     auth_ui,
     devices,
     fabric,
+    features_ui,
     library,
     library_manage_ui,
     mtls,
@@ -161,6 +162,7 @@ app.include_router(ui.router)
 app.include_router(secrets_ui.router)
 app.include_router(library_manage_ui.router)
 app.include_router(sysops_ui.router)
+app.include_router(features_ui.router)
 
 # JSON API routers
 app.include_router(library.router)

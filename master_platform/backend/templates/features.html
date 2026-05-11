@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Features{% endblock %}
+{% block content %}
+  {% set status_colors = {
+    'requested':      'bg-slate-700 text-slate-200',
+    'in_dev':         'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    'deployed_dev':   'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    'deployed_prod':  'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    'rejected':       'bg-red-500/15 text-red-300 border-red-500/40',
+  } %}
+  {% set priority_colors = {
+    'low':       'text-slate-400',
+    'normal':    'text-slate-200',
+    'high':      'text-amber-300',
+    'critical':  'text-red-300',
+  } %}
+
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Feature requests</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Track every requested feature/capability from <code>requested</code> →
+        <code>in_dev</code> → <code>deployed_dev</code> → <code>deployed_prod</code>.
+      </p>
+    </div>
+    <a href="/ui/features/new"
+       class="rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+      + New request
+    </a>
+  </header>
+
+  <!-- Status filter chips -->
+  <section class="mt-6 flex flex-wrap gap-2 text-xs">
+    {% set _all_cls = 'rounded-full border border-slate-700 px-3 py-1 ' + ('bg-slate-800 text-white' if not filter_status else 'text-slate-300 hover:bg-slate-800') %}
+    <a href="/ui/features" class="{{ _all_cls }}">
+      All <span class="ml-1 text-slate-500">{{ counts.values() | sum }}</span>
+    </a>
+    {% for s in STATUSES %}
+      {% set sel = (filter_status == s) %}
+      {% set sel_cls = ('ring-1 ring-inset ring-white/20 ' if sel else '') + status_colors.get(s, 'bg-slate-700 text-slate-200') %}
+      <a href="/ui/features?status={{ s }}"
+         class="rounded-full border border-transparent px-3 py-1 {{ sel_cls }}">
+        {{ s.replace('_', ' ') }} <span class="ml-1 opacity-60">{{ counts.get(s, 0) }}</span>
+      </a>
+    {% endfor %}
+  </section>
+
+  <!-- Search -->
+  <form method="get" action="/ui/features" class="mt-4 flex flex-wrap gap-2">
+    {% if filter_status %}<input type="hidden" name="status" value="{{ filter_status }}">{% endif %}
+    {% if filter_priority %}<input type="hidden" name="priority" value="{{ filter_priority }}">{% endif %}
+    <input name="q" value="{{ filter_q }}"
+           placeholder="Search title / description / id…"
+           class="flex-1 min-w-[12rem] rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm placeholder-slate-500" />
+    <button class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">Search</button>
+    {% if filter_q or filter_status or filter_priority %}
+      <a href="/ui/features" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:bg-slate-800">Clear</a>
+    {% endif %}
+  </form>
+
+  <!-- Table -->
+  <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+        <tr>
+          <th class="px-4 py-3">ID</th>
+          <th class="px-4 py-3">Title</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Priority</th>
+          <th class="px-4 py-3">Requested by</th>
+          <th class="px-4 py-3">Created</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/70">
+        {% for r in rows %}
+          <tr class="hover:bg-slate-900/60 cursor-pointer" onclick="window.location='/ui/features/{{ r.short_id }}'">
+            <td class="px-4 py-3 font-mono text-xs whitespace-nowrap">
+              <a href="/ui/features/{{ r.short_id }}" class="text-emerald-300 hover:underline">{{ r.short_id }}</a>
+            </td>
+            <td class="px-4 py-3 max-w-[24rem]">
+              <div class="font-medium">{{ r.title }}</div>
+              {% if r.description %}
+                <div class="text-xs text-slate-500 line-clamp-2">{{ r.description }}</div>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <span class="inline-block whitespace-nowrap rounded-full border border-transparent px-2 py-0.5 text-[11px] {{ status_colors.get(r.status, 'bg-slate-700') }}">
+                {{ r.status.replace('_', ' ') }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-xs {{ priority_colors.get(r.priority, 'text-slate-300') }}">{{ r.priority }}</td>
+            <td class="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{{ r.requested_by }}</td>
+            <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 italic">
+            {% if filter_q or filter_status or filter_priority %}No matches.{% else %}No feature requests yet — <a class="text-emerald-300 underline" href="/ui/features/new">create the first</a>.{% endif %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}
