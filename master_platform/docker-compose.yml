@@ -73,6 +73,13 @@ services:
       # Docker socket so deploy.sh can rebuild + restart the Neuron
       # stack via the host docker daemon.
       - /var/run/docker.sock:/var/run/docker.sock
+      # SSH deploy key for `git fetch origin <branch>` inside the
+      # container. Mounted read-only at a staging path; deploy.sh
+      # copies it into /root/.ssh/id_ed25519 with chmod 600 on each run
+      # (SSH refuses to use keys with lax perms, and a bind-mount keeps
+      # host UID 1001/neuron — root inside the container can read it,
+      # but SSH still wants strict 600 ownership).
+      - ${NEURON_DEPLOY_KEY:-/home/neuron/.ssh/neuron_platform_deploy}:/tmp/deploy_key:ro
     networks:
       - neuron_internal
     healthcheck:

@@ -1,9 +1,8 @@
 FROM python:3.12-alpine
 
-# git + bash for the deploy.sh wrapper, docker-cli + compose for the
-# Neuron stack restart. No PII, no app code — this image only owns the
-# webhook listener and the shell wrapper.
-RUN apk add --no-cache docker-cli docker-cli-compose git bash curl
+# git over SSH for the auto-deploy fetch, plus bash, docker-cli, and
+# docker-cli-compose so deploy.sh can rebuild + restart the Neuron stack.
+RUN apk add --no-cache docker-cli docker-cli-compose git bash curl openssh-client
 
 WORKDIR /app
 COPY server.py .

@@ -16,6 +16,22 @@ cd /workspace
 # ownership". This is a no-op inside the container; nothing persists.
 git config --global --add safe.directory /workspace
 
+# Stage the SSH deploy key into /root/.ssh with strict perms. The host
+# mounts the key read-only at /tmp/deploy_key; SSH refuses keys whose
+# owner UID differs from the runtime user (root here) or whose perms
+# aren't 600, so we copy rather than symlink. Idempotent.
+if [ -f /tmp/deploy_key ]; then
+  mkdir -p /root/.ssh
+  chmod 700 /root/.ssh
+  install -m 600 /tmp/deploy_key /root/.ssh/id_ed25519
+  export GIT_SSH_COMMAND="ssh -i /root/.ssh/id_ed25519 \
+    -o IdentitiesOnly=yes \
+    -o StrictHostKeyChecking=accept-new \
+    -o UserKnownHostsFile=/root/.ssh/known_hosts"
+else
+  echo "::warning::no /tmp/deploy_key mounted; git fetch will use host defaults"
+fi
+
 BRANCH="${NEURON_DEPLOY_BRANCH:-main}"
 
 git fetch origin "$BRANCH" --quiet || {
