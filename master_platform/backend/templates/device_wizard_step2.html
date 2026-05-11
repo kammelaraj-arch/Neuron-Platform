@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Device wizard · Compute{% endblock %}
+{% block content %}
+  {% include "_wizard_header.html" %}
+
+  <form method="post" action="/ui/devices/wizard/{{ group.id }}/compute" class="space-y-6">
+    <div>
+      <h2 class="text-lg font-semibold">2. Pick the compute module</h2>
+      <p class="mt-1 text-sm text-slate-400">
+        One compute module per group. It owns all the GPIO pins and runs the
+        brain that drives the boards.
+      </p>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {% for c in computes %}
+        {% set sel = (group.compute_stable_id == c.stable_id) %}
+        <label class="group relative cursor-pointer rounded-2xl border bg-slate-900/40 p-4 transition
+                      {% if sel %}border-emerald-400 shadow-[0_0_18px_-4px_rgba(16,185,129,0.6)]
+                      {% else %}border-slate-800 hover:border-emerald-500/60{% endif %}">
+          <input type="radio" name="compute_stable_id" value="{{ c.stable_id }}"
+                 {% if sel %}checked{% endif %} required class="sr-only peer">
+          <!-- selected ring -->
+          <div class="absolute inset-0 rounded-2xl pointer-events-none peer-checked:ring-2 peer-checked:ring-emerald-400"></div>
+
+          <!-- SVG silhouette: compute board with pin dots -->
+          <svg viewBox="0 0 160 110" class="mb-3 w-full">
+            <defs>
+              <linearGradient id="gx-{{ loop.index }}" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%"  stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#1e293b"/>
+              </linearGradient>
+            </defs>
+            <rect x="14" y="14" width="132" height="82" rx="8"
+                  fill="url(#gx-{{ loop.index }})"
+                  stroke="{% if sel %}#34d399{% else %}#334155{% endif %}" stroke-width="1.5"/>
+            <!-- chip -->
+            <rect x="60" y="40" width="40" height="30" rx="3" fill="#020617" stroke="#64748b" stroke-width="0.6"/>
+            <text x="80" y="59" font-size="6" text-anchor="middle"
+                  fill="{% if sel %}#34d399{% else %}#94a3b8{% endif %}" font-family="ui-monospace">MCU</text>
+            <!-- pin rings: top + bottom -->
+            {% for i in range(20) %}
+              <circle cx="{{ 24 + i*6 }}" cy="14" r="1.4" fill="{% if sel %}#34d399{% else %}#475569{% endif %}"/>
+              <circle cx="{{ 24 + i*6 }}" cy="96" r="1.4" fill="{% if sel %}#34d399{% else %}#475569{% endif %}"/>
+            {% endfor %}
+          </svg>
+
+          <div class="flex items-baseline justify-between gap-2">
+            <div class="font-semibold text-sm">{{ c.name }}</div>
+            <span class="text-[10px] font-mono text-slate-500">v{{ c.version }}</span>
+          </div>
+          <div class="mt-1 font-mono text-[10px] text-cyan-300">{{ c.stable_id }}</div>
+          <div class="mt-2 text-xs text-slate-400 line-clamp-3">
+            {{ c.manifest.get('description', '') }}
+          </div>
+        </label>
+      {% else %}
+        <p class="text-sm text-slate-500 italic col-span-full">No micro-compute modules in the catalog yet.</p>
+      {% endfor %}
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">Hardware revision</label>
+      <input name="hardware_revision" value="{{ group.hardware_revision or 'rev_a' }}" maxlength="40"
+             class="mt-1 w-48 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+    </div>
+
+    <div class="flex gap-3">
+      <a href="/ui/devices/wizard" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">← Back</a>
+      <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">Continue →</button>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,39 @@
+{# Shared wizard header — neon progress strip + step titles. #}
+{# Pass: steps (list of (key,label)), step_idx (int), group (optional). #}
+<header class="mb-8">
+  <div class="flex flex-wrap items-baseline justify-between gap-3">
+    <h1 class="text-3xl font-semibold tracking-tight">
+      <span class="bg-gradient-to-br from-emerald-300 to-cyan-400 bg-clip-text text-transparent">
+        Device Wizard
+      </span>
+    </h1>
+    {% if group %}
+      <div class="text-xs text-slate-400 font-mono">
+        group: <span class="text-emerald-300">{{ group.name }}</span> ·
+        <span class="text-slate-500">{{ group.id[:8] }}</span>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Step indicator: glow on current, line connecting dots -->
+  <ol class="mt-5 grid gap-3 grid-cols-3 sm:grid-cols-6 text-[11px] uppercase tracking-wider">
+    {% for key, label in steps %}
+      {% set is_done = loop.index0 < step_idx %}
+      {% set is_now = loop.index0 == step_idx %}
+      <li class="relative flex flex-col items-center text-center">
+        <div class="relative z-10 mb-1 grid h-9 w-9 place-items-center rounded-full border
+                    {% if is_now %}border-emerald-400 bg-emerald-500/10 text-emerald-300 shadow-[0_0_18px_-2px_rgba(16,185,129,0.7)]
+                    {% elif is_done %}border-cyan-500 bg-cyan-500/10 text-cyan-300
+                    {% else %}border-slate-700 bg-slate-900 text-slate-500{% endif %}
+                    font-mono font-semibold">
+          {% if is_done %}✓{% else %}{{ loop.index }}{% endif %}
+        </div>
+        <span class="{% if is_now %}text-emerald-300{% elif is_done %}text-cyan-300{% else %}text-slate-500{% endif %}">{{ label }}</span>
+        {% if not loop.last %}
+          <span class="pointer-events-none absolute top-[18px] left-[calc(50%+24px)] hidden sm:block h-[1px] w-[calc(100%-48px)]
+                      {% if is_done %}bg-cyan-500/40{% else %}bg-slate-800{% endif %}"></span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</header>

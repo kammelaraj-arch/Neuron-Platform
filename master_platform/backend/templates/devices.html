@@ -25,8 +25,32 @@
         No edges yet. <a class="text-emerald-300 underline" href="/ui/systems">Create a Root → Node → Edge</a> first, then come back here.
       </div>
     {% else %}
-      <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
-        <h2 class="font-semibold">+ Register a new device</h2>
+      <!-- New step-wise wizard CTA (FR-0005) — replaces the flat form long-term -->
+      <section class="mt-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 to-cyan-500/5 p-5
+                      shadow-[0_0_30px_-12px_rgba(16,185,129,0.5)]">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+              <span class="bg-gradient-to-br from-emerald-300 to-cyan-400 bg-clip-text text-transparent">
+                Device Wizard
+              </span>
+              <span class="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[10px] font-mono">NEW</span>
+            </h2>
+            <p class="mt-1 text-xs text-slate-300">
+              Step-wise: Edge → Group → Compute → Boards → Components → GPIO Pin Map.
+              Sleek digital-twin UI. <em>Use this for new devices.</em>
+            </p>
+          </div>
+          <a href="/ui/devices/wizard"
+             class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+            Launch wizard →
+          </a>
+        </div>
+      </section>
+
+      <details class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+        <summary class="cursor-pointer font-semibold text-sm text-slate-300">+ Legacy flat form (single-board devices)</summary>
+        <h2 class="mt-4 font-semibold">+ Register a new device</h2>
         <form method="post" action="/ui/devices/new" class="mt-4 grid gap-3 md:grid-cols-2 text-sm">
           <label class="block">Edge
             <select name="edge_id" required class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
@@ -68,7 +92,7 @@
             <button class="rounded-lg bg-emerald-500 px-5 py-2 font-medium text-slate-950 hover:bg-emerald-400">Register device</button>
           </div>
         </form>
-      </section>
+      </details>
     {% endif %}
   {% endif %}
 

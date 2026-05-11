@@ -22,6 +22,7 @@ from .routers import (
     apikeys,
     audit,
     auth_ui,
+    device_wizard_ui,
     devices,
     fabric,
     features_ui,
@@ -241,6 +242,7 @@ app.include_router(library_manage_ui.router)
 app.include_router(sysops_ui.router)
 app.include_router(features_ui.router)
 app.include_router(functions_ui.router)
+app.include_router(device_wizard_ui.router)
 
 # JSON API routers
 app.include_router(library.router)
