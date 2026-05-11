@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═════════════════════════════════════════════════════════════════════════════
 #  Neuron Master Platform — Deploy
-#  Pipeline end-to-end verified: 2026-05-11
+#  Pipeline end-to-end verified: 2026-05-11 (retry)
 #
 #  Standalone. Builds and restarts only the Neuron stack defined in
 #  master_platform/docker-compose.yml. Does NOT touch any external
