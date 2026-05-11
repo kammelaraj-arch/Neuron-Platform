@@ -1,0 +1,10 @@
+[Unit]
+Description=Re-stage Neuron nginx vhost if drifted (defends against host-deployer wipes)
+Wants=neuron-vhost-watchdog.timer
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/neuron-vhost-watchdog
+StandardOutput=journal
+StandardError=journal
