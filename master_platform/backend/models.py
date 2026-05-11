@@ -265,6 +265,11 @@ FUNCTION_LANGUAGES = (
     "json",
     "other",
 )
+# Criticality ladder matches shared_schemas/*.json safety_class so a
+# function's blast-radius lines up with the existing edge alarm /
+# allow-list machinery. AI Agent must NEVER auto-invoke critical or
+# life_safety functions without an explicit human-in-the-loop override.
+FUNCTION_CRITICALITIES = ("nominal", "advisory", "critical", "life_safety")
 
 
 class FeatureRequest(Base):
@@ -305,6 +310,10 @@ class CodeFunction(Base):
     source_path: Mapped[str | None] = mapped_column(String(300))
     tags_json: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(16), default="stable", nullable=False, index=True)
+    criticality: Mapped[str] = mapped_column(String(20), default="nominal", nullable=False, index=True)
+    # AI Agent composability flag: True = the AI Agent may pick this
+    # function up automatically when building a plan; False = humans only.
+    agent_accessible: Mapped[bool] = mapped_column(default=True, nullable=False)
     example: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)

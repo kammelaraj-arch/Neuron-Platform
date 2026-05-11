@@ -6,6 +6,12 @@
     'stable':      'bg-emerald-500/15 text-emerald-300',
     'deprecated':  'bg-slate-700 text-slate-400 line-through',
   } %}
+  {% set crit_colors = {
+    'nominal':      'bg-slate-700 text-slate-200',
+    'advisory':     'bg-cyan-500/20 text-cyan-300',
+    'critical':     'bg-amber-500/20 text-amber-300',
+    'life_safety':  'bg-red-500/20 text-red-300',
+  } %}
 
   <header class="flex flex-wrap items-end justify-between gap-3">
     <div>
@@ -54,8 +60,10 @@
       <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
         <tr>
           <th class="px-4 py-3">Name</th>
-          <th class="px-4 py-3">Language</th>
+          <th class="px-4 py-3">Lang</th>
           <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Criticality</th>
+          <th class="px-4 py-3">AI</th>
           <th class="px-4 py-3">API endpoint</th>
           <th class="px-4 py-3">Source</th>
           <th class="px-4 py-3">Tags</th>
@@ -72,6 +80,8 @@
             </td>
             <td class="px-4 py-3 text-xs"><span class="rounded bg-slate-800 px-2 py-0.5 font-mono">{{ r.language }}</span></td>
             <td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-[11px] {{ status_colors.get(r.status, 'bg-slate-700') }}">{{ r.status }}</span></td>
+            <td class="px-4 py-3"><span class="rounded-full px-2 py-0.5 text-[11px] {{ crit_colors.get(r.criticality, 'bg-slate-700') }}">{{ r.criticality }}</span></td>
+            <td class="px-4 py-3 text-center">{% if r.agent_accessible %}<span title="AI Agent may use this">🤖</span>{% else %}<span class="text-slate-600" title="human-only">·</span>{% endif %}</td>
             <td class="px-4 py-3 font-mono text-xs text-cyan-300">{{ r.api_endpoint or '—' }}</td>
             <td class="px-4 py-3 font-mono text-[11px] text-slate-400">{{ r.source_path or '—' }}</td>
             <td class="px-4 py-3 text-xs">
@@ -80,7 +90,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 italic">
+          <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 italic">
             {% if filter_q or filter_status or filter_language %}No matches.{% else %}No functions catalogued yet — <a class="text-emerald-300 underline" href="/ui/functions/new">add the first</a>.{% endif %}
           </td></tr>
         {% endfor %}

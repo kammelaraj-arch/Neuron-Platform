@@ -26,12 +26,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
 from ..models import (
+    FUNCTION_CRITICALITIES,
     FUNCTION_LANGUAGES,
     FUNCTION_STATUSES,
     APIKey,
     CodeFunction,
 )
 from ..security.audit import record
+from ..security.auth import require_scopes
 from ..security.ui_auth import ui_require_admin
 
 
@@ -109,6 +111,7 @@ async def functions_page(
             "filter_q": q or "",
             "STATUSES": FUNCTION_STATUSES,
             "LANGUAGES": FUNCTION_LANGUAGES,
+            "CRITICALITIES": FUNCTION_CRITICALITIES,
         },
     )
 
@@ -125,6 +128,7 @@ async def function_new_page(
             "row": None,
             "STATUSES": FUNCTION_STATUSES,
             "LANGUAGES": FUNCTION_LANGUAGES,
+            "CRITICALITIES": FUNCTION_CRITICALITIES,
         },
     )
 
@@ -143,6 +147,8 @@ async def _upsert_function(
     source_path: str,
     tags_raw: str,
     status: str,
+    criticality: str,
+    agent_accessible: bool,
     example: str,
 ) -> CodeFunction:
     name = name.strip().lower().replace(" ", "-")
@@ -152,6 +158,8 @@ async def _upsert_function(
         raise HTTPException(400, f"invalid language: {language}")
     if status not in FUNCTION_STATUSES:
         raise HTTPException(400, f"invalid status: {status}")
+    if criticality not in FUNCTION_CRITICALITIES:
+        raise HTTPException(400, f"invalid criticality: {criticality}")
     inputs = _parse_json_list(inputs_raw, "inputs_json")
     outputs = _parse_json_list(outputs_raw, "outputs_json")
     tags = _parse_tags(tags_raw)
@@ -170,6 +178,8 @@ async def _upsert_function(
             source_path=source_path.strip() or None,
             tags_json=tags,
             status=status,
+            criticality=criticality,
+            agent_accessible=agent_accessible,
             example=example.strip() or None,
         )
         session.add(row)
@@ -177,7 +187,8 @@ async def _upsert_function(
         await record(
             session, actor=actor.id, actor_kind="ui_session",
             action="function.create", target_kind="code_function", target_id=row.name,
-            detail={"language": language, "status": status},
+            detail={"language": language, "status": status,
+                    "criticality": criticality, "agent_accessible": agent_accessible},
         )
         return row
     else:
@@ -189,11 +200,14 @@ async def _upsert_function(
         existing.source_path = source_path.strip() or None
         existing.tags_json = tags
         existing.status = status
+        existing.criticality = criticality
+        existing.agent_accessible = agent_accessible
         existing.example = example.strip() or None
         await record(
             session, actor=actor.id, actor_kind="ui_session",
             action="function.update", target_kind="code_function", target_id=existing.name,
-            detail={"language": language, "status": status},
+            detail={"language": language, "status": status,
+                    "criticality": criticality, "agent_accessible": agent_accessible},
         )
         return existing
 
@@ -210,6 +224,8 @@ async def function_create(
     source_path: str = Form(""),
     tags: str = Form(""),
     status: str = Form("stable"),
+    criticality: str = Form("nominal"),
+    agent_accessible: str = Form(""),
     example: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_admin),
@@ -219,7 +235,10 @@ async def function_create(
         name=name, description=description, language=language,
         inputs_raw=inputs_json, outputs_raw=outputs_json,
         api_endpoint=api_endpoint, source_path=source_path,
-        tags_raw=tags, status=status, example=example,
+        tags_raw=tags, status=status,
+        criticality=criticality,
+        agent_accessible=(agent_accessible.lower() in ("on", "true", "1", "yes")),
+        example=example,
     )
     await session.commit()
     return RedirectResponse(f"/ui/functions/{row.name}", status_code=303)
@@ -244,6 +263,7 @@ async def function_detail_page(
             "row": row,
             "STATUSES": FUNCTION_STATUSES,
             "LANGUAGES": FUNCTION_LANGUAGES,
+            "CRITICALITIES": FUNCTION_CRITICALITIES,
             "inputs_pretty": json.dumps(row.inputs_json or [], indent=2),
             "outputs_pretty": json.dumps(row.outputs_json or [], indent=2),
             "tags_pretty": ", ".join(row.tags_json or []),
@@ -263,6 +283,8 @@ async def function_update(
     source_path: str = Form(""),
     tags: str = Form(""),
     status: str = Form("stable"),
+    criticality: str = Form("nominal"),
+    agent_accessible: str = Form(""),
     example: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_admin),
@@ -277,10 +299,99 @@ async def function_update(
         name=row.name, description=description, language=language,
         inputs_raw=inputs_json, outputs_raw=outputs_json,
         api_endpoint=api_endpoint, source_path=source_path,
-        tags_raw=tags, status=status, example=example,
+        tags_raw=tags, status=status,
+        criticality=criticality,
+        agent_accessible=(agent_accessible.lower() in ("on", "true", "1", "yes")),
+        example=example,
     )
     await session.commit()
     return RedirectResponse(f"/ui/functions/{row.name}", status_code=303)
+
+
+# ─── AI Agent-facing JSON API ────────────────────────────────────────────────
+# The AI Agent composes plans by picking functions from this catalog like
+# Lego bricks. It must NEVER auto-invoke functions where:
+#   - criticality is "critical" or "life_safety" (human approval required), OR
+#   - agent_accessible is False (humans only, for any reason).
+# Both flags are enforced by callers (recipe builder, intent resolver,
+# etc.); this endpoint is read-only.
+@router.get("/api/functions", tags=["ai-agent", "functions"])
+async def api_list_functions(
+    status: Optional[str] = None,
+    language: Optional[str] = None,
+    criticality: Optional[str] = None,
+    tag: Optional[str] = None,
+    agent_only: bool = True,
+    q: Optional[str] = None,
+    session: AsyncSession = Depends(get_session),
+    _: APIKey = Depends(require_scopes("library:read")),
+):
+    """Catalog of reusable functions for AI Agent composition.
+
+    Default behaviour: returns only functions marked
+    ``agent_accessible=True`` and status='stable'. Pass ``agent_only=false``
+    to include human-only and draft/deprecated entries (useful for the
+    admin agent that audits the catalog itself).
+    """
+    stmt = select(CodeFunction)
+    if status and status in FUNCTION_STATUSES:
+        stmt = stmt.where(CodeFunction.status == status)
+    elif agent_only:
+        stmt = stmt.where(CodeFunction.status == "stable")
+    if language and language in FUNCTION_LANGUAGES:
+        stmt = stmt.where(CodeFunction.language == language)
+    if criticality and criticality in FUNCTION_CRITICALITIES:
+        stmt = stmt.where(CodeFunction.criticality == criticality)
+    if agent_only:
+        stmt = stmt.where(CodeFunction.agent_accessible.is_(True))
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(
+            (CodeFunction.name.ilike(like))
+            | (CodeFunction.description.ilike(like))
+            | (CodeFunction.api_endpoint.ilike(like))
+        )
+    stmt = stmt.order_by(CodeFunction.name)
+    rows = (await session.execute(stmt)).scalars().all()
+    if tag:
+        rows = [r for r in rows if tag in (r.tags_json or [])]
+
+    return [_function_to_dict(r) for r in rows]
+
+
+@router.get("/api/functions/{name}", tags=["ai-agent", "functions"])
+async def api_get_function(
+    name: str,
+    session: AsyncSession = Depends(get_session),
+    _: APIKey = Depends(require_scopes("library:read")),
+):
+    """Full spec of one function: inputs, outputs, API surface, source,
+    criticality, and example. The AI Agent uses this to format calls.
+    """
+    row = (
+        await session.execute(select(CodeFunction).where(CodeFunction.name == name))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(404, "function not found")
+    return _function_to_dict(row)
+
+
+def _function_to_dict(r: CodeFunction) -> dict:
+    return {
+        "name": r.name,
+        "description": r.description,
+        "language": r.language,
+        "inputs": r.inputs_json or [],
+        "outputs": r.outputs_json or [],
+        "api_endpoint": r.api_endpoint,
+        "source_path": r.source_path,
+        "tags": r.tags_json or [],
+        "status": r.status,
+        "criticality": r.criticality,
+        "agent_accessible": r.agent_accessible,
+        "example": r.example,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+    }
 
 
 @router.post("/ui/functions/{name}/delete")

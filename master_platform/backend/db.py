@@ -56,6 +56,19 @@ def _apply_lightweight_migrations(sync_conn) -> None:
     if not _has_column("edge_systems", "root_id"):
         sync_conn.exec_driver_sql("ALTER TABLE edge_systems ADD COLUMN root_id VARCHAR(36)")
 
+    # 2026-05: criticality + AI-agent-accessibility on code_functions.
+    # Every catalogued function declares its blast radius and whether
+    # the AI Agent may auto-invoke it.
+    if _has_table("code_functions"):
+        if not _has_column("code_functions", "criticality"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE code_functions ADD COLUMN criticality VARCHAR(20) NOT NULL DEFAULT 'nominal'"
+            )
+        if not _has_column("code_functions", "agent_accessible"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE code_functions ADD COLUMN agent_accessible BOOLEAN NOT NULL DEFAULT 1"
+            )
+
 
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
