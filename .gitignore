@@ -1,0 +1,24 @@
+# Stray runtime artifacts that some test or local boot may leave at the
+# neuron-platform/ root if it happened to run with the wrong cwd. The
+# real per-app data lives in master_platform/data/ and edge_runtime/data/
+# (each app already has its own .gitignore).
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Virtual environments
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor scratch
+.vscode/
+.idea/
+*.swp
+.DS_Store

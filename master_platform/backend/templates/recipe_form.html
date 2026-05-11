@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if mode == 'edit' else 'New' }} recipe{% endblock %}
+{% block content %}
+  <header class="flex items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ 'Edit' if mode == 'edit' else 'New' }} recipe</h1>
+      <p class="text-slate-400 text-sm">Recipes drive the Brain via desired-state updates. Same shape as <code>libraries/digital_twin_controls_library/recipes/*.json</code> but stored in the DB and editable here.</p>
+    </div>
+    <a href="/ui/processes" class="text-slate-400 hover:text-white text-sm">← Back</a>
+  </header>
+
+  {% if error %}
+    <div class="mt-4 rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-sm text-red-200">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ '/ui/recipes/edit/' ~ row.id if mode == 'edit' else '/ui/recipes/new' }}" class="mt-6 space-y-4">
+    {% if mode == 'edit' %}
+      <div class="text-sm text-slate-400">recipe_id: <code class="text-slate-200">{{ row.recipe_id }}</code> (immutable)</div>
+    {% else %}
+      <div class="text-sm text-slate-400">Set <code class="text-slate-200">recipe_id</code> in the JSON below — must be unique.</div>
+    {% endif %}
+
+    <label class="block text-sm">
+      <span class="text-slate-300">Recipe JSON</span>
+      <textarea name="recipe_text" rows="22" spellcheck="false"
+                class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs leading-relaxed">{{ recipe_text }}</textarea>
+    </label>
+
+    <label class="block text-sm">
+      <span class="text-slate-300">Notes (optional)</span>
+      <input name="notes" value="{{ row.notes if row else '' }}" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+    </label>
+
+    <div class="flex items-center justify-between gap-3">
+      <details class="text-xs text-slate-400">
+        <summary class="cursor-pointer">Action reference</summary>
+        <ul class="mt-2 space-y-1">
+          <li><code class="text-emerald-300">set_state</code> — push twin <code>desired.state</code> (and <code>setpoint_c</code> when state=PREHEAT)</li>
+          <li><code class="text-emerald-300">wait_minutes</code> — sleep the recipe N minutes; supports <code>${params.hold_minutes}</code></li>
+          <li><code class="text-emerald-300">await</code> — wait until <code>args.expr</code> is true on the reported twin (poll-based)</li>
+        </ul>
+      </details>
+      <button class="rounded-lg bg-emerald-500 px-5 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">{{ 'Save changes' if mode == 'edit' else 'Create recipe' }}</button>
+    </div>
+  </form>
+{% endblock %}

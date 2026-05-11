@@ -1,0 +1,43 @@
+{
+  "stable_id": "compute.pico_2",
+  "name": "Raspberry Pi Pico 2",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "micropython_devices",
+  "description": "RP2350 dual Cortex-M33 at 150 MHz with optional dual RISC-V Hazard3 cores, 520 KB SRAM, 4 MB flash. MicroPython runtime, 26 multi-function GPIO, 4× ADC. No on-board wireless.",
+  "tags": ["pico", "rp2350", "micropython", "wired"],
+  "image": { "asset": "../micropython_devices/pico_2.svg", "alt": "Raspberry Pi Pico 2" },
+  "capabilities": [
+    "gpio_x26", "adc_x4", "i2c_x2", "spi_x2", "uart_x2", "pwm", "mqtt_client_via_host"
+  ],
+  "interfaces": [
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0 },
+    { "type": "USB", "direction": "bidir" }
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 10,
+    "current_ma_typical": 60, "current_ma_peak": 180, "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "micropython", "module": "machine", "version_range": ">=1.23.0" }
+  ],
+  "self_tests": [
+    { "id": "boot_ok", "name": "Boot to REPL", "blocking": true, "steps": ["measure boot time"], "expected": "<5s" }
+  ],
+  "compatibility": {
+    "boards": ["board.motor.l298n", "board.relay.generic.4ch", "board.servo.pca9685"],
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control"]
+  },
+  "metadata": {
+    "soc": "RP2350",
+    "cpu_mhz": 150,
+    "ram_kib": 520,
+    "flash_mb": 4,
+    "wireless": null,
+    "pin_count": 26,
+    "adc_pins": ["GP26", "GP27", "GP28", "GP29"],
+    "default_i2c": { "sda": "GP4", "scl": "GP5" }
+  }
+}

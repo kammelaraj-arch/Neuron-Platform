@@ -1,0 +1,31 @@
+{
+  "stable_id": "camera.module.placeholder",
+  "name": "Generic Camera Module (placeholder)",
+  "vendor": "Generic",
+  "version": "0.1.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "rgb",
+  "description": "Placeholder camera definition; concrete drivers are added per host (CSI/USB).",
+  "tags": ["camera", "placeholder"],
+  "capabilities": ["frame_capture"],
+  "interfaces": [
+    { "type": "USB", "direction": "bidir", "pins_required": 0 }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "current_ma_typical": 250,
+    "current_ma_peak": 500,
+    "power_source": "bus"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "v4l-utils", "version_range": ">=1.20" }
+  ],
+  "self_tests": [
+    { "id": "enumerate", "name": "Camera enumerated by host", "steps": ["list /dev/video*"], "expected": "at least 1 device" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5", "compute.ai_edge.coral"]
+  }
+}

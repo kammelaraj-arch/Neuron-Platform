@@ -1,0 +1,32 @@
+{
+  "stable_id": "api.webhook.outbound",
+  "name": "Outbound Webhook (signed)",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "api_library",
+  "category": "integrations",
+  "description": "Generic outbound webhook integration: HMAC-signed POST to a configured URL when a twin event matches the filter. Honoured by Edge outbound allowlist.",
+  "tags": ["webhook", "http", "integration"],
+  "capabilities": ["http_post", "hmac_sign", "retry_with_backoff"],
+  "interfaces": [
+    { "type": "HTTP", "direction": "out" }
+  ],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "cpython", "module": "httpx", "version_range": ">=0.27,<1" }
+  ],
+  "self_tests": [
+    { "id": "dry_run_sign", "name": "HMAC signs deterministically", "steps": ["sign sample payload"], "expected": "stable signature" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.alarm_model"]
+  },
+  "metadata": {
+    "config_fields": {
+      "url": "https",
+      "secret_kid": "string",
+      "events": "array<string>"
+    }
+  }
+}

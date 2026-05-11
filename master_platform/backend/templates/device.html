@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}{{ device.device_dna if device else "Device" }}{% endblock %}
+{% block content %}
+  {% if not device %}
+    <div class="rounded-xl border border-amber-700/40 bg-amber-500/10 p-4 text-amber-200">Device not found.</div>
+  {% else %}
+    <header class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-xs font-mono text-emerald-300">{{ device.device_dna }}</div>
+        <h1 class="text-2xl font-semibold tracking-tight">{{ device.compute_stable_id }}</h1>
+        <p class="text-slate-400 text-sm">type={{ device.device_type }} · hw={{ device.hardware_revision }} · base={{ device.base_firmware_version }} · app={{ device.app_bundle_version }} · cfg={{ device.config_schema_version }}</p>
+      </div>
+      <a href="/ui/devices/{{ device.device_dna }}/ota" class="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-emerald-400 hover:text-emerald-300">OTA →</a>
+    </header>
+
+    {% if signed_in and not device.firmware_bundle_path %}
+      <section class="mt-4 rounded-2xl border border-emerald-700/40 bg-emerald-500/5 p-4">
+        <h2 class="text-sm font-semibold text-emerald-200">Build pipeline</h2>
+        <p class="mt-1 text-xs text-emerald-200/80">Run these in order to take the device from registered → flashable. Each step records an audit event.</p>
+        <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+          <form method="post" action="/ui/devices/{{ device.device_dna }}/pinmap-auto">
+            <button class="w-full rounded-md border border-slate-700 px-3 py-2 hover:border-emerald-400 hover:text-emerald-300 {% if device.pinmap_json %}bg-emerald-500/10 border-emerald-500/40{% endif %}">{% if device.pinmap_json %}✓{% else %}1.{% endif %} Auto pin map</button>
+          </form>
+          <form method="post" action="/ui/devices/{{ device.device_dna }}/generate-dna">
+            <button class="w-full rounded-md border border-slate-700 px-3 py-2 hover:border-emerald-400 hover:text-emerald-300 {% if device.dna_json and device.dna_json.fingerprint %}bg-emerald-500/10 border-emerald-500/40{% endif %}">{% if device.dna_json and device.dna_json.fingerprint %}✓{% else %}2.{% endif %} Generate DNA</button>
+          </form>
+          <form method="post" action="/ui/devices/{{ device.device_dna }}/generate-brain">
+            <button class="w-full rounded-md border border-slate-700 px-3 py-2 hover:border-emerald-400 hover:text-emerald-300 {% if device.brain_json %}bg-emerald-500/10 border-emerald-500/40{% endif %}">{% if device.brain_json %}✓{% else %}3.{% endif %} Generate Brain</button>
+          </form>
+          <form method="post" action="/ui/devices/{{ device.device_dna }}/build-firmware">
+            <button class="w-full rounded-md border border-slate-700 px-3 py-2 hover:border-emerald-400 hover:text-emerald-300">4. Build firmware</button>
+          </form>
+        </div>
+      </section>
+    {% endif %}
+
+    <div id="alarm-host" class="mt-4"></div>
+
+    <section id="status-bar" class="mt-4 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-2 text-xs">
+      <div class="flex items-center gap-2">
+        <span id="live-dot" class="inline-block h-2 w-2 rounded-full bg-slate-600"></span>
+        <span id="live-label" class="uppercase tracking-widest text-slate-400">connecting…</span>
+      </div>
+      <span id="live-meta" class="font-mono text-slate-500">—</span>
+    </section>
+
+    <section id="widgets-host" class="mt-4 grid gap-4 md:grid-cols-2"></section>
+
+    <details class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+      <summary class="cursor-pointer text-sm font-semibold text-slate-300">Raw twin payload</summary>
+      <pre id="twin-raw" class="mt-3 max-h-64 overflow-auto rounded-lg bg-slate-950/80 p-3 text-[11px] text-emerald-100">awaiting first frame…</pre>
+    </details>
+
+    <script src="/static/widgets.js"></script>
+    <script>
+    (function () {
+      const dna = "{{ device.device_dna }}";
+      const twinControls = {{ device.dna_json.twin_controls | tojson if device.dna_json and device.dna_json.twin_controls else '[]' }};
+
+      const widgetsHost = document.getElementById("widgets-host");
+      const alarmHost   = document.getElementById("alarm-host");
+      const liveDot     = document.getElementById("live-dot");
+      const liveLabel   = document.getElementById("live-label");
+      const liveMeta    = document.getElementById("live-meta");
+      const rawPre      = document.getElementById("twin-raw");
+
+      const widgets = [];
+      twinControls.forEach((tid) => {
+        const host = document.createElement("div");
+        widgetsHost.appendChild(host);
+        const w = NeuronWidgets.create(tid, host);
+        if (w) widgets.push(w);
+      });
+      if (widgets.length === 0) {
+        widgetsHost.innerHTML = '<div class="text-xs text-slate-500 italic">No twin controls declared on this DNA — assign components and regenerate the DNA to see live widgets.</div>';
+      }
+      const alarm = NeuronWidgets.AlarmBanner(alarmHost);
+
+      function setOnline(reason, color, label) {
+        liveDot.style.background = color;
+        liveDot.classList.toggle("animate-pulse", color === "#1FB95A");
+        liveLabel.textContent = label;
+        liveMeta.textContent = reason || "";
+      }
+
+      const es = new EventSource(`/api/devices/${dna}/twin/stream`);
+      es.onmessage = (ev) => {
+        try {
+          const payload = JSON.parse(ev.data);
+          if (!payload.online) {
+            setOnline(payload.reason || "", "#F5A524", "edge offline");
+            return;
+          }
+          setOnline(payload.at ? payload.at.slice(11, 19) + " · " + (payload.source || "live") : "live", "#1FB95A", "live");
+          const twin = payload.twin || {};
+          widgets.forEach((w) => w.render(twin));
+          alarm.render(twin);
+          rawPre.textContent = JSON.stringify(twin, null, 2);
+        } catch (e) { /* ignore */ }
+      };
+      es.onerror = () => setOnline("reconnecting…", "#64748B", "reconnecting");
+    })();
+    </script>
+
+    <div class="mt-6 grid gap-4 md:grid-cols-3">
+      {% for label, blob in [('DNA', device.dna_json), ('Brain', device.brain_json), ('Pin map', device.pinmap_json)] %}
+        <section class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+          <h2 class="font-semibold">{{ label }}</h2>
+          {% if blob %}
+            <pre class="mt-2 max-h-72 overflow-auto rounded-lg bg-slate-950/80 p-3 text-[11px] leading-relaxed text-emerald-100">{{ blob | tojson(indent=2) }}</pre>
+          {% else %}
+            <p class="mt-2 text-sm text-slate-500 italic">Not generated yet.</p>
+          {% endif %}
+        </section>
+      {% endfor %}
+    </div>
+
+    {% if device.firmware_bundle_path %}
+      <div class="mt-6 rounded-2xl border border-emerald-700/40 bg-emerald-500/5 p-4">
+        <div class="text-sm">Firmware bundle ready at <code class="font-mono text-emerald-300">{{ device.firmware_bundle_path }}</code>.</div>
+        <a href="/api/devices/{{ device.device_dna }}/firmware-bundle" class="mt-2 inline-block rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-emerald-400">Download .zip</a>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endblock %}

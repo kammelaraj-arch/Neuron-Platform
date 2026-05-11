@@ -1,0 +1,75 @@
+{
+  "policy_version": "1.0.0",
+  "issued_at": "2026-05-09T00:00:00Z",
+  "edge_id": "edge-default",
+  "inbound": {
+    "default": "deny",
+    "allow": [
+      {
+        "principal": "parent_node",
+        "cidr": "0.0.0.0/0",
+        "ports": [8090],
+        "mtls_required": false,
+        "cert_fingerprints_sha256": [],
+        "purpose": "Master push channel — restrict in production by adding the master's egress CIDR."
+      },
+      {
+        "principal": "local_device",
+        "cidr": "10.0.0.0/8",
+        "ports": [8090],
+        "mtls_required": false,
+        "purpose": "Pico 2 W heartbeat + telemetry from the factory LAN."
+      },
+      {
+        "principal": "local_device",
+        "cidr": "192.168.0.0/16",
+        "ports": [8090],
+        "mtls_required": false,
+        "purpose": "Pico 2 W heartbeat + telemetry from the factory LAN."
+      },
+      {
+        "principal": "emergency",
+        "cidr": "0.0.0.0/0",
+        "ports": [8090],
+        "mtls_required": true,
+        "cert_fingerprints_sha256": [],
+        "purpose": "Emergency stop / safe shutdown channel."
+      }
+    ]
+  },
+  "outbound": {
+    "default": "deny",
+    "allow": [
+      {
+        "principal": "parent_node",
+        "host": "neuron.shital.org.uk",
+        "ports": [443],
+        "purpose": "Telemetry + DNA sync to Master."
+      },
+      {
+        "principal": "master",
+        "host": "neuron.shital.org.uk",
+        "ports": [443],
+        "purpose": "OTA bundle pulls."
+      },
+      {
+        "principal": "emergency",
+        "host": "emergency.example.invalid",
+        "ports": [443],
+        "purpose": "Emergency uplink (configure with real host before enabling)."
+      }
+    ]
+  },
+  "mqtt_acl": [
+    {"principal": "device:*", "topic": "twin/+/+/desired/#",  "permission": "sub"},
+    {"principal": "device:*", "topic": "twin/+/+/reported/#", "permission": "pub"},
+    {"principal": "device:*", "topic": "device/+/heartbeat",   "permission": "pub"},
+    {"principal": "edge",      "topic": "#",                    "permission": "pubsub"}
+  ],
+  "emergency": {
+    "enabled": true,
+    "channel": "https://edge/emergency",
+    "cert_kid": "emergency-default",
+    "command_set": ["safe_stop", "safe_shutdown", "status"]
+  }
+}

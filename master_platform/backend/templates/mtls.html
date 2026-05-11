@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}mTLS{% endblock %}
+{% block content %}
+  <header class="flex items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">mTLS — Edge client certificates</h1>
+      <p class="text-slate-400 text-sm">Issue per-Edge certs signed by the platform CA. The fingerprint goes into <code>access_policy.inbound.allow[].cert_fingerprints_sha256</code>.</p>
+    </div>
+    <a href="/api/mtls/ca.pem" class="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-emerald-400 hover:text-emerald-300">Download CA</a>
+  </header>
+
+  {% if last_issued %}
+    <section class="mt-6 rounded-2xl border border-emerald-700/50 bg-emerald-500/10 p-5">
+      <div class="text-xs uppercase tracking-widest text-emerald-300">Cert + key shown ONCE</div>
+      <div class="mt-1 text-sm">
+        <span class="font-mono">{{ last_issued.subject_cn }}</span>
+        — fingerprint <code class="text-emerald-200 break-all">{{ last_issued.fingerprint_sha256 }}</code>
+        — expires {{ last_issued.expires_at[:10] }}
+      </div>
+      <div class="mt-3 grid gap-3 lg:grid-cols-2 text-xs">
+        <div>
+          <div class="text-[11px] uppercase tracking-widest text-emerald-300/80">cert.pem</div>
+          <pre class="mt-1 max-h-72 overflow-auto rounded-lg bg-slate-950/80 p-3 font-mono leading-relaxed text-emerald-100">{{ last_issued.cert_pem }}</pre>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-widest text-emerald-300/80">key.pem (private — copy now, never shown again)</div>
+          <pre class="mt-1 max-h-72 overflow-auto rounded-lg bg-slate-950/80 p-3 font-mono leading-relaxed text-amber-100">{{ last_issued.key_pem }}</pre>
+        </div>
+      </div>
+      <div class="mt-2 text-[11px] text-slate-400">Reload this page to clear. The plaintext is gone forever after that.</div>
+    </section>
+  {% endif %}
+
+  <section class="mt-8 grid gap-6 lg:grid-cols-3">
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 lg:col-span-2">
+      <h2 class="font-semibold">Issued certs</h2>
+      <table class="mt-3 w-full text-sm">
+        <thead class="text-left text-xs uppercase tracking-wider text-slate-400">
+          <tr>
+            <th class="py-2">Subject</th>
+            <th class="py-2">Edge</th>
+            <th class="py-2">Status</th>
+            <th class="py-2">Expires</th>
+            <th class="py-2 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/70">
+          {% for r in rows %}
+            <tr class="hover:bg-slate-900/60">
+              <td class="py-2">
+                <div>{{ r.subject_cn }}</div>
+                <div class="font-mono text-[10px] text-slate-500 break-all">{{ r.fingerprint_sha256 }}</div>
+              </td>
+              <td class="py-2 font-mono text-xs text-slate-400">{{ r.edge_id or '—' }}</td>
+              <td class="py-2">
+                {% if r.status == 'active' %}<span class="text-emerald-400">active</span>
+                {% elif r.status == 'revoked' %}<span class="text-red-400">revoked</span>
+                {% else %}<span class="text-slate-500">{{ r.status }}</span>{% endif %}
+              </td>
+              <td class="py-2 text-xs text-slate-500">{{ r.expires_at.strftime('%Y-%m-%d') if r.expires_at else '—' }}</td>
+              <td class="py-2 text-right">
+                {% if r.status == 'active' %}
+                  <form method="post" action="/ui/mtls/{{ r.id }}/revoke" onsubmit="return confirm('Revoke this cert?')">
+                    <button class="rounded-md border border-slate-700 px-2.5 py-1 text-xs hover:border-red-400 hover:text-red-300">Revoke</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="py-8 text-center text-slate-500 italic">No certs issued yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <h2 class="font-semibold">Issue a new cert</h2>
+      <form method="post" action="/ui/mtls/new" class="mt-3 space-y-2 text-sm">
+        <label class="block">Subject CN
+          <input name="subject_cn" placeholder="edge-uk-wembley" required
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+        </label>
+        <label class="block">Edge (optional)
+          <select name="edge_id" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+            <option value="">— none —</option>
+            {% for e in edges %}<option value="{{ e.id }}">{{ e.name }} · {{ e.site_id }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="block">Validity (days)
+          <input name="validity_days" type="number" min="1" max="3650" value="365"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+        </label>
+        <label class="block">Notes
+          <input name="notes" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+        </label>
+        <button class="w-full rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">+ Issue cert</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold">Platform CA</h2>
+    <p class="mt-1 text-xs text-slate-400">SHA-256 fingerprint — pin this in any external client that needs to validate cert chains we issue.</p>
+    <div class="mt-2 break-all rounded-md bg-slate-950/80 p-3 font-mono text-[11px] text-emerald-100">{{ ca_fingerprint }}</div>
+    <details class="mt-2">
+      <summary class="cursor-pointer text-xs text-slate-400">CA cert PEM</summary>
+      <pre class="mt-2 max-h-60 overflow-auto rounded-md bg-slate-950/80 p-3 font-mono text-[11px] text-emerald-100">{{ ca_pem }}</pre>
+    </details>
+  </section>
+{% endblock %}

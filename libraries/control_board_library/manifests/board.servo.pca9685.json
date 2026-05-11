@@ -1,0 +1,34 @@
+{
+  "stable_id": "board.servo.pca9685",
+  "name": "PCA9685 16-Channel Servo HAT",
+  "vendor": "NXP",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "servo_hats",
+  "description": "I2C 16-channel 12-bit PWM controller for servos and LEDs.",
+  "tags": ["servo", "pwm", "i2c"],
+  "image": { "asset": "../servo_hats/pca9685.svg", "alt": "PCA9685 HAT" },
+  "capabilities": ["pwm_x16", "servo_drive_x16"],
+  "interfaces": [
+    { "type": "I2C", "direction": "bidir", "pins_required": 2, "address": "0x40", "speed_hz": 400000 }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 100,
+    "current_ma_peak": 1000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "micropython", "module": "pca9685", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "i2c_present", "name": "I2C device responds", "blocking": true, "steps": ["i2c scan", "0x40 in list"], "expected": "0x40 present" }
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "twin_controls": ["twin.motor_control"],
+    "ui_widgets": ["ui.widget.motor_status"]
+  }
+}

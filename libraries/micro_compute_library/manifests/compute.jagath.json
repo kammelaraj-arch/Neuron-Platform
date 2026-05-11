@@ -1,0 +1,42 @@
+{
+  "stable_id": "compute.jagath",
+  "name": "Jagath Custom Board (in-house)",
+  "vendor": "Shital / In-house",
+  "version": "0.1.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "description": "Custom Shital in-house board profile. Linux-class compute, treated as an Edge Runtime host. Specs and pin map are placeholders — update with concrete values when the hardware is finalised.",
+  "tags": ["custom", "in_house", "jagath", "linux"],
+  "image": { "asset": "../linux_edge_hosts/jagath.svg", "alt": "Jagath custom board" },
+  "capabilities": ["linux_host", "docker", "mqtt_broker", "ethernet", "wifi"],
+  "interfaces": [
+    { "type": "Ethernet", "direction": "bidir" },
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "USB", "direction": "bidir" },
+    { "type": "I2C", "direction": "bidir" },
+    { "type": "SPI", "direction": "bidir" },
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0, "notes": "Pin map TBC" }
+  ],
+  "power": {
+    "voltage_v": 12.0, "voltage_tolerance_pct": 10,
+    "current_ma_typical": 800, "current_ma_peak": 3000, "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "docker.io", "version_range": ">=24.0" }
+  ],
+  "self_tests": [
+    { "id": "linux_uptime", "name": "Linux boots to userland", "blocking": true,
+      "steps": ["uptime"], "expected": "exit 0" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control",
+                       "twin.smart_plug_control", "twin.camera_control", "twin.recorder_control"]
+  },
+  "metadata": {
+    "design_status": "prototype",
+    "owner": "shital-platform",
+    "specs_pending": true,
+    "note": "Update pin pool in master_platform/backend/pin_allocator.py once the schematic is finalised."
+  }
+}

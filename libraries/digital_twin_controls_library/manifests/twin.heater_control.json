@@ -1,0 +1,53 @@
+{
+  "stable_id": "twin.heater_control",
+  "name": "Heater Control",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "digital_twin_controls_library",
+  "category": "controls",
+  "description": "Heater digital twin: desired temperature, safety max temperature, state machine with safe stop.",
+  "tags": ["heater", "twin", "state_machine"],
+  "image": { "asset": "../controls/heater_control.svg", "alt": "Heater control twin" },
+  "capabilities": ["temp_setpoint", "safety_max_temp", "ramp", "hold", "fault_state"],
+  "interfaces": [
+    { "type": "Internal", "direction": "bidir" }
+  ],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    { "id": "fsm_reset", "name": "FSM enters IDLE on reset", "blocking": true, "steps": ["reset", "state==IDLE"], "expected": "IDLE" },
+    { "id": "safety_trip", "name": "Trips to SAFE on overtemp", "blocking": true, "steps": ["inject temp > safety_max", "expect SAFE"], "expected": "SAFE" }
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "ui_widgets": ["ui.widget.temp_gauge", "ui.widget.alarm_banner"]
+  },
+  "metadata": {
+    "state_machine": {
+      "states": ["IDLE", "PREHEAT", "HOLD", "COOLDOWN", "SAFE", "FAULT"],
+      "transitions": [
+        { "from": "IDLE", "to": "PREHEAT", "on": "start" },
+        { "from": "PREHEAT", "to": "HOLD", "on": "setpoint_reached" },
+        { "from": "HOLD", "to": "COOLDOWN", "on": "stop" },
+        { "from": "COOLDOWN", "to": "IDLE", "on": "ambient_reached" },
+        { "from": "*", "to": "SAFE", "on": "interlock_trip" },
+        { "from": "*", "to": "FAULT", "on": "sensor_fault" }
+      ]
+    },
+    "desired": {
+      "setpoint_c": { "type": "number", "min": 0, "max": 250 },
+      "safety_max_c": { "type": "number", "min": 0, "max": 300, "default": 200 },
+      "command": { "type": "string", "enum": ["start", "stop", "ack"] }
+    },
+    "reported": {
+      "process_temp_c": { "type": "number" },
+      "state": { "type": "string" },
+      "ssr_duty": { "type": "number", "units": "%" }
+    },
+    "current": {
+      "ssr_duty": { "type": "number" },
+      "alarm_active": { "type": "boolean" }
+    }
+  }
+}

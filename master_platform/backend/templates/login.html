@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+  <div class="mx-auto mt-12 max-w-md">
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-xl">
+      <div class="mb-6 flex items-center gap-3">
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 text-slate-950 font-black">N</span>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight">Neuron Master</h1>
+          <p class="text-xs text-slate-400">Paste your API key to continue</p>
+        </div>
+      </div>
+      {% if error %}
+        <div class="mb-4 rounded-lg border border-red-700/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{{ error }}</div>
+      {% endif %}
+      <form method="post" action="/login" class="space-y-4">
+        <label class="block text-xs uppercase tracking-widest text-slate-400">API key</label>
+        <input
+          type="password"
+          name="secret"
+          autocomplete="off"
+          autofocus
+          required
+          spellcheck="false"
+          placeholder="neu_xxxxxxxxxxxxxxxxxxxxxxxx"
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm focus:border-emerald-400 focus:outline-none" />
+        <button type="submit" class="w-full rounded-lg bg-emerald-500 px-4 py-2 font-medium text-slate-950 hover:bg-emerald-400 transition">Sign in</button>
+      </form>
+      <p class="mt-6 text-xs text-slate-500">
+        First-time setup? After the Master starts, copy the key from
+        <code class="rounded bg-slate-800 px-1.5 py-0.5">data/bootstrap_admin.txt</code> and delete the file.
+      </p>
+    </div>
+  </div>
+{% endblock %}

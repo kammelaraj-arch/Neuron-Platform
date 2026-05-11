@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Sys Ops{% endblock %}
+{% block content %}
+  <header>
+    <h1 class="text-2xl font-semibold tracking-tight">Sys Ops</h1>
+    <p class="text-slate-400 text-sm">Neuron-scoped operational view. Reads only Neuron's own state — no ShitalEco data, no <code>docker</code> calls.</p>
+  </header>
+
+  <!-- ── Top: status strip ─────────────────────────────────────────────── -->
+  <section class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+      <div class="text-[11px] uppercase tracking-widest text-slate-400">Master</div>
+      <div class="mt-1 text-lg font-semibold">live</div>
+      <div class="mt-1 text-[11px] text-slate-500 font-mono">uptime {{ uptime_human }}</div>
+    </div>
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+      <div class="text-[11px] uppercase tracking-widest text-slate-400">Edges online</div>
+      <div class="mt-1 text-lg font-semibold">
+        <span class="text-emerald-300">{{ online_edges }}</span> / {{ edge_total }}
+      </div>
+      <div class="mt-1 text-[11px] text-slate-500">configured in this Master</div>
+    </div>
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+      <div class="text-[11px] uppercase tracking-widest text-slate-400">Devices</div>
+      <div class="mt-1 text-lg font-semibold">{{ n_devices }}</div>
+      <div class="mt-1 text-[11px] text-slate-500">{{ n_releases }} firmware release(s)</div>
+    </div>
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+      <div class="text-[11px] uppercase tracking-widest text-slate-400">Audit rows</div>
+      <div class="mt-1 text-lg font-semibold">{{ n_audit }}</div>
+      <div class="mt-1 text-[11px] text-slate-500">retention: {{ audit_keep_days }} days</div>
+    </div>
+  </section>
+
+  <!-- ── Edges health ──────────────────────────────────────────────────── -->
+  <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40">
+    <div class="border-b border-slate-800 p-4 flex items-center justify-between">
+      <h2 class="font-semibold text-sm">Edge runtimes</h2>
+      <a class="text-xs text-emerald-300 hover:underline" href="/ui/systems">manage →</a>
+    </div>
+    {% if edges %}
+      <table class="w-full text-sm">
+        <thead class="text-left text-xs uppercase tracking-wider text-slate-400">
+          <tr><th class="px-4 py-2">Edge</th><th class="px-4 py-2">Site</th><th class="px-4 py-2">Address</th><th class="px-4 py-2">Status</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/70">
+          {% for e in edges %}
+            <tr class="hover:bg-slate-900/60">
+              <td class="px-4 py-2">{{ e.name }}</td>
+              <td class="px-4 py-2 font-mono text-xs text-slate-400">{{ e.site_id }}</td>
+              <td class="px-4 py-2 font-mono text-xs">
+                {% if e.address %}<span class="text-slate-300 break-all">{{ e.address }}</span>
+                {% else %}<span class="text-amber-300">— unset —</span>{% endif %}
+              </td>
+              <td class="px-4 py-2">
+                {% if e.online %}
+                  <span class="inline-flex items-center gap-1.5 text-emerald-400">
+                    <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span> online
+                  </span>
+                  {% if e.info %}<span class="ml-2 text-[11px] text-slate-500">v{{ e.info.get('version', '') }} · {{ e.info.get('devices_online', '?') }}/{{ e.info.get('devices_total', '?') }} dev</span>{% endif %}
+                {% else %}
+                  <span class="inline-flex items-center gap-1.5 text-amber-400">
+                    <span class="h-2 w-2 rounded-full bg-amber-500"></span> offline
+                  </span>
+                  <span class="ml-2 text-[11px] text-slate-500">{{ e.reason }}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="p-6 text-center text-sm text-slate-500 italic">No edges configured. <a class="text-emerald-300 underline" href="/ui/systems">Create one →</a></div>
+    {% endif %}
+  </section>
+
+  <!-- ── Two-column: storage + library + security ──────────────────────── -->
+  <section class="mt-6 grid gap-6 lg:grid-cols-3">
+    <!-- Storage -->
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <h2 class="font-semibold text-sm">Storage (Neuron only)</h2>
+      <ul class="mt-3 space-y-2 text-sm">
+        <li class="flex items-center justify-between gap-2 border-b border-slate-800/60 pb-1.5">
+          <div class="min-w-0">
+            <div class="text-slate-300">SQLite DB</div>
+            <div class="text-[11px] text-slate-500 font-mono break-all">{{ db_path }}</div>
+          </div>
+          <span class="rounded-md bg-slate-800 px-2 py-0.5 text-emerald-300 font-mono text-xs shrink-0">{{ db_size }}</span>
+        </li>
+        <li class="flex items-center justify-between gap-2 border-b border-slate-800/60 pb-1.5">
+          <div class="min-w-0">
+            <div class="text-slate-300">Firmware bundles</div>
+            <div class="text-[11px] text-slate-500 font-mono break-all">{{ artifacts_path }}</div>
+          </div>
+          <span class="rounded-md bg-slate-800 px-2 py-0.5 text-cyan-300 font-mono text-xs shrink-0">{{ artifacts_size }}</span>
+        </li>
+        <li class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-slate-300">mTLS keys</div>
+            <div class="text-[11px] text-slate-500 font-mono break-all">{{ mtls_path }}</div>
+          </div>
+          <span class="rounded-md bg-slate-800 px-2 py-0.5 text-amber-300 font-mono text-xs shrink-0">{{ mtls_size }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Library breakdown -->
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <h2 class="font-semibold text-sm">Library catalog</h2>
+      <div class="mt-1 text-xs text-slate-500">{{ library_count }} items total</div>
+      <ul class="mt-3 space-y-1 text-sm">
+        {% for lib, count in library_groups.items() %}
+          <li class="flex items-center justify-between border-b border-slate-800/60 pb-0.5">
+            <span class="text-slate-300 text-xs truncate">{{ lib.replace('_library', '').replace('_', ' ') }}</span>
+            <span class="rounded-md bg-slate-800 px-2 py-0.5 text-emerald-300 font-mono text-[11px]">{{ count }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Security -->
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <h2 class="font-semibold text-sm">Security</h2>
+      <ul class="mt-3 space-y-1.5 text-sm">
+        <li class="flex items-center justify-between">
+          <span class="text-slate-300">mTLS certs (active / total)</span>
+          <span class="font-mono text-xs"><span class="text-emerald-300">{{ n_certs_active }}</span> / {{ n_certs_total }}</span>
+        </li>
+        <li class="flex items-center justify-between">
+          <span class="text-slate-300">OTA signing kid</span>
+          <span class="font-mono text-xs text-emerald-300">{{ ota_pubkey_kid }}</span>
+        </li>
+        <li class="flex items-center justify-between">
+          <span class="text-slate-300">Audit oldest</span>
+          <span class="font-mono text-xs text-slate-500">{{ audit_oldest[:19] if audit_oldest else '—' }}</span>
+        </li>
+      </ul>
+      <details class="mt-3 text-[11px] text-slate-400">
+        <summary class="cursor-pointer">CA fingerprint + OTA pubkey</summary>
+        <div class="mt-2 space-y-2">
+          <div>
+            <div class="text-slate-500">mTLS CA SHA-256</div>
+            <code class="break-all text-emerald-200">{{ ca_fingerprint }}</code>
+          </div>
+          <div>
+            <div class="text-slate-500">OTA Ed25519 public</div>
+            <code class="break-all text-emerald-200">{{ ota_pubkey_b64 }}</code>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ── Process info (kept compact, all Neuron-internal) ──────────────── -->
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+    <h2 class="font-semibold text-sm">Process</h2>
+    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+      <div><div class="text-[11px] uppercase tracking-widest text-slate-400">Hostname</div><div class="font-mono text-xs">{{ host }}</div></div>
+      <div><div class="text-[11px] uppercase tracking-widest text-slate-400">Python</div><div class="font-mono text-xs">{{ python_version }}</div></div>
+      <div><div class="text-[11px] uppercase tracking-widest text-slate-400">Master uptime</div><div class="font-mono text-xs">{{ uptime_human }}</div></div>
+      <div><div class="text-[11px] uppercase tracking-widest text-slate-400">UTC now</div><div class="font-mono text-xs">{{ now.strftime('%Y-%m-%d %H:%M:%SZ') }}</div></div>
+    </div>
+    <div class="mt-3 text-[11px] text-slate-500 break-all">
+      DB: <code>{{ neuron_db_url }}</code> · libraries: <code>{{ neuron_libraries_dir }}</code>
+    </div>
+  </section>
+{% endblock %}

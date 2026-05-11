@@ -1,0 +1,45 @@
+{
+  "stable_id": "compute.rpi_zero_2w",
+  "name": "Raspberry Pi Zero 2 W (Linux, low-power)",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "description": "RP3A0 quad-core Cortex-A53 at 1 GHz, 512 MB RAM, Wi-Fi 2.4 GHz + BT 4.2. Same form factor as the original Pi Zero, ~5× the CPU. Good fit for a sub-£20 Edge Runtime at a single-zone factory site.",
+  "tags": ["rpi_zero_2w", "linux", "edge", "low_power", "wifi", "ble"],
+  "image": { "asset": "../linux_edge_hosts/rpi_zero_2w.svg", "alt": "Raspberry Pi Zero 2 W" },
+  "capabilities": ["linux_host", "docker", "mqtt_broker", "wifi"],
+  "interfaces": [
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "BLE", "direction": "bidir" },
+    { "type": "USB", "direction": "bidir" },
+    { "type": "I2C", "direction": "bidir" },
+    { "type": "SPI", "direction": "bidir" },
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0, "notes": "40-pin BCM header" }
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 350, "current_ma_peak": 1200, "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "docker.io", "version_range": ">=24.0" },
+    { "runtime": "linux_pkg", "module": "mosquitto", "version_range": ">=2.0" }
+  ],
+  "self_tests": [
+    { "id": "docker_up", "name": "Docker daemon healthy", "blocking": true, "steps": ["docker info"], "expected": "exit 0" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control",
+                       "twin.smart_plug_control"]
+  },
+  "metadata": {
+    "soc": "RP3A0",
+    "cpu_mhz": 1000,
+    "cpu_cores": 4,
+    "ram_mb": 512,
+    "wireless": "wifi+ble",
+    "pin_count": 40,
+    "default_i2c": { "sda": "GPIO2", "scl": "GPIO3" }
+  }
+}

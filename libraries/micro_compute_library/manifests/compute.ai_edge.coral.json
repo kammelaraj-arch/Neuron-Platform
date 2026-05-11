@@ -1,0 +1,36 @@
+{
+  "stable_id": "compute.ai_edge.coral",
+  "name": "Coral Edge AI Host (Linux + TPU)",
+  "vendor": "Google",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "ai_accelerators",
+  "description": "Linux edge host profile with attached Coral USB/PCIe Edge TPU for vision/anomaly inference.",
+  "tags": ["ai", "tpu", "coral", "edge"],
+  "image": { "asset": "../ai_accelerators/coral.svg", "alt": "Coral edge TPU host" },
+  "capabilities": ["linux_host", "tflite_inference", "vision_pipeline"],
+  "dependencies": [
+    { "stable_id": "compute.rpi5", "version_range": ">=1.0.0", "optional": true }
+  ],
+  "interfaces": [
+    { "type": "USB", "direction": "bidir" },
+    { "type": "Ethernet", "direction": "bidir" }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "current_ma_typical": 900,
+    "current_ma_peak": 2500,
+    "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "libedgetpu1-std", "version_range": ">=16.0" },
+    { "runtime": "cpython", "module": "tflite-runtime", "version_range": ">=2.13" }
+  ],
+  "self_tests": [
+    { "id": "tpu_present", "name": "TPU device enumerated", "blocking": true, "steps": ["lsusb | grep Global"], "expected": "1a6e:089a or 18d1:9302" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.motor_control"]
+  }
+}

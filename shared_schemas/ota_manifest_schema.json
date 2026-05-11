@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://neuron.shital.org.uk/schemas/ota_manifest.schema.json",
+  "title": "Neuron OTA Manifest",
+  "description": "Describes an OTA update bundle and the compatibility gates it must satisfy before being applied.",
+  "type": "object",
+  "required": [
+    "manifest_id",
+    "kind",
+    "issued_at",
+    "min_supported_base_firmware_version",
+    "supported_hardware_revisions",
+    "target_app_bundle_version",
+    "target_config_schema_version",
+    "artifacts",
+    "signature"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "manifest_id": { "type": "string" },
+    "kind": { "type": "string", "enum": ["base_firmware", "app_bundle", "config", "library_pack"] },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "issuer": { "type": "string" },
+    "channel": { "type": "string", "enum": ["dev", "beta", "stable"], "default": "stable" },
+    "min_supported_base_firmware_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "max_supported_base_firmware_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "supported_hardware_revisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "target_app_bundle_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "target_config_schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "rollback_allowed": { "type": "boolean", "default": false },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "size_bytes", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "size_bytes": { "type": "integer", "minimum": 0 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "compression": { "type": "string", "enum": ["none", "gzip", "zstd"], "default": "none" }
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "required": ["alg", "kid", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "alg": { "type": "string", "enum": ["ed25519", "rsa-pss-sha256"] },
+        "kid": { "type": "string" },
+        "value": { "type": "string" }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

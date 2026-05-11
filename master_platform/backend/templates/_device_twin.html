@@ -1,0 +1,47 @@
+{% if payload.online %}
+  <div id="twin-live" class="rounded-2xl border border-emerald-700/40 bg-emerald-500/5 p-5"
+       hx-get="/ui/devices/{{ device.device_dna }}/twin-fragment"
+       hx-trigger="every 3s" hx-swap="outerHTML">
+    <div class="flex items-center justify-between">
+      <div>
+        <span class="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="ml-2 text-xs uppercase tracking-widest text-emerald-300">Live · Edge {{ payload.edge_url }}</span>
+      </div>
+      <span class="text-[11px] text-slate-500">refresh: 3 s</span>
+    </div>
+
+    <div class="mt-4 grid gap-3 md:grid-cols-3">
+      {% for ch in ['desired', 'reported', 'current'] %}
+        {% set state = payload.twin.get(ch, {}) %}
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+          <div class="text-[11px] uppercase tracking-widest text-slate-400">{{ ch }}</div>
+          {% if state %}
+            <ul class="mt-2 space-y-1 text-xs">
+              {% for k, v in state.items() %}
+                <li class="flex items-center justify-between border-b border-slate-800/60 pb-0.5">
+                  <span class="font-mono text-slate-400">{{ k }}</span>
+                  <span class="font-mono text-emerald-200">{{ v }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="mt-2 text-xs text-slate-500 italic">no fields yet</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% else %}
+  <div id="twin-live" class="rounded-2xl border border-amber-700/40 bg-amber-500/5 p-5"
+       hx-get="/ui/devices/{{ device.device_dna }}/twin-fragment"
+       hx-trigger="every 5s" hx-swap="outerHTML">
+    <div class="flex items-center justify-between">
+      <div>
+        <span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>
+        <span class="ml-2 text-xs uppercase tracking-widest text-amber-300">Edge offline</span>
+      </div>
+      <span class="text-[11px] text-slate-500">{{ payload.reason }}</span>
+    </div>
+    <p class="mt-2 text-xs text-slate-400">Live twin telemetry needs the Edge Runtime reachable from this Master. Set the Edge System's <code class="text-slate-200">address</code> field to e.g. <code class="text-slate-200">http://192.168.10.10:8090</code>.</p>
+  </div>
+{% endif %}

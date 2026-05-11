@@ -1,0 +1,29 @@
+{
+  "stable_id": "ui.widget.camera_view",
+  "name": "Camera View",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "ui_controls_library",
+  "category": "widgets",
+  "description": "Live MJPEG/HLS preview tile with motion-event halo, snapshot button and PTZ pad (when the bound twin advertises PTZ capability). Bound to twin.camera_control reported channel.",
+  "tags": ["camera", "video", "ptz"],
+  "image": { "asset": "../symbols_svg/camera.svg", "alt": "Camera view widget" },
+  "capabilities": ["render_video", "ptz_pad", "snapshot_button", "motion_halo", "mobile_responsive"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "node", "module": "@neuron/ui-widgets", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "renders", "name": "Mounts without error", "steps": ["mount in dom"], "expected": "no exceptions" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.camera_control"]
+  },
+  "ui_bindings": [
+    { "widget_id": "ui.widget.camera_view", "binding": "$.reported.stream_url" },
+    { "widget_id": "ui.widget.camera_view", "binding": "$.reported.motion_detected" },
+    { "widget_id": "ui.widget.camera_view", "binding": "$.reported.state" }
+  ]
+}

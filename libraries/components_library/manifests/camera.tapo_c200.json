@@ -1,0 +1,54 @@
+{
+  "stable_id": "camera.tapo_c200",
+  "name": "TP-Link Tapo C200 Pan/Tilt Camera",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip_ptz",
+  "description": "1080p Wi-Fi pan/tilt indoor camera. RTSP stream available locally; ONVIF for PTZ. Audio + motion + night vision.",
+  "tags": ["tapo", "camera", "ip", "rtsp", "ptz", "wifi"],
+  "image": { "asset": "../cameras/tapo_c200.svg", "alt": "Tapo C200 camera" },
+  "capabilities": ["frame_capture", "rtsp_stream", "ptz", "motion_detection", "audio_in"],
+  "interfaces": [
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "HTTP", "direction": "bidir", "notes": "ONVIF + Tapo local API" },
+    { "type": "Internal", "direction": "out", "notes": "rtsp://<user>:<pass>@<ip>:554/stream1 (HD), /stream2 (SD)" }
+  ],
+  "power": {
+    "voltage_v": 9,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 800,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "ffmpeg", "version_range": ">=4.0" },
+    { "runtime": "cpython", "module": "onvif-zeep", "version_range": ">=0.2" }
+  ],
+  "self_tests": [
+    { "id": "rtsp_open", "name": "RTSP HD stream opens",
+      "blocking": true,
+      "steps": ["ffprobe -v error -show_streams rtsp://.../stream1"],
+      "expected": "1+ video stream" },
+    { "id": "ptz_home", "name": "PTZ returns to home",
+      "steps": ["onvif.GotoHomePosition()"],
+      "expected": "no fault" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5", "compute.ai_edge.coral"],
+    "twin_controls": ["twin.camera_control"],
+    "ui_widgets": ["ui.widget.camera_view"]
+  },
+  "twin_bindings": [
+    { "control_id": "twin.camera_control", "channel": "reported", "field": "stream_url" },
+    { "control_id": "twin.camera_control", "channel": "reported", "field": "motion_detected" }
+  ],
+  "metadata": {
+    "model_family": "C200",
+    "max_resolution": "1920x1080",
+    "ptz_pan_deg": 360,
+    "ptz_tilt_deg": 114
+  }
+}

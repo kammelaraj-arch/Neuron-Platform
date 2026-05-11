@@ -1,0 +1,31 @@
+{
+  "stable_id": "twin.effects_model",
+  "name": "Twin Effects Model",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "digital_twin_controls_library",
+  "category": "effects",
+  "description": "Standard set of UI animations + colours for twin states (running/stopped/fault) usable by every widget.",
+  "tags": ["effects", "animation", "ui"],
+  "image": { "asset": "../effects/effects_model.svg", "alt": "Effects model" },
+  "capabilities": ["effect_running", "effect_stopped", "effect_fault", "color_palette"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [],
+  "self_tests": [
+    { "id": "palette_loaded", "name": "Palette resolves all states", "steps": ["lookup all states"], "expected": "no missing colours" }
+  ],
+  "compatibility": {
+    "ui_widgets": ["ui.widget.motor_status", "ui.widget.temp_gauge", "ui.widget.alarm_banner"]
+  },
+  "metadata": {
+    "palette": {
+      "running": { "color": "#1FB95A", "animation": "pulse_2s" },
+      "stopped": { "color": "#7A7F87", "animation": "static" },
+      "fault":   { "color": "#E5484D", "animation": "blink_500ms" },
+      "warning": { "color": "#F5A524", "animation": "pulse_1s" },
+      "preheat": { "color": "#3B82F6", "animation": "ramp_3s" }
+    }
+  }
+}

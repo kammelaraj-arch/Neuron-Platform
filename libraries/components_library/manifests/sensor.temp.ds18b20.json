@@ -1,0 +1,53 @@
+{
+  "stable_id": "sensor.temp.ds18b20",
+  "name": "DS18B20 Digital Temperature Sensor",
+  "vendor": "Maxim/Analog Devices",
+  "version": "1.2.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "temperature",
+  "description": "1-Wire digital temperature sensor, -55C to +125C, 9-12 bit resolution. Suitable for food zone temperature monitoring.",
+  "tags": ["temperature", "1-wire", "food_grade"],
+  "image": { "asset": "../sensors/ds18b20.svg", "alt": "DS18B20 probe" },
+  "capabilities": ["temperature_read"],
+  "dependencies": [],
+  "interfaces": [
+    { "type": "1-Wire", "direction": "bidir", "pins_required": 1, "voltage": 3.3 }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1.5,
+    "current_ma_peak": 4,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "micropython", "module": "onewire", "version_range": ">=0.1.0" },
+    { "runtime": "micropython", "module": "ds18x20", "version_range": ">=0.1.0" }
+  ],
+  "self_tests": [
+    {
+      "id": "probe_present",
+      "name": "Detect probe on 1-Wire bus",
+      "blocking": true,
+      "steps": ["scan 1-wire bus", "expect at least 1 device"],
+      "expected": "device count >= 1"
+    },
+    {
+      "id": "reading_in_range",
+      "name": "Reading within plausible range",
+      "steps": ["read temperature", "verify -55<=t<=125"],
+      "expected": "value within range"
+    }
+  ],
+  "compatibility": {
+    "boards": ["board.relay.generic.4ch"],
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "twin_controls": ["twin.heater_control", "twin.weighscale_control"],
+    "ui_widgets": ["ui.widget.temp_gauge"]
+  },
+  "twin_bindings": [
+    { "control_id": "twin.heater_control", "channel": "reported", "field": "process_temp_c", "units": "C" }
+  ]
+}

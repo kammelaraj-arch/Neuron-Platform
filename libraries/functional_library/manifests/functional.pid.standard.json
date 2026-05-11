@@ -1,0 +1,33 @@
+{
+  "stable_id": "functional.pid.standard",
+  "name": "Standard PID Block",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "functional_library",
+  "category": "control_blocks",
+  "description": "Reusable PID function block with anti-windup, output clamp, and bumpless setpoint changes. Consumable from any Brain loop of type=pid.",
+  "tags": ["pid", "control", "functional"],
+  "capabilities": ["pid_compute", "anti_windup", "output_clamp"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "cpython", "module": "neuron_runtime.pid", "version_range": ">=1.0.0" },
+    { "runtime": "micropython", "module": "neuron_runtime.pid", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "step_response", "name": "Stable step response", "steps": ["apply 100% setpoint step", "no oscillation > 5 cycles"], "expected": "stable" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control"]
+  },
+  "metadata": {
+    "params": {
+      "kp": { "type": "number", "default": 1.0 },
+      "ki": { "type": "number", "default": 0.0 },
+      "kd": { "type": "number", "default": 0.0 },
+      "out_min": { "type": "number", "default": 0 },
+      "out_max": { "type": "number", "default": 100 }
+    }
+  }
+}

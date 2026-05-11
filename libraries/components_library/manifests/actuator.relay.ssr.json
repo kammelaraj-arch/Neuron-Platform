@@ -1,0 +1,45 @@
+{
+  "stable_id": "actuator.relay.ssr",
+  "name": "Solid State Relay 25A",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "relay",
+  "description": "Zero-cross SSR for AC heater/heater-element switching. Drives heater via PWM duty over slow cycle.",
+  "tags": ["relay", "ssr", "ac"],
+  "image": { "asset": "../actuators/ssr.svg", "alt": "Solid state relay" },
+  "capabilities": ["switch_ac", "duty_cycle"],
+  "interfaces": [
+    { "type": "GPIO", "direction": "out", "pins_required": 1, "voltage": 3.3 }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 8,
+    "current_ma_peak": 20,
+    "power_source": "bus"
+  },
+  "safety_class": "critical",
+  "drivers": [
+    { "runtime": "micropython", "module": "machine", "version_range": ">=1.20.0" }
+  ],
+  "self_tests": [
+    {
+      "id": "toggle_cycle",
+      "name": "Toggle without overheat",
+      "blocking": true,
+      "steps": ["set off", "wait 100ms", "set on briefly", "set off"],
+      "expected": "no fault"
+    }
+  ],
+  "compatibility": {
+    "boards": ["board.relay.generic.4ch"],
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "twin_controls": ["twin.heater_control"],
+    "ui_widgets": ["ui.widget.motor_status"]
+  },
+  "twin_bindings": [
+    { "control_id": "twin.heater_control", "channel": "current", "field": "ssr_duty", "units": "%" }
+  ]
+}

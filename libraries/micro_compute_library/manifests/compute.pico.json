@@ -1,0 +1,44 @@
+{
+  "stable_id": "compute.pico",
+  "name": "Raspberry Pi Pico",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "micropython_devices",
+  "description": "RP2040 dual Cortex-M0+ at 133 MHz, 264 KB SRAM, 2 MB flash. MicroPython runtime, 26 multi-function GPIO, 3× ADC. No on-board wireless — pair with an Edge Pi over UART/SPI for connectivity.",
+  "tags": ["pico", "rp2040", "micropython", "wired"],
+  "image": { "asset": "../micropython_devices/pico.svg", "alt": "Raspberry Pi Pico" },
+  "capabilities": [
+    "gpio_x26", "adc_x3", "i2c_x2", "spi_x2", "uart_x2", "pwm", "mqtt_client_via_host"
+  ],
+  "interfaces": [
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0, "notes": "26 multi-function" },
+    { "type": "USB", "direction": "bidir" }
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 10,
+    "current_ma_typical": 50, "current_ma_peak": 150, "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "micropython", "module": "machine", "version_range": ">=1.21.0" },
+    { "runtime": "micropython", "module": "umqtt.simple", "version_range": ">=0.1.0" }
+  ],
+  "self_tests": [
+    { "id": "boot_ok", "name": "Boot to REPL", "blocking": true, "steps": ["measure boot time"], "expected": "<5s" }
+  ],
+  "compatibility": {
+    "boards": ["board.motor.l298n", "board.relay.generic.4ch", "board.servo.pca9685"],
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control"]
+  },
+  "metadata": {
+    "soc": "RP2040",
+    "cpu_mhz": 133,
+    "ram_kib": 264,
+    "flash_mb": 2,
+    "wireless": null,
+    "pin_count": 26,
+    "adc_pins": ["GP26", "GP27", "GP28"],
+    "default_i2c": { "sda": "GP4", "scl": "GP5" }
+  }
+}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Devices{% endblock %}
+{% block content %}
+  <header class="flex items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Devices</h1>
+      <p class="text-slate-400 text-sm">Each device carries an immutable DNA, a Brain config, and a built firmware bundle.</p>
+    </div>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  {% if not signed_in %}
+    <div class="mt-4 rounded-xl border border-amber-700/40 bg-amber-500/5 p-4 text-sm text-amber-200">
+      Sign in with an admin-tier API key to register a device.
+      <a class="ml-2 underline" href="/login">Sign in →</a>
+    </div>
+  {% endif %}
+
+  {% if signed_in %}
+    {% if not edges %}
+      <div class="mt-6 rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-300">
+        No edges yet. <a class="text-emerald-300 underline" href="/ui/systems">Create a Root → Node → Edge</a> first, then come back here.
+      </div>
+    {% else %}
+      <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+        <h2 class="font-semibold">+ Register a new device</h2>
+        <form method="post" action="/ui/devices/new" class="mt-4 grid gap-3 md:grid-cols-2 text-sm">
+          <label class="block">Edge
+            <select name="edge_id" required class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+              {% for e in edges %}<option value="{{ e.id }}">{{ e.name }} · {{ e.site_id }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="block">Compute
+            <select name="compute_stable_id" required class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+              {% for c in computes %}
+                <option value="{{ c.stable_id }}" {% if c.stable_id == 'compute.pico2w' %}selected{% endif %}>{{ c.name }} ({{ c.stable_id }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="block md:col-span-2">Components
+            <span class="block text-xs text-slate-500">Pick all that apply (Cmd/Ctrl-click for multiple)</span>
+            <select name="component_ids" multiple size="6"
+                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+              {% for c in components %}
+                <option value="{{ c.stable_id }}">{{ c.name }} ({{ c.stable_id }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="block">Hardware revision
+            <input name="hardware_revision" value="rev_a" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+          </label>
+          <label class="block">Base firmware version
+            <input name="base_firmware_version" value="1.0.0" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+          </label>
+          <label class="block">App bundle version
+            <input name="app_bundle_version" value="1.0.0" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+          </label>
+          <label class="block">Config schema version
+            <input name="config_schema_version" value="1.0.0" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs">
+          </label>
+          <label class="md:col-span-2 flex items-center gap-2 text-xs text-slate-400">
+            <input type="checkbox" name="auto_build" value="1" checked> Jump to the device page after registering (so you can run pin map → DNA → Brain → firmware)
+          </label>
+          <div class="md:col-span-2 flex justify-end">
+            <button class="rounded-lg bg-emerald-500 px-5 py-2 font-medium text-slate-950 hover:bg-emerald-400">Register device</button>
+          </div>
+        </form>
+      </section>
+    {% endif %}
+  {% endif %}
+
+  <div class="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+        <tr>
+          <th class="px-4 py-3">DNA</th>
+          <th class="px-4 py-3">Type</th>
+          <th class="px-4 py-3">Compute</th>
+          <th class="px-4 py-3">Pinmap</th>
+          <th class="px-4 py-3">Brain</th>
+          <th class="px-4 py-3">Firmware</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/70">
+        {% for d in devices %}
+          <tr class="hover:bg-slate-900/60">
+            <td class="px-4 py-3 font-mono text-xs">
+              <a href="/ui/devices/{{ d.device_dna }}" class="text-emerald-300 hover:underline">{{ d.device_dna }}</a>
+            </td>
+            <td class="px-4 py-3">{{ d.device_type }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-400">{{ d.compute_stable_id }}</td>
+            <td class="px-4 py-3">{% if d.pinmap_json %}<span class="text-emerald-400">✓</span>{% else %}<span class="text-slate-600">—</span>{% endif %}</td>
+            <td class="px-4 py-3">{% if d.brain_json %}<span class="text-emerald-400">✓</span>{% else %}<span class="text-slate-600">—</span>{% endif %}</td>
+            <td class="px-4 py-3">{% if d.firmware_bundle_path %}<span class="text-emerald-400">✓</span>{% else %}<span class="text-slate-600">—</span>{% endif %}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500 italic">No devices yet — use the form above.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -1,0 +1,12 @@
+fastapi>=0.115,<0.120
+uvicorn[standard]>=0.30,<0.35
+sqlalchemy>=2.0,<2.1
+aiosqlite>=0.20,<0.22
+pydantic>=2.7,<3
+pydantic-settings>=2.4,<3
+jinja2>=3.1,<4
+jsonschema>=4.21,<5
+httpx>=0.27,<0.30
+itsdangerous>=2.1,<3
+aiomqtt>=2.0,<3
+tapo>=0.7,<2

@@ -1,0 +1,20 @@
+{
+  "_comment": "Per-device config. Replaced at provisioning by the Master's firmware bundle.",
+  "device_dna": "DNA-XXXX-XXXX-XXXX-XXXX",
+  "device_type": "pico2w",
+  "compute_stable_id": "compute.pico2w",
+  "hardware_revision": "rev_a",
+  "base_firmware_version": "1.0.0",
+  "app_bundle_version": "1.0.0",
+  "config_schema_version": "1.0.0",
+  "wifi": {
+    "ssid": "FACTORY_LAN",
+    "password": ""
+  },
+  "edge": {
+    "url": "http://192.168.1.10:8090",
+    "heartbeat_period_s": 15,
+    "telemetry_period_ms": 1000
+  },
+  "test_mode": false
+}

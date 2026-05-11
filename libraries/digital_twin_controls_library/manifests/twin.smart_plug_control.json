@@ -1,0 +1,47 @@
+{
+  "stable_id": "twin.smart_plug_control",
+  "name": "Smart Plug Control",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "digital_twin_controls_library",
+  "category": "controls",
+  "description": "On/off + scheduled + energy-aware twin for any smart plug (Tapo P110, generic placeholder, etc). Reports live power and cumulative energy when the underlying plug supports it.",
+  "tags": ["smart_plug", "twin", "energy"],
+  "image": { "asset": "../controls/smart_plug_control.svg", "alt": "Smart plug twin" },
+  "capabilities": ["on_off", "schedule", "energy_read"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    { "id": "fsm_reset", "name": "FSM enters OFF on reset",
+      "blocking": true, "steps": ["reset", "state==OFF"], "expected": "OFF" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5"],
+    "ui_widgets": ["ui.widget.smart_plug_status"]
+  },
+  "metadata": {
+    "state_machine": {
+      "states": ["OFF", "ON", "SCHEDULED", "FAULT"],
+      "transitions": [
+        { "from": "OFF", "to": "ON", "on": "switch_on" },
+        { "from": "ON", "to": "OFF", "on": "switch_off" },
+        { "from": "*", "to": "FAULT", "on": "comm_lost" }
+      ]
+    },
+    "desired": {
+      "switch":   { "type": "string", "enum": ["on", "off"] },
+      "schedule": { "type": "object", "note": "iCal-style RRULE list, optional" }
+    },
+    "reported": {
+      "state":      { "type": "string" },
+      "power_w":    { "type": "number", "units": "W" },
+      "energy_kwh": { "type": "number", "units": "kWh" },
+      "rssi_dbm":   { "type": "number" }
+    },
+    "current": {
+      "alarm_active": { "type": "boolean" }
+    }
+  }
+}

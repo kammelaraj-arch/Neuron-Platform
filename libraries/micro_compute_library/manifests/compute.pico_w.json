@@ -1,0 +1,49 @@
+{
+  "stable_id": "compute.pico_w",
+  "name": "Raspberry Pi Pico W",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "micropython_devices",
+  "description": "Pico + Infineon CYW43439 (Wi-Fi 4 + BLE 5.2). RP2040 dual Cortex-M0+ at 133 MHz, 264 KB SRAM, 2 MB flash. MicroPython runtime, 26 multi-function GPIO, 3× ADC.",
+  "tags": ["pico", "rp2040", "micropython", "wifi", "ble"],
+  "image": { "asset": "../micropython_devices/pico_w.svg", "alt": "Raspberry Pi Pico W" },
+  "capabilities": [
+    "gpio_x26", "adc_x3", "i2c_x2", "spi_x2", "uart_x2", "pwm",
+    "wifi", "ble", "mqtt_client"
+  ],
+  "interfaces": [
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0, "notes": "26 multi-function" },
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "BLE", "direction": "bidir" },
+    { "type": "USB", "direction": "bidir" }
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 10,
+    "current_ma_typical": 70, "current_ma_peak": 200, "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "micropython", "module": "machine", "version_range": ">=1.21.0" },
+    { "runtime": "micropython", "module": "network", "version_range": ">=1.21.0" },
+    { "runtime": "micropython", "module": "umqtt.simple", "version_range": ">=0.1.0" }
+  ],
+  "self_tests": [
+    { "id": "boot_ok", "name": "Boot to REPL", "blocking": true, "steps": ["measure boot time"], "expected": "<5s" },
+    { "id": "wifi_connect", "name": "Connect to test SSID", "steps": ["network.WLAN connect"], "expected": "got_ip" }
+  ],
+  "compatibility": {
+    "boards": ["board.motor.l298n", "board.relay.generic.4ch", "board.servo.pca9685"],
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control"]
+  },
+  "metadata": {
+    "soc": "RP2040",
+    "cpu_mhz": 133,
+    "ram_kib": 264,
+    "flash_mb": 2,
+    "wireless": "wifi+ble",
+    "pin_count": 26,
+    "adc_pins": ["GP26", "GP27", "GP28"],
+    "default_i2c": { "sda": "GP4", "scl": "GP5" }
+  }
+}

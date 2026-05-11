@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Libraries{% endblock %}
+{% block content %}
+  {% set ICONS = {
+    'sensors':           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>',
+    'actuators':         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>',
+    'cameras':           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="3" y="6" width="14" height="12" rx="2"/><circle cx="10" cy="12" r="3"/><path d="M17 9l4-2v10l-4-2"/></svg>',
+    'comms':             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="12" cy="12" r="2"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
+    'safety_devices':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M12 3l8 4v5c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>',
+    'power':             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+    'motor_drivers':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>',
+    'relay_boards':      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4M11 10v4M15 10v4M19 10v4"/></svg>',
+    'servo_hats':        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="2"/><circle cx="15" cy="15" r="2"/></svg>',
+    'micropython_devices':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
+    'linux_edge_hosts':  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="3" y="5" width="18" height="11" rx="2"/><path d="M8 19h8M12 16v3"/></svg>',
+    'ai_accelerators':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg>',
+    'controls':          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    'state_machines':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8"/></svg>',
+    'effects':           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M12 2l2 6 6 1-4 4 1 6-5-3-5 3 1-6-4-4 6-1z"/></svg>',
+    'alarms':            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M6 8a6 6 0 0 1 12 0v5l2 2H4l2-2V8z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>',
+    'recipes':           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M5 4h11l3 3v13H5z"/><path d="M16 4v3h3M9 12h6M9 16h4"/></svg>',
+    'widgets':           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    'panels':            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="3" y="3" width="18" height="6" rx="1"/><rect x="3" y="11" width="18" height="10" rx="1"/></svg>',
+    'dashboards':        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3M12 4v3"/></svg>',
+    'symbols_svg':       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="7" cy="7" r="3"/><rect x="14" y="4" width="6" height="6"/><path d="M4 18l4-6 4 6 4-6 4 6"/></svg>',
+    'bindings_templates':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M9 3l-6 6 6 6M15 3l6 6-6 6M14 3L10 21"/></svg>',
+    'integrations':      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><path d="M14 9l-2 2 5 5-2 2-5-5-2 2-5-5 6-6z"/><circle cx="17" cy="7" r="3"/></svg>',
+    'control_blocks':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18M3 8h18M16 8v8M8 16h8"/></svg>',
+    'general':           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-5 w-5"><circle cx="12" cy="12" r="9"/></svg>'
+  } %}
+
+  <header class="flex items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Library Catalog</h1>
+      <p class="text-slate-400 text-sm">Manifest-driven. All items validated against shared_schemas/manifest_schema.json.</p>
+    </div>
+    <input
+      class="w-64 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+      placeholder="Filter… e.g. heater, pico, tapo"
+      oninput="filterCards(this.value)" />
+  </header>
+
+  <div class="mt-6 space-y-10">
+    {% for lib, items in grouped.items() %}
+      <section>
+        <h2 class="text-sm font-mono uppercase tracking-widest text-emerald-300">{{ lib.replace('_', ' ') }}</h2>
+        <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {% for it in items %}
+            <article class="library-card group rounded-xl border border-slate-800 bg-slate-900/50 p-4 hover:border-emerald-500/60 hover:bg-slate-900 transition"
+                     data-keywords="{{ (it.stable_id ~ ' ' ~ it.name ~ ' ' ~ it.vendor ~ ' ' ~ (it.manifest.tags or []) | join(' '))|lower }}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-start gap-2.5 min-w-0">
+                  <div class="shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-1.5 text-emerald-300">
+                    {{ ICONS.get(it.category, ICONS['general']) | safe }}
+                  </div>
+                  <div class="min-w-0">
+                    <div class="font-semibold leading-tight truncate">{{ it.name }}</div>
+                    <div class="text-xs text-slate-500 font-mono break-all">{{ it.stable_id }}</div>
+                  </div>
+                </div>
+                <span class="shrink-0 rounded-md bg-slate-800 px-2 py-0.5 text-xs font-mono text-cyan-300">v{{ it.version }}</span>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <span class="rounded-md bg-slate-800/80 px-2 py-0.5 text-[11px] text-slate-300">{{ it.category }}</span>
+                <span class="rounded-md bg-slate-800/80 px-2 py-0.5 text-[11px] text-slate-300">{{ it.vendor }}</span>
+                {% if it.safety_class != 'nominal' %}
+                  <span class="rounded-md bg-amber-500/20 px-2 py-0.5 text-[11px] text-amber-200">safety: {{ it.safety_class }}</span>
+                {% endif %}
+              </div>
+              {% if it.manifest.description %}
+                <p class="mt-3 text-sm text-slate-400 line-clamp-3">{{ it.manifest.description }}</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+
+  <script>
+    function filterCards(q) {
+      q = (q || '').trim().toLowerCase();
+      document.querySelectorAll('.library-card').forEach(el => {
+        const kw = el.getAttribute('data-keywords') || '';
+        el.style.display = !q || kw.includes(q) ? '' : 'none';
+      });
+    }
+  </script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{
+  "stable_id": "compute.rpi4",
+  "name": "Raspberry Pi 4 Model B (Linux Edge Host)",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "description": "BCM2711 quad-core Cortex-A72 at 1.5–1.8 GHz, 2/4/8 GB RAM. True Gigabit Ethernet, Wi-Fi 5, BT 5, 2× USB 3.0 + 2× USB 2.0. Solid Edge Runtime host with headroom for Coral USB / vision pipelines.",
+  "tags": ["rpi4", "linux", "edge", "wifi", "ethernet", "usb3"],
+  "image": { "asset": "../linux_edge_hosts/rpi4.svg", "alt": "Raspberry Pi 4 Model B" },
+  "capabilities": [
+    "linux_host", "docker", "mqtt_broker", "mtls_terminator", "wifi", "ethernet", "usb3"
+  ],
+  "interfaces": [
+    { "type": "Ethernet", "direction": "bidir" },
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "BLE", "direction": "bidir" },
+    { "type": "USB", "direction": "bidir" },
+    { "type": "I2C", "direction": "bidir" },
+    { "type": "SPI", "direction": "bidir" },
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0, "notes": "40-pin BCM header" }
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 1200, "current_ma_peak": 3500, "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "docker.io", "version_range": ">=24.0" },
+    { "runtime": "linux_pkg", "module": "mosquitto", "version_range": ">=2.0" }
+  ],
+  "self_tests": [
+    { "id": "docker_up", "name": "Docker daemon healthy", "blocking": true, "steps": ["docker info"], "expected": "exit 0" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control",
+                       "twin.smart_plug_control", "twin.camera_control", "twin.recorder_control"]
+  },
+  "metadata": {
+    "soc": "BCM2711",
+    "cpu_mhz": 1800,
+    "cpu_cores": 4,
+    "ram_mb_options": [2048, 4096, 8192],
+    "wireless": "wifi+ble",
+    "pin_count": 40,
+    "default_i2c": { "sda": "GPIO2", "scl": "GPIO3" }
+  }
+}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+
+  {% if not all_done %}
+    <!-- ── Quick-start (visible until everything's done) ─────────────────────── -->
+    <section class="rounded-2xl border border-emerald-700/40 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-slate-950 p-5 sm:p-6">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-xs font-mono uppercase tracking-widest text-emerald-300">Quick start</div>
+          <h1 class="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{{ completed }} of {{ steps|length }} complete</h1>
+        </div>
+        <div class="hidden sm:block w-40">
+          <div class="h-2 w-full rounded bg-slate-800 overflow-hidden">
+            <div class="h-full bg-emerald-400 transition-all" style="width: {{ (completed / steps|length * 100) | round(0) }}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <ol class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+        {% for s in steps %}
+          {% if s.done %}
+            <li class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+              <div class="flex items-center gap-2">
+                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[11px] font-bold text-slate-950">✓</span>
+                <span class="text-emerald-200">{{ s.label }}</span>
+              </div>
+            </li>
+          {% else %}
+            <li class="rounded-xl border border-slate-700 bg-slate-900/60 p-3 hover:border-emerald-500/60 transition">
+              {% if s.href %}
+                <a href="{{ s.href }}" {% if s.external %}target="_blank" rel="noopener"{% endif %} class="block">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 text-[11px] font-mono">{{ loop.index }}</span>
+                    <span class="font-medium">{{ s.label }}</span>
+                    {% if s.external %}<span class="text-[11px] text-slate-500 ml-auto">↗</span>{% endif %}
+                  </div>
+                  <div class="mt-1 ml-7 text-[12px] text-slate-400">{{ s.hint }}</div>
+                </a>
+              {% else %}
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-600 text-[11px] font-mono">{{ loop.index }}</span>
+                    <span class="font-medium">{{ s.label }}</span>
+                  </div>
+                  <div class="mt-1 ml-7 text-[12px] text-slate-400">{{ s.hint }}</div>
+                </div>
+              {% endif %}
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ol>
+    </section>
+  {% endif %}
+
+  <section class="mt-6 grid gap-6 md:grid-cols-3">
+    <div class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-5 md:col-span-2 sm:p-6">
+      <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Smart Factory, library-first.</h1>
+      <p class="mt-2 max-w-2xl text-slate-300 text-sm sm:text-base">
+        One unified Master that browses the libraries, designs root/node/edge hierarchy,
+        assigns hardware, allocates pins, generates signed DNA + Brain config, and
+        produces firmware bundles ready for OTA.
+      </p>
+      <div class="mt-5 flex flex-wrap gap-2">
+        <a href="/ui/library" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 transition">Browse libraries</a>
+        <a href="/ui/systems" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800 transition">Design systems</a>
+        <a href="/ui/devices" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800 transition">Register device</a>
+        <a href="/docs" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800 transition">OpenAPI</a>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
+      <div class="text-xs uppercase tracking-widest text-slate-400">Topology</div>
+      <ul class="mt-2 space-y-1.5 text-sm">
+        <li class="flex items-center justify-between">
+          <span class="text-slate-300">Roots</span>
+          <span class="rounded-md bg-slate-800 px-2 py-0.5 text-emerald-300 font-mono text-xs">{{ n_roots }}</span>
+        </li>
+        <li class="flex items-center justify-between">
+          <span class="text-slate-300">Nodes</span>
+          <span class="rounded-md bg-slate-800 px-2 py-0.5 text-emerald-300 font-mono text-xs">{{ n_nodes }}</span>
+        </li>
+        <li class="flex items-center justify-between">
+          <span class="text-slate-300">Edges</span>
+          <span class="rounded-md bg-slate-800 px-2 py-0.5 text-emerald-300 font-mono text-xs">{{ n_edges }}</span>
+        </li>
+        <li class="flex items-center justify-between">
+          <span class="text-slate-300">Devices</span>
+          <span class="rounded-md bg-slate-800 px-2 py-0.5 text-cyan-300 font-mono text-xs">{{ device_count }}</span>
+        </li>
+        <li class="flex items-center justify-between text-xs text-slate-500 mt-1 pt-1 border-t border-slate-800/60">
+          <span>with DNA / firmware</span>
+          <span class="font-mono">{{ n_devices_with_dna }} / {{ n_devices_with_firmware }}</span>
+        </li>
+      </ul>
+
+      <div class="mt-4 text-xs uppercase tracking-widest text-slate-400">Catalog</div>
+      <ul class="mt-2 space-y-1 text-sm">
+        {% for lib, count in library_counts.items() %}
+          <li class="flex items-center justify-between border-b border-slate-800/60 pb-0.5">
+            <span class="text-slate-300 text-xs truncate">{{ lib.replace('_library', '').replace('_', ' ') }}</span>
+            <span class="rounded-md bg-slate-800 px-2 py-0.5 text-emerald-300 font-mono text-[11px]">{{ count }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="mt-8 grid gap-3 md:grid-cols-3">
+    {% set tiles = [
+      ('Pick hardware', 'Browse Components, Boards, Compute and Twins. 34 items shipped, more added at /ui/library/manage.', '/ui/library'),
+      ('Design system', 'Root → Node → Edge → Device. Each tier creatable inline at /ui/systems and /ui/devices.', '/ui/systems'),
+      ('Build & ship', 'Auto pin-map, generate signed DNA + Brain, build OTA-ready firmware, promote dev → stable.', '/ui/devices'),
+    ] %}
+    {% for title, body, href in tiles %}
+      <a href="{{ href }}" class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 hover:border-emerald-500/60 hover:bg-slate-900 transition">
+        <div class="text-xs font-mono text-emerald-400">›</div>
+        <div class="mt-1 text-lg font-semibold">{{ title }}</div>
+        <p class="mt-2 text-sm text-slate-400">{{ body }}</p>
+      </a>
+    {% endfor %}
+  </section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{
+  "stable_id": "compute.rpi3",
+  "name": "Raspberry Pi 3 Model B+ (Linux Edge Host)",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "description": "BCM2837B0 quad-core Cortex-A53 at 1.4 GHz, 1 GB RAM, dual-band Wi-Fi (2.4/5 GHz), BT 4.2, gigabit Ethernet over USB 2.0 (~300 Mbps practical). Runs the Edge Runtime stack at sites where a Pi 5 is overkill.",
+  "tags": ["rpi3", "linux", "edge", "wifi", "ethernet"],
+  "image": { "asset": "../linux_edge_hosts/rpi3.svg", "alt": "Raspberry Pi 3 Model B+" },
+  "capabilities": [
+    "linux_host", "docker", "mqtt_broker", "mtls_terminator", "wifi", "ethernet"
+  ],
+  "interfaces": [
+    { "type": "Ethernet", "direction": "bidir" },
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "BLE", "direction": "bidir" },
+    { "type": "USB", "direction": "bidir" },
+    { "type": "I2C", "direction": "bidir" },
+    { "type": "SPI", "direction": "bidir" },
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0, "notes": "40-pin BCM header" }
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 600, "current_ma_peak": 2500, "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "docker.io", "version_range": ">=24.0" },
+    { "runtime": "linux_pkg", "module": "mosquitto", "version_range": ">=2.0" }
+  ],
+  "self_tests": [
+    { "id": "docker_up", "name": "Docker daemon healthy", "blocking": true, "steps": ["docker info"], "expected": "exit 0" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control",
+                       "twin.smart_plug_control", "twin.camera_control", "twin.recorder_control"]
+  },
+  "metadata": {
+    "soc": "BCM2837B0",
+    "cpu_mhz": 1400,
+    "cpu_cores": 4,
+    "ram_mb": 1024,
+    "wireless": "wifi+ble",
+    "pin_count": 40,
+    "default_i2c": { "sda": "GPIO2", "scl": "GPIO3" }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "stable_id": "twin.weighscale_control",
+  "name": "Weigh Scale Control",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "digital_twin_controls_library",
+  "category": "controls",
+  "description": "Tare, stable-weight detection, lo/hi thresholds. Drives a load-cell sensor.",
+  "tags": ["weight", "scale", "twin"],
+  "image": { "asset": "../controls/weighscale_control.svg", "alt": "Weigh scale twin" },
+  "capabilities": ["tare", "stable_detection", "thresholds"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [],
+  "self_tests": [
+    { "id": "tare_zero", "name": "Tare yields ~0g", "blocking": true, "steps": ["tare", "abs(weight) < 5"], "expected": "near zero" }
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "ui_widgets": ["ui.widget.scale_readout"]
+  },
+  "metadata": {
+    "desired": {
+      "lo_threshold_g": { "type": "number" },
+      "hi_threshold_g": { "type": "number" },
+      "stability_window_g": { "type": "number", "default": 2 },
+      "stability_time_ms": { "type": "integer", "default": 500 },
+      "command": { "type": "string", "enum": ["tare", "calibrate", "ack"] }
+    },
+    "reported": {
+      "raw_weight_g": { "type": "number" },
+      "stable_weight_g": { "type": "number" },
+      "is_stable": { "type": "boolean" },
+      "in_range": { "type": "boolean" }
+    },
+    "current": {
+      "alarm_active": { "type": "boolean" }
+    }
+  }
+}

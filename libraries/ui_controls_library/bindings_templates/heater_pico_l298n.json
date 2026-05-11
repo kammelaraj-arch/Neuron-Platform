@@ -1,0 +1,28 @@
+{
+  "binding_id": "binding.heater_pico_l298n",
+  "version": "1.0.0",
+  "description": "Wires a HeaterControl twin to a Pico 2 W with DS18B20 + SSR. Default mappings used by auto pin allocator.",
+  "twin_control": "twin.heater_control",
+  "compute": "compute.pico2w",
+  "components": [
+    { "stable_id": "sensor.temp.ds18b20", "instance_id": "probe_a", "role": "process_temp" },
+    { "stable_id": "actuator.relay.ssr",  "instance_id": "ssr_main",  "role": "heater_drive" },
+    { "stable_id": "actuator.heater.element", "instance_id": "element_a", "role": "heater" }
+  ],
+  "channels": {
+    "desired": {
+      "setpoint_c":     "twin/heater/{instance}/desired/setpoint_c",
+      "safety_max_c":   "twin/heater/{instance}/desired/safety_max_c",
+      "command":        "twin/heater/{instance}/desired/command"
+    },
+    "reported": {
+      "process_temp_c": "twin/heater/{instance}/reported/process_temp_c",
+      "state":          "twin/heater/{instance}/reported/state",
+      "ssr_duty":       "twin/heater/{instance}/reported/ssr_duty"
+    }
+  },
+  "ui_widgets": [
+    { "widget": "ui.widget.temp_gauge", "title": "Process Temperature" },
+    { "widget": "ui.widget.alarm_banner" }
+  ]
+}

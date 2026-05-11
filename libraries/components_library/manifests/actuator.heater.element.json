@@ -1,0 +1,42 @@
+{
+  "stable_id": "actuator.heater.element",
+  "name": "Resistive Heater Element 1.5kW",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "heater",
+  "description": "AC heater element driven through SSR. Always paired with a temperature sensor + safety thermostat.",
+  "tags": ["heater", "ac", "food"],
+  "image": { "asset": "../actuators/heater.svg", "alt": "Heater coil" },
+  "capabilities": ["resistive_heat"],
+  "dependencies": [
+    { "stable_id": "actuator.relay.ssr", "version_range": ">=1.0.0" }
+  ],
+  "interfaces": [
+    { "type": "Internal", "direction": "in", "notes": "AC line through SSR" }
+  ],
+  "power": {
+    "voltage_v": 230,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 6500,
+    "current_ma_peak": 7500,
+    "power_source": "mains"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "no_runaway",
+      "name": "Temp delta within window when SSR off",
+      "blocking": true,
+      "steps": ["force SSR off", "monitor 10s", "delta_c < 1.0"],
+      "expected": "no thermal runaway"
+    }
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "twin_controls": ["twin.heater_control"],
+    "ui_widgets": ["ui.widget.temp_gauge"]
+  }
+}

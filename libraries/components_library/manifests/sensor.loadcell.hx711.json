@@ -1,0 +1,45 @@
+{
+  "stable_id": "sensor.loadcell.hx711",
+  "name": "HX711 24-bit ADC + Load Cell",
+  "vendor": "Avia Semiconductor",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "weight",
+  "description": "Strain-gauge load cell + HX711 24-bit ADC for precision weighing.",
+  "tags": ["weight", "load_cell", "adc"],
+  "image": { "asset": "../sensors/hx711.svg", "alt": "HX711 load cell amplifier" },
+  "capabilities": ["weight_read", "tare", "calibrate"],
+  "interfaces": [
+    { "type": "GPIO", "direction": "out", "pins_required": 1, "notes": "SCK clock" },
+    { "type": "GPIO", "direction": "in", "pins_required": 1, "notes": "DOUT data" }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1.5,
+    "current_ma_peak": 5,
+    "power_source": "bus"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "micropython", "module": "hx711", "version_range": ">=0.3.0" }
+  ],
+  "self_tests": [
+    {
+      "id": "tare_zero",
+      "name": "Tare reads near zero",
+      "blocking": true,
+      "steps": ["tare", "read", "abs(value) < 50"],
+      "expected": "value near zero"
+    }
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "twin_controls": ["twin.weighscale_control"],
+    "ui_widgets": ["ui.widget.scale_readout"]
+  },
+  "twin_bindings": [
+    { "control_id": "twin.weighscale_control", "channel": "reported", "field": "stable_weight_g", "units": "g" }
+  ]
+}

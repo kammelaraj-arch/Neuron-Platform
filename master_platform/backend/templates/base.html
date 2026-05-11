@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1020" />
+    <title>{% block title %}Neuron Platform{% endblock %} — Master</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+    {% set nav = [('/', 'Home'),
+                  ('/ui/live', 'Live'),
+                  ('/ui/library', 'Catalog'),
+                  ('/ui/library/manage', 'Library Mgmt'),
+                  ('/ui/systems', 'Systems'),
+                  ('/ui/devices', 'Devices'),
+                  ('/ui/processes', 'Processes'),
+                  ('/ui/secrets', 'Secrets'),
+                  ('/ui/mtls', 'mTLS'),
+                  ('/ui/audit', 'Audit'),
+                  ('/ui/sysops', 'Sys Ops'),
+                  ('/docs', 'API')] %}
+    {% set signed_in = request.session.get('neuron_api_key_id') %}
+
+    <header class="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/85 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70">
+      <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+        <a href="/" class="flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
+          <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400 to-cyan-500 text-slate-950 font-black">N</span>
+          <span>Neuron</span>
+          <span class="text-slate-500 hidden md:inline">Master</span>
+        </a>
+
+        <!-- Desktop nav -->
+        <nav class="ml-auto hidden items-center gap-1 text-sm md:flex">
+          {% for href, label in nav %}
+            <a href="{{ href }}" class="rounded-md px-2.5 py-1.5 hover:bg-slate-800/70 text-slate-300 hover:text-white transition">{{ label }}</a>
+          {% endfor %}
+          {% if signed_in %}
+            <form method="post" action="/logout" class="ml-2">
+              <button class="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-red-400 hover:text-red-300">Sign out</button>
+            </form>
+          {% else %}
+            <a href="/login" class="ml-2 rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Sign in</a>
+          {% endif %}
+        </nav>
+
+        <!-- Mobile burger -->
+        <button id="mobile-burger"
+                class="ml-auto inline-flex items-center justify-center rounded-md border border-slate-700 p-2 text-slate-300 md:hidden"
+                aria-label="Toggle navigation"
+                aria-controls="mobile-nav"
+                aria-expanded="false">
+          <svg id="burger-icon-open" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <svg id="burger-icon-close" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Mobile drawer -->
+      <nav id="mobile-nav" class="hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur md:hidden">
+        <div class="mx-auto max-w-6xl px-2 py-2">
+          <ul class="grid grid-cols-2 gap-1 text-sm">
+            {% for href, label in nav %}
+              <li><a href="{{ href }}" class="block rounded-md px-3 py-2 text-slate-200 hover:bg-slate-800/70">{{ label }}</a></li>
+            {% endfor %}
+          </ul>
+          <div class="mt-2 px-2">
+            {% if signed_in %}
+              <form method="post" action="/logout">
+                <button class="w-full rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-red-400 hover:text-red-300">Sign out</button>
+              </form>
+            {% else %}
+              <a href="/login" class="block w-full rounded-md bg-emerald-500 px-3 py-2 text-center text-sm font-medium text-slate-950 hover:bg-emerald-400">Sign in</a>
+            {% endif %}
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+      Neuron Platform · neuron.shital.org.uk · DB isolated from ShitalEco
+    </footer>
+
+    <script>
+    (function () {
+      const btn = document.getElementById('mobile-burger');
+      const nav = document.getElementById('mobile-nav');
+      const open = document.getElementById('burger-icon-open');
+      const close = document.getElementById('burger-icon-close');
+      if (!btn || !nav) return;
+      btn.addEventListener('click', () => {
+        const isHidden = nav.classList.toggle('hidden');
+        btn.setAttribute('aria-expanded', String(!isHidden));
+        open.classList.toggle('hidden', !isHidden);
+        close.classList.toggle('hidden', isHidden);
+      });
+      // Auto-close drawer on a wider viewport.
+      window.addEventListener('resize', () => {
+        if (window.matchMedia('(min-width: 768px)').matches) {
+          nav.classList.add('hidden');
+          btn.setAttribute('aria-expanded', 'false');
+          open.classList.remove('hidden');
+          close.classList.add('hidden');
+        }
+      });
+    })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "stable_id": "twin.alarm_model",
+  "name": "Standard Alarm Model",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "digital_twin_controls_library",
+  "category": "alarms",
+  "description": "Standard alarm contract: severity, latching, acknowledgement, suppression window.",
+  "tags": ["alarm", "model"],
+  "image": { "asset": "../alarms/alarm_model.svg", "alt": "Alarm model" },
+  "capabilities": ["severity_warning", "severity_critical", "latch", "ack", "suppress"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    { "id": "latch_holds", "name": "Latched alarm survives clear-source", "steps": ["raise", "clear_source", "still active"], "expected": "active" }
+  ],
+  "compatibility": {
+    "ui_widgets": ["ui.widget.alarm_banner"]
+  },
+  "metadata": {
+    "severities": ["info", "warning", "critical"],
+    "fields": {
+      "id": "string",
+      "severity": "enum",
+      "source": "string",
+      "message": "string",
+      "raised_at": "datetime",
+      "acked_at": "datetime|null",
+      "cleared_at": "datetime|null",
+      "latched": "boolean"
+    }
+  }
+}

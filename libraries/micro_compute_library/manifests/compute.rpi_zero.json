@@ -1,0 +1,45 @@
+{
+  "stable_id": "compute.rpi_zero",
+  "name": "Raspberry Pi Zero W (Linux, low-power)",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "description": "BCM2835 single-core ARM11 at 1 GHz, 512 MB RAM, Wi-Fi 2.4 GHz + BT 4.1. Tiny power-sipping Linux host — fine for one-or-two device twins, not a Master / NVR. Use the Pi Zero 2 W where you need any compute headroom.",
+  "tags": ["rpi_zero", "linux", "edge", "low_power", "wifi"],
+  "image": { "asset": "../linux_edge_hosts/rpi_zero.svg", "alt": "Raspberry Pi Zero W" },
+  "capabilities": ["linux_host", "wifi"],
+  "interfaces": [
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "BLE", "direction": "bidir" },
+    { "type": "USB", "direction": "bidir" },
+    { "type": "I2C", "direction": "bidir" },
+    { "type": "SPI", "direction": "bidir" },
+    { "type": "GPIO", "direction": "bidir", "pins_required": 0, "notes": "40-pin BCM header" }
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 130, "current_ma_peak": 350, "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "docker.io", "version_range": ">=24.0",
+      "init_args": { "note": "tight on RAM — limit container count" } }
+  ],
+  "self_tests": [
+    { "id": "boot_ok", "name": "Boot to login", "blocking": true, "steps": ["uptime"], "expected": "exit 0" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control",
+                       "twin.smart_plug_control"]
+  },
+  "metadata": {
+    "soc": "BCM2835",
+    "cpu_mhz": 1000,
+    "cpu_cores": 1,
+    "ram_mb": 512,
+    "wireless": "wifi+ble",
+    "pin_count": 40,
+    "default_i2c": { "sda": "GPIO2", "scl": "GPIO3" }
+  }
+}

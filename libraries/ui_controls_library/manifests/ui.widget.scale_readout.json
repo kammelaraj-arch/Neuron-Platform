@@ -1,0 +1,30 @@
+{
+  "stable_id": "ui.widget.scale_readout",
+  "name": "Scale Readout",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "ui_controls_library",
+  "category": "widgets",
+  "description": "Large weight readout with stable indicator, lo/hi range bar, tare button.",
+  "tags": ["scale", "weight"],
+  "image": { "asset": "../symbols_svg/scale.svg", "alt": "Scale readout" },
+  "capabilities": ["render_weight", "stable_dot", "range_bar", "tare_button", "mobile_responsive"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "node", "module": "@neuron/ui-widgets", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "renders", "name": "Mounts without error", "steps": ["mount in dom"], "expected": "no exceptions" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.weighscale_control"]
+  },
+  "ui_bindings": [
+    { "widget_id": "ui.widget.scale_readout", "binding": "$.reported.stable_weight_g", "format": "{value:.1f} g" },
+    { "widget_id": "ui.widget.scale_readout", "binding": "$.reported.is_stable" },
+    { "widget_id": "ui.widget.scale_readout", "binding": "$.desired.lo_threshold_g" },
+    { "widget_id": "ui.widget.scale_readout", "binding": "$.desired.hi_threshold_g" }
+  ]
+}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Live wall{% endblock %}
+{% block content %}
+  <header class="flex items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Live wall</h1>
+      <p class="text-slate-400 text-sm">Every registered device's twin widgets, streaming via SSE. Click any tile to open its detail page.</p>
+    </div>
+    <div class="hidden sm:flex items-center gap-3 text-xs text-slate-400">
+      <span><span id="online-count" class="font-mono text-emerald-300">0</span> / {{ devices|length }} online</span>
+      <button id="fullscreen-btn" class="rounded-md border border-slate-700 px-2 py-1 hover:border-emerald-400 hover:text-emerald-300">Fullscreen</button>
+    </div>
+  </header>
+
+  {% if not devices %}
+    <div class="mt-6 rounded-xl border border-slate-800 bg-slate-900/40 p-6 text-center text-sm text-slate-400">
+      No devices yet — <a class="text-emerald-300 underline" href="/ui/devices">register one</a>.
+    </div>
+  {% else %}
+    <div id="wall" class="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {% for d in devices %}
+        <a href="/ui/devices/{{ d.device_dna }}" id="card-{{ d.device_dna }}"
+           class="group block rounded-2xl border border-slate-800 bg-slate-900/40 hover:border-emerald-500/60 hover:bg-slate-900 transition overflow-hidden">
+          <div class="flex items-center justify-between gap-2 border-b border-slate-800/70 px-3 py-2 text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+              <span id="dot-{{ d.device_dna }}" class="inline-block h-2 w-2 shrink-0 rounded-full bg-slate-600"></span>
+              <span class="truncate font-mono text-emerald-300">{{ d.device_dna }}</span>
+            </div>
+            <span id="lbl-{{ d.device_dna }}" class="text-[10px] uppercase tracking-widest text-slate-400">connecting</span>
+          </div>
+          <div class="p-3">
+            <div class="text-[10px] font-mono text-slate-500 truncate">{{ d.compute_stable_id }}</div>
+            <div id="widgets-{{ d.device_dna }}" class="mt-2 space-y-2"></div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <script src="/static/widgets.js"></script>
+  <script>
+  (function () {
+    const devices = [
+      {% for d in devices %}
+      {
+        dna: "{{ d.device_dna }}",
+        twin_controls: {{ d.dna_json.twin_controls | tojson if d.dna_json and d.dna_json.twin_controls else '[]' }}
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    const onlineCountEl = document.getElementById("online-count");
+    const onlineSet = new Set();
+    function updateOnlineCount() { if (onlineCountEl) onlineCountEl.textContent = onlineSet.size; }
+
+    const fsBtn = document.getElementById("fullscreen-btn");
+    if (fsBtn) {
+      fsBtn.addEventListener("click", () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+      });
+    }
+
+    devices.forEach((d) => {
+      const widgetsHost = document.getElementById("widgets-" + d.dna);
+      const dot = document.getElementById("dot-" + d.dna);
+      const lbl = document.getElementById("lbl-" + d.dna);
+      if (!widgetsHost) return;
+
+      const widgets = [];
+      d.twin_controls.forEach((tid) => {
+        const tile = document.createElement("div");
+        widgetsHost.appendChild(tile);
+        const w = NeuronWidgets.create(tid, tile);
+        if (w) widgets.push(w);
+      });
+      if (widgets.length === 0) {
+        widgetsHost.innerHTML = '<div class="text-[11px] text-slate-500 italic">no widgets bound — assign components + regenerate DNA</div>';
+      }
+
+      const setStatus = (color, text) => {
+        if (dot) {
+          dot.style.background = color;
+          dot.classList.toggle("animate-pulse", color === "#1FB95A");
+        }
+        if (lbl) lbl.textContent = text;
+      };
+
+      const es = new EventSource(`/api/devices/${d.dna}/twin/stream`);
+      es.onmessage = (ev) => {
+        try {
+          const payload = JSON.parse(ev.data);
+          if (!payload.online) {
+            setStatus("#F5A524", "offline");
+            onlineSet.delete(d.dna); updateOnlineCount();
+            return;
+          }
+          setStatus("#1FB95A", "live");
+          onlineSet.add(d.dna); updateOnlineCount();
+          const twin = payload.twin || {};
+          widgets.forEach((w) => w.render(twin));
+        } catch (e) { /* ignore */ }
+      };
+      es.onerror = () => {
+        setStatus("#64748B", "reconnect");
+        onlineSet.delete(d.dna); updateOnlineCount();
+      };
+    });
+  })();
+  </script>
+{% endblock %}

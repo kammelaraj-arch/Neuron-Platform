@@ -1,0 +1,29 @@
+{
+  "stable_id": "ui.widget.smart_plug_status",
+  "name": "Smart Plug Status",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "ui_controls_library",
+  "category": "widgets",
+  "description": "On/off toggle tile with live wattage, cumulative kWh, and last-seen indicator. Driven by twin.smart_plug_control reported channel.",
+  "tags": ["smart_plug", "tile", "energy"],
+  "image": { "asset": "../symbols_svg/smart_plug.svg", "alt": "Smart plug widget" },
+  "capabilities": ["render_state", "render_power", "render_energy", "tap_toggle", "mobile_responsive"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "node", "module": "@neuron/ui-widgets", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "renders", "name": "Mounts without error", "steps": ["mount in dom"], "expected": "no exceptions" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.smart_plug_control"]
+  },
+  "ui_bindings": [
+    { "widget_id": "ui.widget.smart_plug_status", "binding": "$.reported.state" },
+    { "widget_id": "ui.widget.smart_plug_status", "binding": "$.reported.power_w",   "format": "{value:.1f} W" },
+    { "widget_id": "ui.widget.smart_plug_status", "binding": "$.reported.energy_kwh","format": "{value:.2f} kWh" }
+  ]
+}

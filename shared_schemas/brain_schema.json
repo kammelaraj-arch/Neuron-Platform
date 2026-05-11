@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://neuron.shital.org.uk/schemas/brain.schema.json",
+  "title": "Neuron Device Brain Configuration",
+  "description": "Behaviour configuration deployed on top of a DNA. Defines control loops, safety, telemetry and offline policy.",
+  "type": "object",
+  "required": [
+    "device_dna",
+    "brain_version",
+    "config_schema_version",
+    "loops",
+    "safety",
+    "telemetry",
+    "offline_policy"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "device_dna": { "type": "string" },
+    "brain_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "config_schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "loops": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "inputs", "outputs", "period_ms"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["pid", "bangbang", "schedule", "state_machine", "passthrough"] },
+          "period_ms": { "type": "integer", "minimum": 5 },
+          "inputs": { "type": "array", "items": { "type": "string" } },
+          "outputs": { "type": "array", "items": { "type": "string" } },
+          "params": { "type": "object", "additionalProperties": true },
+          "twin_control_ref": { "type": "string" }
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "required": ["safe_state", "interlocks"],
+      "additionalProperties": false,
+      "properties": {
+        "safe_state": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Output values to enforce on fault/disconnect."
+        },
+        "interlocks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "condition", "action"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "condition": { "type": "string", "description": "Expression on twin/inputs." },
+              "action": { "type": "string", "enum": ["go_safe", "stop_loop", "raise_alarm", "fail_open", "fail_closed"] },
+              "alarm_severity": { "type": "string", "enum": ["info", "warning", "critical"] }
+            }
+          }
+        },
+        "watchdog_ms": { "type": "integer", "minimum": 50 }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "required": ["publish_period_ms", "topics"],
+      "additionalProperties": false,
+      "properties": {
+        "publish_period_ms": { "type": "integer", "minimum": 100 },
+        "qos": { "type": "integer", "minimum": 0, "maximum": 2, "default": 1 },
+        "topics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["topic", "fields"],
+            "additionalProperties": false,
+            "properties": {
+              "topic": { "type": "string" },
+              "fields": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "offline_policy": {
+      "type": "object",
+      "required": ["mode", "max_offline_seconds", "buffer_size"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string", "enum": ["continue_safe", "hold_last", "go_safe"] },
+        "max_offline_seconds": { "type": "integer", "minimum": 0 },
+        "buffer_size": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "recipe_id": "recipe.cooking.hold_80c",
+  "name": "Cook & Hold at 80 °C",
+  "version": "1.0.0",
+  "description": "Heat process zone to 80 °C and hold for the configured duration. Uses HeaterControl + temp sensor with safety_max_c=120.",
+  "twin_targets": ["twin.heater_control"],
+  "params": {
+    "setpoint_c": 80,
+    "safety_max_c": 120,
+    "hold_minutes": 30
+  },
+  "steps": [
+    { "id": "preheat", "action": "set_state", "args": { "state": "PREHEAT" } },
+    { "id": "wait_hot", "action": "await", "args": { "expr": "reported.process_temp_c >= 79.5" } },
+    { "id": "hold", "action": "set_state", "args": { "state": "HOLD" } },
+    { "id": "hold_timer", "action": "wait_minutes", "args": { "minutes": "${params.hold_minutes}" } },
+    { "id": "cooldown", "action": "set_state", "args": { "state": "COOLDOWN" } }
+  ]
+}

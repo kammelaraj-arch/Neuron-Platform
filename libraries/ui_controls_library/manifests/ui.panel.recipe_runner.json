@@ -1,0 +1,28 @@
+{
+  "stable_id": "ui.panel.recipe_runner",
+  "name": "Recipe Runner Panel",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "ui_controls_library",
+  "category": "panels",
+  "description": "Panel that searches/selects a recipe, shows steps, target temperatures and weights, and starts/stops the run via Brain APIs.",
+  "tags": ["recipe", "panel"],
+  "image": { "asset": "../symbols_svg/recipe.svg", "alt": "Recipe runner" },
+  "capabilities": ["recipe_browse", "recipe_run", "recipe_pause", "step_progress", "mobile_responsive"],
+  "interfaces": [{ "type": "HTTP", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "node", "module": "@neuron/ui-widgets", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "renders", "name": "Mounts without error", "steps": ["mount in dom"], "expected": "no exceptions" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control", "twin.weighscale_control"]
+  },
+  "ui_bindings": [
+    { "widget_id": "ui.panel.recipe_runner", "binding": "$.recipes[*]" },
+    { "widget_id": "ui.panel.recipe_runner", "binding": "$.run_state" }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "stable_id": "board.relay.generic.4ch",
+  "name": "4-Channel Relay Board",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "relay_boards",
+  "description": "Opto-isolated 4-channel mechanical relay board. 10A per channel.",
+  "tags": ["relay", "4ch"],
+  "image": { "asset": "../relay_boards/relay_4ch.svg", "alt": "4-channel relay board" },
+  "capabilities": ["switch_ac_x4", "switch_dc_x4"],
+  "interfaces": [
+    { "type": "GPIO", "direction": "out", "pins_required": 4 }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 70,
+    "current_ma_peak": 280,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "micropython", "module": "machine", "version_range": ">=1.20.0" }
+  ],
+  "self_tests": [
+    { "id": "all_off", "name": "All channels off at boot", "steps": ["read pins", "all high (active-low)"], "expected": "all off" }
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "twin_controls": ["twin.heater_control", "twin.motor_control"],
+    "ui_widgets": ["ui.widget.motor_status"]
+  }
+}

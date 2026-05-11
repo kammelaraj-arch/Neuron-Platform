@@ -1,0 +1,48 @@
+{
+  "stable_id": "twin.recorder_control",
+  "name": "Recorder Control",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "digital_twin_controls_library",
+  "category": "controls",
+  "description": "NVR / recorder twin: which streams to record, retention window, current disk usage, last-event clip URL.",
+  "tags": ["recorder", "nvr", "twin"],
+  "image": { "asset": "../controls/recorder_control.svg", "alt": "Recorder twin" },
+  "capabilities": ["start_stop_recording", "retention_policy", "event_clip"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [],
+  "self_tests": [
+    { "id": "disk_check", "name": "Recording disk writable",
+      "blocking": true, "steps": ["statvfs", "free > 5%"], "expected": "ok" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5", "compute.ai_edge.coral"]
+  },
+  "metadata": {
+    "state_machine": {
+      "states": ["IDLE", "RECORDING", "FULL", "FAULT"],
+      "transitions": [
+        { "from": "IDLE", "to": "RECORDING", "on": "start" },
+        { "from": "RECORDING", "to": "IDLE", "on": "stop" },
+        { "from": "RECORDING", "to": "FULL", "on": "disk_full" },
+        { "from": "*", "to": "FAULT", "on": "fault" }
+      ]
+    },
+    "desired": {
+      "recording":        { "type": "boolean" },
+      "retention_days":   { "type": "integer", "default": 7 },
+      "stream_stable_ids":{ "type": "array",   "note": "list of camera stable_ids to record" }
+    },
+    "reported": {
+      "state":         { "type": "string" },
+      "disk_used_pct": { "type": "number" },
+      "active_streams":{ "type": "array" },
+      "last_event_url":{ "type": "string" }
+    },
+    "current": {
+      "alarm_active": { "type": "boolean" }
+    }
+  }
+}

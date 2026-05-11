@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Processes & Recipes{% endblock %}
+{% block content %}
+  <header class="flex items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Processes & Recipes</h1>
+      <p class="text-slate-400 text-sm">Drag &amp; drop process graphs (saved as JSON) and run recipes against any registered device.</p>
+    </div>
+    <a href="/ui/recipes/new" class="rounded-lg bg-emerald-500 px-4 py-2 font-medium text-slate-950 hover:bg-emerald-400 transition text-sm">+ New recipe</a>
+  </header>
+
+  <section class="mt-6 grid gap-6 lg:grid-cols-2">
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <h2 class="font-semibold">Recipes</h2>
+      <ul class="mt-3 divide-y divide-slate-800/70 text-sm">
+        {% for r in recipes %}
+          <li class="py-3 flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-medium">{{ r.name }}</span>
+                {% if r.source == 'db' %}
+                  <span class="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">db (editable)</span>
+                {% else %}
+                  <span class="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">file</span>
+                {% endif %}
+              </div>
+              <div class="font-mono text-xs text-slate-500 break-all">{{ r.recipe_id }}</div>
+              <div class="mt-1 text-xs text-slate-400">targets: {{ r.twin_targets | join(', ') }} · steps: {{ r.steps | join(' → ') }}</div>
+            </div>
+            <div class="flex flex-col gap-1 shrink-0">
+              <a class="rounded-md border border-slate-700 px-2.5 py-1 text-xs hover:border-emerald-400 hover:text-emerald-300"
+                 href="/ui/recipes/{{ r.recipe_id }}">Run</a>
+              {% if r.editable %}
+                <a class="rounded-md border border-slate-700 px-2.5 py-1 text-xs hover:border-cyan-400 hover:text-cyan-300"
+                   href="/ui/recipes/edit/{{ r.db_id }}">Edit</a>
+                <form method="post" action="/ui/recipes/delete/{{ r.db_id }}" onsubmit="return confirm('Delete recipe {{ r.recipe_id }}?')">
+                  <button class="w-full rounded-md border border-slate-700 px-2.5 py-1 text-xs hover:border-red-400 hover:text-red-300">Delete</button>
+                </form>
+              {% endif %}
+            </div>
+          </li>
+        {% else %}
+          <li class="py-6 text-center text-slate-500 italic">No recipes yet — click "+ New recipe" or drop a file in libraries/digital_twin_controls_library/recipes/</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <h2 class="font-semibold">Recent recipe runs</h2>
+      <table class="mt-3 w-full text-sm">
+        <thead class="text-left text-xs uppercase tracking-wider text-slate-400">
+          <tr><th class="py-2">Recipe</th><th class="py-2">Device</th><th class="py-2">State</th><th class="py-2">Step</th><th class="py-2">%</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/70">
+          {% for run in runs %}
+            <tr>
+              <td class="py-2 font-mono text-xs">{{ run.recipe_id.split('.')[-1] }}</td>
+              <td class="py-2 font-mono text-xs">{{ run.device_dna[:16] }}…</td>
+              <td class="py-2">
+                {% if run.state == 'running' %}<span class="text-emerald-400">running</span>
+                {% elif run.state == 'completed' %}<span class="text-cyan-300">completed</span>
+                {% elif run.state == 'paused' %}<span class="text-amber-400">paused</span>
+                {% elif run.state == 'failed' %}<span class="text-red-400">failed</span>
+                {% else %}<span class="text-slate-500">{{ run.state }}</span>{% endif %}
+              </td>
+              <td class="py-2 text-xs">{{ run.current_step or '—' }}</td>
+              <td class="py-2 font-mono text-xs">{{ run.progress_pct }}%</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="py-6 text-center text-slate-500 italic">No runs yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+    <h2 class="font-semibold">Process graph canvas</h2>
+    <p class="mt-1 text-xs text-slate-400">Drag nodes onto the canvas. Save persists the graph to <code>POST /api/processes</code>.</p>
+    <div class="mt-3 grid gap-3 lg:grid-cols-[240px_1fr]">
+      <aside class="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs">
+        <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-2">Palette</div>
+        <ul id="palette" class="space-y-1">
+          {% for tk in twin_kinds %}
+            <li class="cursor-grab rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 hover:border-emerald-400" draggable="true" data-kind="{{ tk }}">
+              {{ tk.replace('twin.', '').replace('_', ' ') }}
+            </li>
+          {% endfor %}
+        </ul>
+        <button id="save" class="mt-3 w-full rounded-md bg-emerald-500 px-3 py-1.5 text-slate-950 font-medium hover:bg-emerald-400">Save graph</button>
+        <input id="graph-name" placeholder="Graph name" class="mt-2 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs">
+        <input id="api-key" placeholder="X-API-Key (admin)" class="mt-2 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs">
+      </aside>
+      <div id="canvas" class="relative h-[420px] rounded-xl border border-dashed border-slate-700 bg-slate-950/40">
+        <svg id="links" class="absolute inset-0 pointer-events-none w-full h-full"></svg>
+      </div>
+    </div>
+    <div id="msg" class="mt-2 text-xs text-slate-400"></div>
+  </section>
+
+  <script>
+    (function(){
+      const canvas = document.getElementById('canvas');
+      const links  = document.getElementById('links');
+      const palette = document.getElementById('palette');
+      const msg = document.getElementById('msg');
+      let nextId = 1;
+      const nodes = [];
+      const edges = [];
+
+      palette.querySelectorAll('li').forEach(li => {
+        li.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('kind', li.dataset.kind);
+        });
+      });
+      canvas.addEventListener('dragover', e => e.preventDefault());
+      canvas.addEventListener('drop', e => {
+        e.preventDefault();
+        const kind = e.dataTransfer.getData('kind');
+        if (!kind) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left, y = e.clientY - rect.top;
+        addNode(kind, x, y);
+      });
+
+      function addNode(kind, x, y){
+        const id = 'n' + (nextId++);
+        const el = document.createElement('div');
+        el.className = 'absolute rounded-lg border border-emerald-500/60 bg-slate-900 px-3 py-2 text-xs cursor-move shadow';
+        el.style.left = (x - 60) + 'px';
+        el.style.top  = (y - 14) + 'px';
+        el.dataset.id = id; el.dataset.kind = kind;
+        el.textContent = kind.replace('twin.','').replace('_',' ');
+        canvas.appendChild(el);
+        nodes.push({id, kind, x, y});
+        makeDraggable(el);
+      }
+
+      function makeDraggable(el){
+        let dx=0, dy=0;
+        el.addEventListener('mousedown', start);
+        function start(e){
+          dx = e.clientX - el.offsetLeft; dy = e.clientY - el.offsetTop;
+          document.addEventListener('mousemove', move);
+          document.addEventListener('mouseup', stop);
+        }
+        function move(e){
+          el.style.left = (e.clientX - dx) + 'px';
+          el.style.top  = (e.clientY - dy) + 'px';
+          const n = nodes.find(n => n.id === el.dataset.id);
+          if (n){ n.x = e.clientX - dx + 60; n.y = e.clientY - dy + 14; }
+        }
+        function stop(){
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', stop);
+        }
+      }
+
+      document.getElementById('save').addEventListener('click', async () => {
+        const name = document.getElementById('graph-name').value.trim();
+        const key  = document.getElementById('api-key').value.trim();
+        if (!name) { msg.textContent = 'name required'; return; }
+        if (!key)  { msg.textContent = 'API key required'; return; }
+        const body = {
+          name,
+          graph_json: { nodes: nodes.map(n => ({id:n.id, kind:n.kind, x:n.x, y:n.y})), edges }
+        };
+        const r = await fetch('/api/processes', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-API-Key':key},
+          body: JSON.stringify(body),
+        });
+        msg.textContent = r.ok ? 'saved ✓' : ('save failed: ' + r.status);
+      });
+    })();
+  </script>
+{% endblock %}

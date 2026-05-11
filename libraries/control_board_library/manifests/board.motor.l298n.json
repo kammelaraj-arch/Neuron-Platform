@@ -1,0 +1,41 @@
+{
+  "stable_id": "board.motor.l298n",
+  "name": "L298N Dual H-Bridge Motor Driver",
+  "vendor": "STMicroelectronics (clone)",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "description": "Dual H-bridge driver for two DC motors or one stepper. PWM speed + direction control.",
+  "tags": ["motor", "h-bridge", "pwm"],
+  "image": { "asset": "../motor_drivers/l298n.svg", "alt": "L298N module" },
+  "capabilities": ["dc_motor_drive_2ch", "pwm_speed", "direction_control"],
+  "interfaces": [
+    { "type": "GPIO", "direction": "out", "pins_required": 4, "notes": "IN1..IN4" },
+    { "type": "PWM",  "direction": "out", "pins_required": 2, "notes": "ENA, ENB" }
+  ],
+  "power": {
+    "voltage_v": 12,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 600,
+    "current_ma_peak": 2000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "micropython", "module": "machine", "version_range": ">=1.20.0" }
+  ],
+  "self_tests": [
+    {
+      "id": "bridge_off_idle",
+      "name": "Bridge idles low at boot",
+      "blocking": true,
+      "steps": ["read INs", "all low"],
+      "expected": "all low"
+    }
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.rpi5"],
+    "twin_controls": ["twin.motor_control"],
+    "ui_widgets": ["ui.widget.motor_status"]
+  }
+}

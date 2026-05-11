@@ -1,0 +1,55 @@
+{
+  "stable_id": "comms.smart_plug.tapo_p110",
+  "name": "TP-Link Tapo P110 Smart Plug",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_plug",
+  "description": "Wi-Fi smart plug with energy monitoring. Local-LAN protocol via the Tapo Python client. No cloud dependency once provisioned.",
+  "tags": ["tapo", "smart_plug", "wifi", "energy_meter", "local"],
+  "image": { "asset": "../comms/tapo_p110.svg", "alt": "Tapo P110 plug" },
+  "capabilities": ["switch_ac", "energy_meter", "schedule"],
+  "interfaces": [
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "HTTP", "direction": "bidir", "notes": "Local LAN HTTPS to the plug's IP" }
+  ],
+  "power": {
+    "voltage_v": 230,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 50,
+    "current_ma_peak": 16000,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "cpython", "module": "tapo", "version_range": ">=0.7,<2",
+      "init_args": { "host": "<plug_ip>", "email": "<tapo_email>", "password_kid": "<secret_id>" } }
+  ],
+  "self_tests": [
+    { "id": "reachable", "name": "Plug reachable on LAN",
+      "blocking": true,
+      "steps": ["client = ApiClient(email, password)",
+                "device = client.p110(host)",
+                "device.get_device_info()"],
+      "expected": "no exception" },
+    { "id": "toggle_safe", "name": "Off → On → Off without trip",
+      "steps": ["device.off()", "wait 200ms", "device.on()", "wait 1s", "device.off()"],
+      "expected": "load not tripped" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5", "compute.ai_edge.coral"],
+    "twin_controls": ["twin.smart_plug_control"],
+    "ui_widgets": ["ui.widget.smart_plug_status"]
+  },
+  "twin_bindings": [
+    { "control_id": "twin.smart_plug_control", "channel": "reported", "field": "power_w", "units": "W" },
+    { "control_id": "twin.smart_plug_control", "channel": "reported", "field": "energy_kwh", "units": "kWh" }
+  ],
+  "metadata": {
+    "model_family": "P110",
+    "rated_a": 13,
+    "rated_w": 3000,
+    "homologation": ["CE", "UKCA"]
+  }
+}

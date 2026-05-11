@@ -1,0 +1,46 @@
+{
+  "stable_id": "compute.rpi5",
+  "name": "Raspberry Pi 5 (Linux Edge Host)",
+  "vendor": "Raspberry Pi",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "description": "Quad-core Cortex-A76 SBC, runs the Edge Runtime stack (gateway, twin cache, command router, broker).",
+  "tags": ["rpi5", "linux", "edge"],
+  "image": { "asset": "../linux_edge_hosts/rpi5.svg", "alt": "Raspberry Pi 5" },
+  "capabilities": [
+    "linux_host",
+    "docker",
+    "mqtt_broker",
+    "mtls_terminator",
+    "wifi",
+    "ethernet"
+  ],
+  "interfaces": [
+    { "type": "Ethernet", "direction": "bidir" },
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "USB", "direction": "bidir" },
+    { "type": "I2C", "direction": "bidir" },
+    { "type": "SPI", "direction": "bidir" },
+    { "type": "GPIO", "direction": "bidir" }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 1500,
+    "current_ma_peak": 5000,
+    "power_source": "external"
+  },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "linux_pkg", "module": "docker.io", "version_range": ">=24.0" },
+    { "runtime": "linux_pkg", "module": "mosquitto", "version_range": ">=2.0" }
+  ],
+  "self_tests": [
+    { "id": "docker_up", "name": "Docker daemon healthy", "blocking": true, "steps": ["docker info"], "expected": "exit 0" },
+    { "id": "broker_up", "name": "Local MQTT broker reachable", "steps": ["mosquitto_pub test"], "expected": "ack" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control", "twin.motor_control", "twin.weighscale_control"]
+  }
+}

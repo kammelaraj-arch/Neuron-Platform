@@ -1,0 +1,21 @@
+:root { color-scheme: dark; }
+
+/* Tighter type and slightly looser tap targets on small viewports. */
+@media (max-width: 640px) {
+  body { font-size: 15px; }
+  button, [role="button"] { min-height: 36px; }
+  table { font-size: 13px; }
+  pre, code { font-size: 12px; }
+}
+
+/* Tables horizontally scroll instead of squeezing columns. */
+.overflow-x-auto > table { min-width: 480px; }
+
+pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

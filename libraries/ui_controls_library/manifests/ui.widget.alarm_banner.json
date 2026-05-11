@@ -1,0 +1,27 @@
+{
+  "stable_id": "ui.widget.alarm_banner",
+  "name": "Alarm Banner",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "ui_controls_library",
+  "category": "widgets",
+  "description": "Top-of-screen banner showing highest-severity active alarm with ACK button.",
+  "tags": ["alarm", "banner"],
+  "image": { "asset": "../symbols_svg/alarm.svg", "alt": "Alarm banner" },
+  "capabilities": ["render_active_alarm", "ack_button", "severity_color", "mobile_responsive"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "node", "module": "@neuron/ui-widgets", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "renders", "name": "Mounts without error", "steps": ["mount in dom"], "expected": "no exceptions" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.alarm_model"]
+  },
+  "ui_bindings": [
+    { "widget_id": "ui.widget.alarm_banner", "binding": "$.alarms[?(@.acked_at==null)] | sort_by(severity desc) | first()" }
+  ]
+}

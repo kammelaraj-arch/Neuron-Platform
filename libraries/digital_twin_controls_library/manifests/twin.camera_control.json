@@ -1,0 +1,50 @@
+{
+  "stable_id": "twin.camera_control",
+  "name": "Camera Control",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "digital_twin_controls_library",
+  "category": "controls",
+  "description": "PTZ + record/snapshot + motion-event twin for any IP camera (Tapo C200, generic placeholder). Stream URL is reported as-is so the UI can render it directly.",
+  "tags": ["camera", "ptz", "twin"],
+  "image": { "asset": "../controls/camera_control.svg", "alt": "Camera twin" },
+  "capabilities": ["pan", "tilt", "zoom", "snapshot", "record_window", "motion_event"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [],
+  "self_tests": [
+    { "id": "fsm_reset", "name": "FSM enters IDLE on reset",
+      "blocking": true, "steps": ["reset", "state==IDLE"], "expected": "IDLE" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5", "compute.ai_edge.coral"],
+    "ui_widgets": ["ui.widget.camera_view"]
+  },
+  "metadata": {
+    "state_machine": {
+      "states": ["IDLE", "PANNING", "RECORDING", "FAULT"],
+      "transitions": [
+        { "from": "IDLE", "to": "PANNING", "on": "ptz_command" },
+        { "from": "PANNING", "to": "IDLE", "on": "ptz_complete" },
+        { "from": "*", "to": "RECORDING", "on": "record_start" },
+        { "from": "RECORDING", "to": "IDLE", "on": "record_stop" }
+      ]
+    },
+    "desired": {
+      "ptz_pan_deg":  { "type": "number", "min": -180, "max": 180 },
+      "ptz_tilt_deg": { "type": "number", "min": -45,  "max": 90 },
+      "record":       { "type": "boolean" },
+      "snapshot":     { "type": "boolean", "note": "edge-triggered" }
+    },
+    "reported": {
+      "state":           { "type": "string" },
+      "stream_url":      { "type": "string" },
+      "motion_detected": { "type": "boolean" },
+      "last_snapshot_at":{ "type": "datetime" }
+    },
+    "current": {
+      "alarm_active": { "type": "boolean" }
+    }
+  }
+}

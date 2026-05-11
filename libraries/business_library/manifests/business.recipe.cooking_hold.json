@@ -1,0 +1,25 @@
+{
+  "stable_id": "business.recipe.cooking_hold",
+  "name": "Cook & Hold Recipe (business item)",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "business_library",
+  "category": "recipes",
+  "description": "Business-level recipe descriptor: ramp to setpoint, hold N minutes, cool down. Bound to twin.heater_control via the digital_twin recipes folder.",
+  "tags": ["recipe", "cooking", "business"],
+  "capabilities": ["recipe_definition"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    { "id": "params_present", "name": "Required params present", "steps": ["check setpoint_c, hold_minutes"], "expected": "all set" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control"]
+  },
+  "metadata": {
+    "kpis": ["yield_kg", "energy_kwh", "cycle_time_min"],
+    "default_params": { "setpoint_c": 80, "hold_minutes": 30 }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "stable_id": "comms.smart_plug.placeholder",
+  "name": "Smart Plug (placeholder)",
+  "vendor": "Generic",
+  "version": "0.1.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_plug",
+  "description": "Placeholder smart-plug definition; concrete protocol drivers (Tasmota/Matter/Zigbee) are added later.",
+  "tags": ["smart_plug", "placeholder"],
+  "capabilities": ["switch_ac", "energy_meter"],
+  "interfaces": [
+    { "type": "WiFi", "direction": "bidir" },
+    { "type": "MQTT", "direction": "bidir" }
+  ],
+  "power": {
+    "voltage_v": 230,
+    "current_ma_typical": 50,
+    "current_ma_peak": 16000,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "cpython", "module": "paho-mqtt", "version_range": ">=2.0.0" }
+  ],
+  "self_tests": [
+    { "id": "ping", "name": "MQTT availability ping", "steps": ["sub avail topic 5s"], "expected": "online=true" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5"],
+    "ui_widgets": ["ui.widget.motor_status"]
+  }
+}

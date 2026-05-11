@@ -1,0 +1,41 @@
+{
+  "stable_id": "ui.widget.temp_gauge",
+  "name": "Temperature Gauge",
+  "vendor": "Neuron Platform",
+  "version": "1.0.0",
+  "library": "ui_controls_library",
+  "category": "widgets",
+  "description": "Rich SVG dial gauge with setpoint, current value, safety max ring, and alarm halo.",
+  "tags": ["gauge", "temperature", "svg"],
+  "image": { "asset": "../symbols_svg/heater.svg", "alt": "Temperature gauge" },
+  "capabilities": ["render_dial", "render_setpoint", "render_alarm_halo", "mobile_responsive"],
+  "interfaces": [{ "type": "Internal", "direction": "bidir" }],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "nominal",
+  "drivers": [
+    { "runtime": "node", "module": "@neuron/ui-widgets", "version_range": ">=1.0.0" }
+  ],
+  "self_tests": [
+    { "id": "renders", "name": "Mounts without error", "steps": ["mount in dom"], "expected": "no exceptions" }
+  ],
+  "compatibility": {
+    "twin_controls": ["twin.heater_control"]
+  },
+  "ui_bindings": [
+    { "widget_id": "ui.widget.temp_gauge", "binding": "$.reported.process_temp_c", "format": "{value:.1f} °C" },
+    { "widget_id": "ui.widget.temp_gauge", "binding": "$.desired.setpoint_c" },
+    { "widget_id": "ui.widget.temp_gauge", "binding": "$.desired.safety_max_c" }
+  ],
+  "metadata": {
+    "props": {
+      "min": 0,
+      "max": 250,
+      "unit": "°C",
+      "thresholds": [
+        { "value": 80, "color": "#3B82F6" },
+        { "value": 150, "color": "#F5A524" },
+        { "value": 200, "color": "#E5484D" }
+      ]
+    }
+  }
+}

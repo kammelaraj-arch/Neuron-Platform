@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://neuron.shital.org.uk/schemas/pinmap.schema.json",
+  "title": "Neuron Platform Pin Map",
+  "type": "object",
+  "required": ["device_dna", "compute_id", "assignments", "generated_by", "generated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "device_dna": { "type": "string" },
+    "compute_id": { "type": "string", "description": "stable_id of the micro-compute (e.g. 'compute.pico2w')." },
+    "board_id": { "type": "string", "description": "Optional control board stable_id." },
+    "generated_by": { "type": "string", "enum": ["auto_allocator", "manual_override", "imported"] },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "assignments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["component_stable_id", "pins"],
+        "additionalProperties": false,
+        "properties": {
+          "component_stable_id": { "type": "string" },
+          "instance_id": { "type": "string", "description": "Instance label inside the device (e.g. 'temp_zone_a')." },
+          "pins": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["physical", "function"],
+              "additionalProperties": false,
+              "properties": {
+                "physical": { "type": "string", "description": "Board pin label (e.g. 'GP15')." },
+                "logical": { "type": "string", "description": "Optional firmware-side alias." },
+                "function": { "type": "string", "enum": ["GPIO_IN", "GPIO_OUT", "PWM", "ADC", "DAC", "I2C_SDA", "I2C_SCL", "SPI_MOSI", "SPI_MISO", "SPI_SCK", "SPI_CS", "UART_TX", "UART_RX", "1-WIRE", "POWER", "GROUND"] },
+                "pull": { "type": "string", "enum": ["none", "up", "down"] },
+                "active": { "type": "string", "enum": ["high", "low"] }
+              }
+            }
+          },
+          "interface": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": { "type": "string" },
+              "address": { "type": "string" },
+              "speed_hz": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Allocator-detected conflicts; must be empty before firmware build."
+    }
+  }
+}

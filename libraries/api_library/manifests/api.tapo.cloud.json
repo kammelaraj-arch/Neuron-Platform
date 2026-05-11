@@ -1,0 +1,43 @@
+{
+  "stable_id": "api.tapo.cloud",
+  "name": "Tapo Cloud Integration (FALLBACK — prefer local LAN)",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "api_library",
+  "category": "integrations",
+  "description": "OAuth-style email/password integration to TP-Link's Tapo cloud (tplinkcloud.com). Used when devices are not on the same LAN as the Edge. Local-LAN integration is preferred — see comms.smart_plug.tapo_p110 — but cloud is the fallback for remote sites.",
+  "tags": ["tapo", "cloud", "tplink", "integration"],
+  "capabilities": ["device_list", "device_state_read", "device_command", "schedule"],
+  "interfaces": [
+    { "type": "HTTP", "direction": "bidir", "notes": "POST https://wap.tplinkcloud.com" }
+  ],
+  "power": { "voltage_v": 0, "current_ma_typical": 0, "power_source": "bus" },
+  "safety_class": "advisory",
+  "drivers": [
+    { "runtime": "cpython", "module": "httpx", "version_range": ">=0.27,<1" },
+    { "runtime": "cpython", "module": "tapo", "version_range": ">=0.7,<2", "init_args": { "mode": "cloud" } }
+  ],
+  "self_tests": [
+    { "id": "login", "name": "Cloud login OK",
+      "blocking": true,
+      "steps": ["client = ApiClient(email, password)", "client.list_devices()"],
+      "expected": "non-empty device list" }
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi5"],
+    "twin_controls": ["twin.smart_plug_control", "twin.camera_control"]
+  },
+  "metadata": {
+    "preferred_path": "local",
+    "fallback_only": true,
+    "note": "Use comms.smart_plug.tapo_p110 / camera.tapo_c200 (local LAN) by default. This cloud integration is only for sites where the device cannot be reached on the same LAN as the Edge.",
+    "config_fields": {
+      "tapo_email":      { "type": "string",  "required": true },
+      "tapo_secret_kid": { "type": "string",  "required": true,
+                           "note": "References a secret stored at /ui/secrets, never inlined" },
+      "region":          { "type": "string",  "default": "EU",
+                           "enum": ["EU", "US", "AS"] }
+    },
+    "rate_limit_per_minute": 60
+  }
+}

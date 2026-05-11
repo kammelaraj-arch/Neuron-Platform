@@ -1,0 +1,10 @@
+[Unit]
+Description=Re-stage Neuron nginx vhost (defends against the deployer hook wiping it)
+Wants=neuron-vhost-watchdog.timer
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/shitaleco/neuron-platform/scripts/restage_vhost.sh
+StandardOutput=journal
+StandardError=journal

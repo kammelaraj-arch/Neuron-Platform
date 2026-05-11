@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if mode == 'edit' else 'New' }} library item{% endblock %}
+{% block content %}
+  <header class="flex items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ 'Edit' if mode == 'edit' else 'New' }} library item</h1>
+      <p class="text-slate-400 text-sm">All items are validated against <code>shared_schemas/manifest_schema.json</code>.</p>
+    </div>
+    <a href="/ui/library/manage" class="text-slate-400 hover:text-white text-sm">← Back to list</a>
+  </header>
+
+  {% if error %}
+    <div class="mt-4 rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-sm text-red-200">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ '/ui/library/edit/' ~ row.id if mode == 'edit' else '/ui/library/new' }}" class="mt-6 space-y-4">
+    {% if mode == 'create' %}
+      <label class="block text-sm">
+        <span class="text-slate-300">Library</span>
+        <select name="library" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+          {% for group_name, libs in groups.items() %}
+            <optgroup label="{{ group_name }}">
+              {% for lib in libs %}
+                <option value="{{ lib }}" {% if lib == library %}selected{% endif %}>{{ lib }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </label>
+    {% else %}
+      <div class="text-sm text-slate-400">Library: <code class="text-slate-200">{{ row.library }}</code> · stable_id: <code class="text-slate-200">{{ row.stable_id }}</code> (immutable)</div>
+    {% endif %}
+    <label class="block text-sm">
+      <span class="text-slate-300">Manifest JSON</span>
+      <textarea name="manifest_text" rows="22" spellcheck="false"
+                class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs leading-relaxed">{{ manifest_text }}</textarea>
+    </label>
+    <label class="block text-sm">
+      <span class="text-slate-300">Notes (optional)</span>
+      <input name="notes" value="{{ row.notes if row else '' }}" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+    </label>
+    <div class="flex justify-end">
+      <button class="rounded-lg bg-emerald-500 px-5 py-2 font-medium text-slate-950 hover:bg-emerald-400">{{ 'Save changes' if mode == 'edit' else 'Create item' }}</button>
+    </div>
+  </form>
+{% endblock %}
