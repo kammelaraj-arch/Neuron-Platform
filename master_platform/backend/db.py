@@ -27,6 +27,34 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Lightweight in-place migrations for SQLite. Base.metadata.create_all
+        # creates missing tables but never alters existing ones, so additive
+        # column changes have to be applied by hand. Each migration is idempotent.
+        await conn.run_sync(_apply_lightweight_migrations)
+
+
+def _apply_lightweight_migrations(sync_conn) -> None:
+    """Run additive SQLite migrations (idempotent)."""
+    from sqlalchemy import text
+
+    def _has_column(table: str, column: str) -> bool:
+        rows = sync_conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()
+        return any(r[1] == column for r in rows)
+
+    def _has_table(table: str) -> bool:
+        rows = sync_conn.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (table,),
+        ).fetchall()
+        return bool(rows)
+
+    if not _has_table("edge_systems"):
+        return  # fresh DB — create_all already gave us the right schema
+
+    # 2026-05: hierarchy flexibility — Edge can attach directly to a Root
+    # (skipping Node). node_id becomes nullable; root_id is added.
+    if not _has_column("edge_systems", "root_id"):
+        sync_conn.exec_driver_sql("ALTER TABLE edge_systems ADD COLUMN root_id VARCHAR(36)")
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

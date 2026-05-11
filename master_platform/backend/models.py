@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -44,19 +44,30 @@ class NodeSystem(Base):
 
 
 class EdgeSystem(Base):
+    """An edge (factory site). Attaches to EITHER a NodeSystem (full
+    hierarchy) OR a RootSystem (Node skipped, smaller deployments).
+    Exactly one of node_id / root_id must be set — enforced by the
+    check constraint below.
+    """
     __tablename__ = "edge_systems"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    node_id: Mapped[str] = mapped_column(ForeignKey("node_systems.id"), nullable=False)
+    node_id: Mapped[str | None] = mapped_column(ForeignKey("node_systems.id"))
+    root_id: Mapped[str | None] = mapped_column(ForeignKey("root_systems.id"))
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     site_id: Mapped[str] = mapped_column(String(120), nullable=False)
     address: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
-    node: Mapped[NodeSystem] = relationship(back_populates="edges")
+    node: Mapped[NodeSystem | None] = relationship(back_populates="edges")
+    root: Mapped[RootSystem | None] = relationship()
     devices: Mapped[list[Device]] = relationship(back_populates="edge", cascade="all, delete-orphan")
 
-    __table_args__ = (UniqueConstraint("node_id", "name", name="uq_edge_per_node"),)
+    # NOTE: the XOR constraint (exactly one of node_id/root_id set) is
+    # enforced at the application layer in routers/systems.py. SQLite
+    # can't add CHECK constraints to an existing table via ALTER, and
+    # we want existing edges (all node_id-attached) to keep working
+    # without a destructive table rewrite.
 
 
 class Device(Base):

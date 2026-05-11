@@ -3,8 +3,38 @@
 {% block content %}
   <header>
     <h1 class="text-2xl font-semibold tracking-tight">System Designer</h1>
-    <p class="text-slate-400 text-sm">Build the Root → Node → Edge hierarchy. Each Edge runs the Edge Runtime at a factory site; Devices register under an Edge.</p>
+    <p class="text-slate-400 text-sm">
+      Hierarchy is flexible: <strong>Root → Node → Edge → Device</strong> (full),
+      <strong>Root → Edge → Device</strong> (Node optional), or
+      <strong>all-in-one</strong> (Root + Edge on one host). Each Edge runs the Edge
+      Runtime at a factory site; Devices register under an Edge.
+    </p>
   </header>
+
+  {% if signed_in %}
+    <section class="mt-4 rounded-2xl border border-emerald-700/30 bg-emerald-500/5 p-4">
+      <details>
+        <summary class="cursor-pointer text-sm font-medium text-emerald-200">
+          ⚡ All-in-one quick setup (Root + Edge in one shot)
+        </summary>
+        <p class="mt-2 text-xs text-slate-400">
+          Creates a Root and an Edge directly under it (no Node). Use this for
+          single-site deployments or test rigs where one host plays both roles.
+        </p>
+        <form method="post" action="/ui/systems/all-in-one" class="mt-3 grid gap-2 sm:grid-cols-3">
+          <input name="name" placeholder="Edge name (e.g. Wembley)" required
+                 class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+          <input name="site_id" placeholder="Site id (e.g. wembley-1)" required
+                 class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+          <input name="address" placeholder="Edge URL (optional)"
+                 class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono text-xs">
+          <button class="rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 sm:col-span-3">
+            ⚡ Create All-in-one
+          </button>
+        </form>
+      </details>
+    </section>
+  {% endif %}
 
   {% if flash %}
     <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
@@ -79,7 +109,12 @@
         {% for e in edges %}
           <li class="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
             <div class="font-medium">{{ e.name }}</div>
-            <div class="text-xs text-slate-500 font-mono">site={{ e.site_id }} · node={{ e.node_id }}</div>
+            <div class="text-xs text-slate-500 font-mono">
+              site={{ e.site_id }} ·
+              {% if e.node_id %}node={{ e.node_id }}
+              {% elif e.root_id %}root={{ e.root_id }} <span class="text-amber-400">(node skipped)</span>
+              {% else %}<span class="text-red-400">orphaned</span>{% endif %}
+            </div>
             {% if e.address %}<div class="mt-1 text-xs text-emerald-300 break-all">{{ e.address }}</div>
             {% else %}<div class="mt-1 text-xs text-amber-300 italic">no address — devices will heartbeat but Master can't push commands</div>{% endif %}
           </li>
@@ -87,10 +122,20 @@
           <li class="text-slate-500 italic text-sm">No edges yet.</li>
         {% endfor %}
       </ul>
-      {% if signed_in and nodes %}
+      {% if signed_in and (nodes or roots) %}
         <form method="post" action="/ui/systems/edge/new" class="mt-4 space-y-2">
-          <select name="node_id" required class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            {% for n in nodes %}<option value="{{ n.id }}">{{ n.name }}</option>{% endfor %}
+          <label class="block text-[11px] uppercase tracking-wider text-slate-400">Attach to</label>
+          <select name="parent" required class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+            {% if nodes %}
+              <optgroup label="Under a Node (full hierarchy)">
+                {% for n in nodes %}<option value="node:{{ n.id }}">node · {{ n.name }}</option>{% endfor %}
+              </optgroup>
+            {% endif %}
+            {% if roots %}
+              <optgroup label="Directly under a Root (Node skipped)">
+                {% for r in roots %}<option value="root:{{ r.id }}">root · {{ r.name }}</option>{% endfor %}
+              </optgroup>
+            {% endif %}
           </select>
           <input name="name" placeholder="Edge name (e.g. Wembley)" required
                  class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
@@ -101,7 +146,7 @@
           <button class="w-full rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">+ Create Edge</button>
         </form>
       {% elif signed_in %}
-        <p class="mt-3 text-xs text-slate-500 italic">Create a Node first.</p>
+        <p class="mt-3 text-xs text-slate-500 italic">Create a Root (and optionally a Node) first, or use the All-in-one button above.</p>
       {% endif %}
     </div>
   </section>

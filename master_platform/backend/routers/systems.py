@@ -78,11 +78,29 @@ async def create_edge(
     session: AsyncSession = Depends(get_session),
     api_key: APIKey = Depends(require_scopes("systems:write")),
 ):
-    node = await session.get(NodeSystem, payload.node_id)
-    if node is None:
-        raise HTTPException(404, "node system not found")
+    # Hierarchy flexibility: an Edge attaches to EITHER a Node (full
+    # hierarchy) or a Root (Node skipped, smaller deployments). Exactly
+    # one must be set.
+    if bool(payload.node_id) == bool(payload.root_id):
+        raise HTTPException(
+            400,
+            "exactly one of node_id / root_id must be set",
+        )
+    node_id = None
+    root_id = None
+    if payload.node_id:
+        node = await session.get(NodeSystem, payload.node_id)
+        if node is None:
+            raise HTTPException(404, "node system not found")
+        node_id = node.id
+    else:
+        root = await session.get(RootSystem, payload.root_id)
+        if root is None:
+            raise HTTPException(404, "root system not found")
+        root_id = root.id
     row = EdgeSystem(
-        node_id=node.id,
+        node_id=node_id,
+        root_id=root_id,
         name=payload.name,
         site_id=payload.site_id,
         address=payload.address,
@@ -98,11 +116,14 @@ async def create_edge(
 @router.get("/edge-systems", response_model=list[schemas.EdgeSystemOut])
 async def list_edges(
     node_id: str | None = None,
+    root_id: str | None = None,
     session: AsyncSession = Depends(get_session),
     _: APIKey = Depends(require_scopes("systems:read")),
 ):
     stmt = select(EdgeSystem).order_by(EdgeSystem.created_at)
     if node_id:
         stmt = stmt.where(EdgeSystem.node_id == node_id)
+    if root_id:
+        stmt = stmt.where(EdgeSystem.root_id == root_id)
     res = await session.execute(stmt)
     return list(res.scalars())

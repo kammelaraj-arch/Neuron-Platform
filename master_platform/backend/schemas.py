@@ -37,7 +37,12 @@ class NodeSystemOut(_Base):
 
 
 class EdgeSystemCreate(BaseModel):
-    node_id: str
+    """Create an Edge under EITHER a Node (full hierarchy) or directly
+    under a Root (skipping Node — small/single-region deployments).
+    Exactly one of node_id / root_id must be set.
+    """
+    node_id: str | None = None
+    root_id: str | None = None
     name: str
     site_id: str
     address: str | None = None
@@ -45,7 +50,8 @@ class EdgeSystemCreate(BaseModel):
 
 class EdgeSystemOut(_Base):
     id: str
-    node_id: str
+    node_id: str | None = None
+    root_id: str | None = None
     name: str
     site_id: str
     address: str | None = None

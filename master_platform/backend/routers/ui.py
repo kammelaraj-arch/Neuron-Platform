@@ -177,24 +177,78 @@ async def ui_systems_new_node(
 @router.post("/ui/systems/edge/new")
 async def ui_systems_new_edge(
     request: Request,
-    node_id: str = Form(...),
+    parent: str = Form(...),                # "<kind>:<id>", e.g. "node:abc" or "root:xyz"
     name: str = Form(...),
     site_id: str = Form(...),
     address: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_admin),
 ):
-    if await session.get(NodeSystem, node_id) is None:
-        request.session["systems_flash"] = {"kind": "red", "msg": "Selected node does not exist."}
+    # Hierarchy flexibility: an Edge can attach to a Node (full hierarchy)
+    # OR directly to a Root (Node skipped, smaller deployments).
+    kind, _, pid = parent.partition(":")
+    if kind not in ("node", "root") or not pid:
+        request.session["systems_flash"] = {"kind": "red", "msg": "Pick a parent (node or root)."}
         return RedirectResponse("/ui/systems", status_code=303)
-    row = EdgeSystem(node_id=node_id, name=name.strip(), site_id=site_id.strip(),
+    node_id = None
+    root_id = None
+    if kind == "node":
+        if await session.get(NodeSystem, pid) is None:
+            request.session["systems_flash"] = {"kind": "red", "msg": "Selected node does not exist."}
+            return RedirectResponse("/ui/systems", status_code=303)
+        node_id = pid
+    else:
+        if await session.get(RootSystem, pid) is None:
+            request.session["systems_flash"] = {"kind": "red", "msg": "Selected root does not exist."}
+            return RedirectResponse("/ui/systems", status_code=303)
+        root_id = pid
+    row = EdgeSystem(node_id=node_id, root_id=root_id,
+                     name=name.strip(), site_id=site_id.strip(),
                      address=address.strip() or None)
     session.add(row); await session.flush()
     await record(session, actor=actor.id, actor_kind="ui_session",
                  action="create_edge", target_kind="edge_system", target_id=row.id,
-                 detail={"node_id": node_id, "site_id": site_id, "address": address or None})
+                 detail={"parent_kind": kind, "parent_id": pid, "site_id": site_id, "address": address or None})
     await session.commit()
-    request.session["systems_flash"] = {"kind": "emerald", "msg": f"Created edge '{name}' at site '{site_id}'."}
+    parent_label = "node" if kind == "node" else "root (Node skipped)"
+    request.session["systems_flash"] = {"kind": "emerald",
+                                        "msg": f"Created edge '{name}' under {parent_label} at site '{site_id}'."}
+    return RedirectResponse("/ui/systems", status_code=303)
+
+
+@router.post("/ui/systems/all-in-one")
+async def ui_systems_all_in_one(
+    request: Request,
+    name: str = Form(...),
+    site_id: str = Form(...),
+    address: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    """All-in-one quick setup: create a Root and an Edge directly under
+    it in one shot. For tiny deployments or test rigs where the same
+    host plays Root + Edge.
+    """
+    name = name.strip()
+    site_id = site_id.strip()
+    if not name or not site_id:
+        request.session["systems_flash"] = {"kind": "red", "msg": "Name and site id are required."}
+        return RedirectResponse("/ui/systems", status_code=303)
+    # Generate a root with the same display name; if it collides, append " (root)".
+    root_name = name
+    if await session.scalar(select(RootSystem).where(RootSystem.name == root_name)):
+        root_name = f"{name} (root)"
+    root = RootSystem(name=root_name, description=f"Auto-created by All-in-one setup for edge '{name}'.")
+    session.add(root); await session.flush()
+    edge = EdgeSystem(root_id=root.id, name=name, site_id=site_id,
+                      address=address.strip() or None)
+    session.add(edge); await session.flush()
+    await record(session, actor=actor.id, actor_kind="ui_session",
+                 action="create_all_in_one", target_kind="edge_system", target_id=edge.id,
+                 detail={"root_id": root.id, "site_id": site_id})
+    await session.commit()
+    request.session["systems_flash"] = {"kind": "emerald",
+                                        "msg": f"All-in-one created: root '{root_name}' + edge '{name}' at '{site_id}'."}
     return RedirectResponse("/ui/systems", status_code=303)
 
 
