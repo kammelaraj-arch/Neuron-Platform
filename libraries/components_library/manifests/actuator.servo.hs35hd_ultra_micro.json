@@ -1,0 +1,71 @@
+{
+  "stable_id": "actuator.servo.hs35hd_ultra_micro",
+  "name": "Hitec HS-35HD Ultra-Micro Servo (4.4g)",
+  "vendor": "Hitec",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "World's smallest mass-production servo — 4.4g, 0.6kg·cm. Use for tiny mechanisms: indoor RC planes, small animatronic eyes/mouths, watch-face automation, surface-mount handling rigs.",
+  "tags": [
+    "servo",
+    "ultra_micro",
+    "tiny",
+    "hitec"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 4.8
+    }
+  ],
+  "power": {
+    "voltage_v": 4.8,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 60,
+    "current_ma_peak": 200,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Hitec HS-35HD Ultra-Micro Servo (4.4g) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://hitecrcd.com/files/products/servos/HS-35HD.jpg",
+    "datasheet_url": "https://hitecrcd.com/products/servos/sport-economy/analog-sport-economy/hs-35hd-ultra-nano-premium-servo",
+    "brand_variants": [
+      "Hitec HS-35HD",
+      "Hitec HS-5035HD (digital)",
+      "Spektrum A2030"
+    ],
+    "price_usd_range": [
+      25,
+      50
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

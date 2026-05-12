@@ -1,0 +1,70 @@
+{
+  "stable_id": "actuator.servo.ds3218",
+  "name": "DS3218 / DS3218MG High-Torque Digital Servo (20kg)",
+  "vendor": "DSSERVO / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Digital coreless servo with metal gears, 20kg·cm torque at 6.8V, 180° / 270° variants. Faster response than analog (1520µs pulse). Use for RC cars, robotic arms with payload, heavy pan-tilt.",
+  "tags": [
+    "servo",
+    "digital",
+    "high-torque",
+    "20kg"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 333,
+      "voltage": 6.8
+    }
+  ],
+  "power": {
+    "voltage_v": 7.4,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 700,
+    "current_ma_peak": 3500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "DS3218 / DS3218MG High-Torque Digital Servo (20kg) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/DS3218_Servo.jpg/480px-DS3218_Servo.jpg",
+    "brand_variants": [
+      "DSSERVO DS3218MG",
+      "Annimos DS3218",
+      "Miuzei DS3218"
+    ],
+    "price_usd_range": [
+      15,
+      30
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

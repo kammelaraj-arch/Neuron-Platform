@@ -1,0 +1,73 @@
+{
+  "stable_id": "actuator.servo.hsb_9381th",
+  "name": "Hitec HSB-9381TH Waterproof High-Voltage Servo",
+  "vendor": "Hitec",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "IP67 waterproof brushless titanium-gear servo, 17.4kg·cm at 7.4V (HV LiPo). Used in marine RC, outdoor irrigation valves, wash-down food-processing equipment, rugged outdoor automation.",
+  "tags": [
+    "servo",
+    "waterproof",
+    "ip67",
+    "brushless",
+    "high_voltage"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 7.4
+    }
+  ],
+  "power": {
+    "voltage_v": 7.4,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 300,
+    "current_ma_peak": 2000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Hitec HSB-9381TH Waterproof High-Voltage Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://hitecrcd.com/files/products/servos/HSB-9381TH.jpg",
+    "datasheet_url": "https://hitecrcd.com/products/servos/specialty-servos/waterproof-servos/hsb-9381th-brushless-titanium-gear-hv-servo",
+    "brand_variants": [
+      "Hitec HSB-9381TH",
+      "Savox SW-1210SG (waterproof)",
+      "SPT5638WP",
+      "Spektrum A5040 (waterproof)"
+    ],
+    "price_usd_range": [
+      120,
+      250
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

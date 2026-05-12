@@ -1,0 +1,77 @@
+{
+  "stable_id": "actuator.servo.feetech_sts3215",
+  "name": "Feetech STS3215 Smart Bus Servo",
+  "vendor": "FEETECH / Waveshare",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Budget Dynamixel-style smart servo, 30kg·cm, 360° absolute encoder, TTL bus. Used in cheap robotic arm kits (Waveshare ServoBus). Position + speed + load feedback at <$25 each.",
+  "tags": [
+    "servo",
+    "smart",
+    "serial",
+    "bus",
+    "feetech",
+    "feedback"
+  ],
+  "capabilities": [
+    "position_set",
+    "position_read",
+    "velocity_read",
+    "load_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "UART",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "speed_hz": 1000000,
+      "notes": "Half-duplex TTL"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 30,
+    "current_ma_typical": 200,
+    "current_ma_peak": 2500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Feetech STS3215 Smart Bus Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.waveshare.com/img/devkit/accBoard/ST3215-Servo/ST3215-Servo-3.jpg",
+    "datasheet_url": "https://www.feetechrc.com/STS3215-servo-with-magnetic-encoder",
+    "brand_variants": [
+      "FEETECH STS3215",
+      "Waveshare ST3215",
+      "LX-16A (LewanSoul alt)",
+      "LewanSoul LX-224"
+    ],
+    "price_usd_range": [
+      18,
+      35
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

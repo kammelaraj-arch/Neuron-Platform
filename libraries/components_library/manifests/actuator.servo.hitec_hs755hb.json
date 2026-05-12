@@ -1,0 +1,69 @@
+{
+  "stable_id": "actuator.servo.hitec_hs755hb",
+  "name": "Hitec HS-755HB Quarter-Scale Servo",
+  "vendor": "Hitec",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Big 110g 1/4-scale servo, 13.2kg·cm torque, karbonite gears, ball bearings. Use for sail-boat winches, large robot heads, animatronics, automated gate flaps.",
+  "tags": [
+    "servo",
+    "quarter_scale",
+    "hitec",
+    "karbonite"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 6.0
+    }
+  ],
+  "power": {
+    "voltage_v": 6.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 250,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Hitec HS-755HB Quarter-Scale Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Hitec_HS-755HB_Servo.jpg/480px-Hitec_HS-755HB_Servo.jpg",
+    "brand_variants": [
+      "Hitec HS-755HB (analog)",
+      "Hitec HS-805BB (digital sibling)"
+    ],
+    "price_usd_range": [
+      35,
+      60
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

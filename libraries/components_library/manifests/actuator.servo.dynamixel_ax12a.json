@@ -1,0 +1,78 @@
+{
+  "stable_id": "actuator.servo.dynamixel_ax12a",
+  "name": "Dynamixel AX-12A Smart Serial Servo",
+  "vendor": "ROBOTIS",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Smart serial servo with TTL daisy-chain bus (up to 254 servos), position+velocity feedback, temperature/load reporting, configurable PID gains. The standard for educational/research robot arms. 1.5N·m torque, 300° travel.",
+  "tags": [
+    "servo",
+    "smart",
+    "serial",
+    "dynamixel",
+    "feedback"
+  ],
+  "capabilities": [
+    "position_set",
+    "position_read",
+    "velocity_read",
+    "load_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "UART",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "speed_hz": 1000000,
+      "notes": "Half-duplex TTL bus"
+    }
+  ],
+  "power": {
+    "voltage_v": 9.6,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 250,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Dynamixel AX-12A Smart Serial Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Dynamixel_AX-12A.jpg/480px-Dynamixel_AX-12A.jpg",
+    "datasheet_url": "https://emanual.robotis.com/docs/en/dxl/ax/ax-12a/",
+    "brand_variants": [
+      "AX-12A (1.5N·m)",
+      "AX-18A (1.8N·m)",
+      "MX-12W (high speed)",
+      "MX-28 (2.5N·m)",
+      "MX-64 (6N·m)",
+      "MX-106 (10N·m)"
+    ],
+    "price_usd_range": [
+      45,
+      350
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

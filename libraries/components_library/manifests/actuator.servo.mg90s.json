@@ -1,0 +1,71 @@
+{
+  "stable_id": "actuator.servo.mg90s",
+  "name": "MG90S Metal-Gear Micro Servo (9g)",
+  "vendor": "TowerPro",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "9g servo with metal gears (upgrade from SG90's plastic). 2.2kg·cm torque, 180° range. Same form factor as SG90 — drop-in replacement when SG90's plastic gears strip out under load.",
+  "tags": [
+    "servo",
+    "9g",
+    "metal-gear",
+    "micro"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 300,
+    "current_ma_peak": 800,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MG90S Metal-Gear Micro Servo (9g) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/MG90S_Servo.jpg/480px-MG90S_Servo.jpg",
+    "datasheet_url": "https://www.electronicoscaldas.com/datasheet/MG90S_Tower-Pro.pdf",
+    "brand_variants": [
+      "TowerPro MG90S",
+      "Miuzei MS18 metal gear",
+      "Generic MG90S"
+    ],
+    "price_usd_range": [
+      3,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

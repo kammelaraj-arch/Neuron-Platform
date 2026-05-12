@@ -1,0 +1,73 @@
+{
+  "stable_id": "actuator.servo.fs90r_360",
+  "name": "FS90R / FS5103R Continuous-Rotation Servo",
+  "vendor": "FEETECH",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Hacked servo electronics — PWM pulse-width now sets DIRECTION + SPEED instead of position. 1500µs = stop, 1000µs = full reverse, 2000µs = full forward. Use as a budget wheel motor — no H-bridge needed. ~30 RPM at 5V no-load.",
+  "tags": [
+    "servo",
+    "continuous",
+    "360",
+    "wheel",
+    "feetech"
+  ],
+  "capabilities": [
+    "rotation_continuous",
+    "speed_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 6.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 250,
+    "current_ma_peak": 700,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "FS90R / FS5103R Continuous-Rotation Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/FS90R_Continuous_Rotation_Servo.jpg/480px-FS90R_Continuous_Rotation_Servo.jpg",
+    "brand_variants": [
+      "FEETECH FS90R",
+      "FEETECH FS5103R (heavier-duty)",
+      "Parallax 360° servo",
+      "Adafruit 154"
+    ],
+    "price_usd_range": [
+      5,
+      15
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "stable_id": "actuator.servo.hitec_hs422",
+  "name": "Hitec HS-422 Standard Analog Servo",
+  "vendor": "Hitec",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "RC industry classic, 3.3kg·cm analog standard-size servo. Reliable, well-built nylon-gear servo used in countless robotics + RC projects. Reference baseline for analog servo behaviour.",
+  "tags": [
+    "servo",
+    "analog",
+    "hitec",
+    "rc"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 4.8
+    }
+  ],
+  "power": {
+    "voltage_v": 4.8,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 150,
+    "current_ma_peak": 700,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Hitec HS-422 Standard Analog Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Hitec_HS-422_Servo.jpg/480px-Hitec_HS-422_Servo.jpg",
+    "datasheet_url": "https://hitecrcd.com/products/servos/sport-economy/analog-sport-economy/hs-422-standard-deluxe/product",
+    "brand_variants": [
+      "Hitec HS-422",
+      "Hitec HS-425BB (ball bearing)",
+      "Hitec HS-311 (budget)"
+    ],
+    "price_usd_range": [
+      10,
+      18
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "stable_id": "actuator.servo.mg995",
+  "name": "MG995 Standard Metal-Gear Servo",
+  "vendor": "TowerPro",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Cheaper sibling of MG996R — same form factor, 8-10kg·cm torque, analog (not digital) feedback. Workhorse 55g servo for RC, robotics, classroom projects.",
+  "tags": [
+    "servo",
+    "metal-gear",
+    "standard",
+    "55g"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 6.0
+    }
+  ],
+  "power": {
+    "voltage_v": 6.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 350,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MG995 Standard Metal-Gear Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/MG995_Servo.jpg/480px-MG995_Servo.jpg",
+    "brand_variants": [
+      "TowerPro MG995",
+      "Generic MG995"
+    ],
+    "price_usd_range": [
+      3,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

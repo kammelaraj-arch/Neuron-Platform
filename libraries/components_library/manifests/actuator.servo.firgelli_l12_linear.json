@@ -1,0 +1,74 @@
+{
+  "stable_id": "actuator.servo.firgelli_l12_linear",
+  "name": "Firgelli L12 Miniature Linear Servo",
+  "vendor": "Actuonix (formerly Firgelli)",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Linear actuator with servo-style PWM input (1-2ms pulse maps to extension). Strokes 30/50/100mm, force 12-100N. Use for camera-zoom mechanisms, automated drawers, telescope focus, micro-positioning.",
+  "tags": [
+    "servo",
+    "linear",
+    "actuator",
+    "firgelli",
+    "actuonix"
+  ],
+  "capabilities": [
+    "position_set",
+    "linear_motion"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 6.0
+    }
+  ],
+  "power": {
+    "voltage_v": 6.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 350,
+    "current_ma_peak": 600,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Firgelli L12 Miniature Linear Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.actuonix.com/_files/ugd/8d3f5b_l12_360.jpg",
+    "datasheet_url": "https://www.actuonix.com/L12-Linear-Actuator",
+    "brand_variants": [
+      "Actuonix L12-30-50-12-S (30mm)",
+      "L12-50-100-12-S",
+      "L12-100-100-12-S",
+      "L16-50-150-12-P (with position feedback)"
+    ],
+    "price_usd_range": [
+      70,
+      130
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "stable_id": "actuator.servo.ds3225",
+  "name": "DS3225 / DS3225MG High-Torque Digital Servo (25kg)",
+  "vendor": "DSSERVO / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "25kg·cm digital servo, IP66 splash-resistant variants common. 180° / 270° / 360° options. Used in larger RC vehicles, robotic shoulder/elbow joints, automated dampers, sliding-gate position.",
+  "tags": [
+    "servo",
+    "digital",
+    "high-torque",
+    "25kg",
+    "splash"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 333,
+      "voltage": 6.8
+    }
+  ],
+  "power": {
+    "voltage_v": 7.4,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 900,
+    "current_ma_peak": 4500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "DS3225 / DS3225MG High-Torque Digital Servo (25kg) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/DS3225_Servo.jpg/480px-DS3225_Servo.jpg",
+    "brand_variants": [
+      "DSSERVO DS3225MG",
+      "Annimos DS3225",
+      "RDS3225",
+      "Hiwonder LD-1501MG (similar)"
+    ],
+    "price_usd_range": [
+      18,
+      40
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}
