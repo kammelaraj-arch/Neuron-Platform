@@ -1,0 +1,70 @@
+{
+  "stable_id": "actuator.pump.peristaltic_12v",
+  "name": "12V DC Peristaltic Pump",
+  "vendor": "Kamoer / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "pump",
+  "description": "Self-priming peristaltic pump, 5-100 mL/min, food-grade silicone tube. Drive via MOSFET or motor driver. Common in hydroponic dosing, lab dispensing, fish-tank water-change automation.",
+  "tags": [
+    "pump",
+    "peristaltic",
+    "dosing",
+    "food-grade"
+  ],
+  "capabilities": [
+    "fluid_dispense"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Drive via L298N or similar — pump motor pulls more than a GPIO can source"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 15,
+    "current_ma_typical": 80,
+    "current_ma_peak": 200,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "12V DC Peristaltic Pump reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Peristaltic_Pump_Module.jpg/640px-Peristaltic_Pump_Module.jpg",
+    "brand_variants": [
+      "Kamoer KPP",
+      "Adafruit 1150",
+      "Generic ZJchao"
+    ],
+    "price_usd_range": [
+      10,
+      35
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

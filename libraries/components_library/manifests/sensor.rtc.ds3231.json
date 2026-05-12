@@ -1,0 +1,78 @@
+{
+  "stable_id": "sensor.rtc.ds3231",
+  "name": "DS3231 Precision Real-Time Clock",
+  "vendor": "Maxim/Analog Devices",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "rtc",
+  "description": "Temperature-compensated crystal oscillator RTC over I2C, ±2 ppm accuracy. CR2032-backed time when main power is off. Essential for offline timestamping in disconnected edge sites.",
+  "tags": [
+    "rtc",
+    "clock",
+    "i2c",
+    "battery-backed"
+  ],
+  "capabilities": [
+    "time_read",
+    "time_write",
+    "alarm_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x68",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.3,
+    "current_ma_peak": 0.5,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "ds3231",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "DS3231 Precision Real-Time Clock reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/DS3231_RTC_Module.jpg/640px-DS3231_RTC_Module.jpg",
+    "datasheet_url": "https://datasheets.maximintegrated.com/en/ds/DS3231.pdf",
+    "brand_variants": [
+      "Adafruit 3013",
+      "Generic ZS-042 module"
+    ],
+    "price_usd_range": [
+      2,
+      10
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

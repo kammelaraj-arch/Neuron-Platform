@@ -1,0 +1,72 @@
+{
+  "stable_id": "actuator.stepper.nema17",
+  "name": "NEMA 17 Stepper Motor",
+  "vendor": "Generic / Various",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "stepper",
+  "description": "Bipolar industrial stepper, 1.8° step (200/rev), holding torque 40-60 N·cm typical, ~1-2A per phase. Needs a current-limited driver (A4988, DRV8825, TMC2209). Standard for 3D printers, CNC, conveyors, precision dispensers.",
+  "tags": [
+    "stepper",
+    "bipolar",
+    "industrial",
+    "nema17"
+  ],
+  "capabilities": [
+    "position_step",
+    "rotation_continuous"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 0,
+      "notes": "Drive via A4988/DRV8825/TMC2209 — see board.stepper.* entries"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 800,
+    "current_ma_peak": 2000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "NEMA 17 Stepper Motor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Nema17_stepper_motor.jpg/640px-Nema17_stepper_motor.jpg",
+    "datasheet_url": "https://www.makerguides.com/wp-content/uploads/2019/03/nema17.pdf",
+    "brand_variants": [
+      "StepperOnline 17HS19-2004S1",
+      "Polulu #2267",
+      "Wantai 42BYGHW609",
+      "OMC Stepperonline"
+    ],
+    "price_usd_range": [
+      10,
+      30
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

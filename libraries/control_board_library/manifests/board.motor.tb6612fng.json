@@ -1,0 +1,77 @@
+{
+  "stable_id": "board.motor.tb6612fng",
+  "name": "TB6612FNG Dual DC Motor Driver",
+  "vendor": "Toshiba",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "h_bridge",
+  "description": "Modern, efficient (no big diode drop) dual H-bridge, 1.2A continuous / 3A peak per channel. Use instead of L298N for higher efficiency and cooler operation. Common in line followers, small robots.",
+  "tags": [
+    "motor_driver",
+    "h_bridge",
+    "efficient"
+  ],
+  "capabilities": [
+    "dc_motor_drive",
+    "stepper_drive_bipolar"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 4,
+      "voltage": 3.3,
+      "notes": "IN1/IN2 per motor + STBY"
+    },
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 6.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 1200,
+    "current_ma_peak": 3000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TB6612FNG Dual DC Motor Driver reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/TB6612FNG_module.jpg/640px-TB6612FNG_module.jpg",
+    "datasheet_url": "https://www.sparkfun.com/datasheets/Robotics/TB6612FNG.pdf",
+    "brand_variants": [
+      "SparkFun ROB-14451",
+      "Pololu #713",
+      "Adafruit 2448"
+    ],
+    "price_usd_range": [
+      4,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

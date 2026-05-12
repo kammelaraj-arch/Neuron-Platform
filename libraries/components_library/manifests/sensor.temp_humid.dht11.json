@@ -1,0 +1,76 @@
+{
+  "stable_id": "sensor.temp_humid.dht11",
+  "name": "DHT11 Temperature & Humidity Sensor",
+  "vendor": "Aosong",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "environment",
+  "description": "Budget single-wire digital temp (0~50°C, ±2°C) + humidity (20-90% RH, ±5%). Less accurate than DHT22; pick when cost matters and tight tolerance doesn't.",
+  "tags": [
+    "temperature",
+    "humidity",
+    "budget"
+  ],
+  "capabilities": [
+    "temperature_read",
+    "humidity_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "bidir",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.5,
+    "current_ma_peak": 1.5,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "dht",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "DHT11 Temperature & Humidity Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/DHT11-Module.jpg/640px-DHT11-Module.jpg",
+    "datasheet_url": "https://www.mouser.com/datasheet/2/758/DHT11-Technical-Data-Sheet-Translated-Version-1143054.pdf",
+    "brand_variants": [
+      "Aosong DHT11",
+      "KY-015 module",
+      "HiLetGo DHT11"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.current.acs712_30a",
+  "name": "ACS712 Hall-Effect Current Sensor (30A)",
+  "vendor": "Allegro Microsystems",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "current",
+  "description": "Galvanically isolated bidirectional current sensor, ±30A range, analog output 66mV/A. Needs ADC. Used for AC/DC current monitoring on machinery, motor over-current detection.",
+  "tags": [
+    "current",
+    "hall-effect",
+    "analog",
+    "isolation"
+  ],
+  "capabilities": [
+    "current_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 5.0,
+      "notes": "Pico ADC tops out at 3.3V — use a divider or ACS712-5A 185mV/A variant for direct Pico connection."
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 10,
+    "current_ma_peak": 13,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "ACS712 Hall-Effect Current Sensor (30A) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/ACS712_Module.jpg/640px-ACS712_Module.jpg",
+    "datasheet_url": "https://www.allegromicro.com/-/media/files/datasheets/acs712-datasheet.pdf",
+    "brand_variants": [
+      "ACS712ELC-05B (5A)",
+      "ACS712ELC-20A",
+      "ACS712ELC-30A",
+      "ACS758 (50-200A successor)"
+    ],
+    "price_usd_range": [
+      2,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

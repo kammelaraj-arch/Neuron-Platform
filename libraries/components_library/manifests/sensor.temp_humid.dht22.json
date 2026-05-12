@@ -1,0 +1,78 @@
+{
+  "stable_id": "sensor.temp_humid.dht22",
+  "name": "DHT22 / AM2302 Temperature & Humidity Sensor",
+  "vendor": "Aosong",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "environment",
+  "description": "Digital temperature (-40~80°C, ±0.5°C) + humidity (0-100% RH, ±2%) on a single wire. Slow (1Hz max) but accurate. Industry standard for HVAC, greenhouses, climate monitoring.",
+  "tags": [
+    "temperature",
+    "humidity",
+    "1-wire-style",
+    "low-power"
+  ],
+  "capabilities": [
+    "temperature_read",
+    "humidity_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "bidir",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1.5,
+    "current_ma_peak": 2.5,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "dht",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "DHT22 / AM2302 Temperature & Humidity Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.adafruit.com/product/393",
+    "datasheet_url": "https://www.sparkfun.com/datasheets/Sensors/Temperature/DHT22.pdf",
+    "wiring_diagram_url": "https://learn.adafruit.com/dht/wiring",
+    "brand_variants": [
+      "Aosong AM2302",
+      "DFRobot DHT22",
+      "Adafruit 393"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

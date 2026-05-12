@@ -1,0 +1,76 @@
+{
+  "stable_id": "sensor.temp.max31855_k",
+  "name": "MAX31855 K-Type Thermocouple Amplifier",
+  "vendor": "Maxim/Analog Devices",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "temperature",
+  "description": "K-type thermocouple cold-junction-compensated SPI amplifier. -270~1372°C, 0.25°C resolution. Use for high-temperature process control (kilns, ovens, furnaces, food production).",
+  "tags": [
+    "temperature",
+    "thermocouple",
+    "k-type",
+    "spi",
+    "high-temp"
+  ],
+  "capabilities": [
+    "temperature_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "SPI",
+      "direction": "in",
+      "voltage": 3.3,
+      "speed_hz": 5000000
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.9,
+    "current_ma_peak": 1.5,
+    "power_source": "bus"
+  },
+  "safety_class": "critical",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "max31855",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MAX31855 K-Type Thermocouple Amplifier reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/269-00.jpg",
+    "datasheet_url": "https://datasheets.maximintegrated.com/en/ds/MAX31855.pdf",
+    "brand_variants": [
+      "Adafruit 269",
+      "Maxim MAX31855KASA"
+    ],
+    "price_usd_range": [
+      12,
+      25
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

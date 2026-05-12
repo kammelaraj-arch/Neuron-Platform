@@ -1,0 +1,72 @@
+{
+  "stable_id": "board.io.mcp23017",
+  "name": "MCP23017 16-Channel I/O Expander (I2C)",
+  "vendor": "Microchip",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "io_expansion",
+  "subcategory": "gpio_expander",
+  "description": "Extends a Pi/Pico's GPIO by 16 pins per chip over I2C; up to 8 chips = 128 pins on one bus. Pull-ups, interrupts, polarity-invert. Standard for button matrices, status LED banks, large-format I/O panels.",
+  "tags": [
+    "gpio",
+    "expander",
+    "i2c",
+    "16-channel"
+  ],
+  "capabilities": [
+    "gpio_read",
+    "gpio_write"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x20-0x27",
+      "speed_hz": 1700000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1,
+    "current_ma_peak": 3,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MCP23017 16-Channel I/O Expander (I2C) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MCP23017_breakout.jpg/640px-MCP23017_breakout.jpg",
+    "datasheet_url": "https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP23017-Data-Sheet-DS20001952.pdf",
+    "brand_variants": [
+      "Adafruit 5346",
+      "Generic GY-MCP23017",
+      "Pimoroni IO Expander"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

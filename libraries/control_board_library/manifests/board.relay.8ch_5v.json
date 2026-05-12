@@ -1,0 +1,70 @@
+{
+  "stable_id": "board.relay.8ch_5v",
+  "name": "8-Channel 5V Relay Module",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "relays",
+  "subcategory": "multi_channel",
+  "description": "Eight opto-isolated 5V relays on one board, 10A 250VAC per channel. Use as a switching panel for multi-zone heaters, lighting circuits, irrigation manifolds.",
+  "tags": [
+    "relay",
+    "8-channel",
+    "mains",
+    "opto-isolated"
+  ],
+  "capabilities": [
+    "switch_load"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 8,
+      "voltage": 3.3,
+      "notes": "Active-low control"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 320,
+    "current_ma_peak": 560,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "8-Channel 5V Relay Module reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Relay-module-5v-8ch.jpg/640px-Relay-module-5v-8ch.jpg",
+    "brand_variants": [
+      "SunFounder SHIELD-8CH",
+      "ELEGOO 8 Channel Relay",
+      "SainSmart 8-CH"
+    ],
+    "price_usd_range": [
+      8,
+      25
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

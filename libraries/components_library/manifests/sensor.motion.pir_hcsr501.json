@@ -1,0 +1,69 @@
+{
+  "stable_id": "sensor.motion.pir_hcsr501",
+  "name": "HC-SR501 PIR Motion Sensor",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "motion",
+  "description": "Passive infrared motion detector with adjustable sensitivity + hold time. ~7m range, 120° cone. Used for security lights, presence-aware automation, idle-mode triggers.",
+  "tags": [
+    "motion",
+    "pir",
+    "infrared"
+  ],
+  "capabilities": [
+    "motion_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.06,
+    "current_ma_peak": 0.1,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "HC-SR501 PIR Motion Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/PIR_Sensor_HC-SR501.jpg/640px-PIR_Sensor_HC-SR501.jpg",
+    "datasheet_url": "https://www.mpja.com/download/31227sc.pdf",
+    "brand_variants": [
+      "HC-SR501",
+      "AM312 mini-PIR",
+      "Panasonic EKMC"
+    ],
+    "price_usd_range": [
+      1,
+      6
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

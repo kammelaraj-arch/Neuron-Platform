@@ -1,0 +1,67 @@
+{
+  "stable_id": "board.relay.16ch_5v",
+  "name": "16-Channel 5V Relay Module",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "relays",
+  "subcategory": "multi_channel",
+  "description": "Sixteen relays for high-channel-count switching panels. Pair with an MCP23017 expander to avoid eating 16 GPIOs. Use for large-format alarm panels, theatrical lighting, multi-zone HVAC.",
+  "tags": [
+    "relay",
+    "16-channel",
+    "mains"
+  ],
+  "capabilities": [
+    "switch_load"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 16,
+      "voltage": 3.3,
+      "notes": "Pair with MCP23017 to cut GPIO usage"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 640,
+    "current_ma_peak": 1100,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "16-Channel 5V Relay Module reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Relay-module-5v-16ch.jpg/640px-Relay-module-5v-16ch.jpg",
+    "brand_variants": [
+      "SainSmart 16-CH",
+      "ELEGOO 16 Channel Relay"
+    ],
+    "price_usd_range": [
+      15,
+      40
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

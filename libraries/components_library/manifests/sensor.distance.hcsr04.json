@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.distance.hcsr04",
+  "name": "HC-SR04 Ultrasonic Distance Sensor",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "distance",
+  "description": "Ultrasonic time-of-flight rangefinder. 2cm-400cm, ±3mm. Trigger pulse → echo pulse-width. Used for tank level, presence detection, robot collision avoidance.",
+  "tags": [
+    "distance",
+    "ultrasonic",
+    "rangefinder"
+  ],
+  "capabilities": [
+    "distance_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "bidir",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "Echo needs level shift to 3.3V — use 1k/2k divider on Pi/Pico"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 15,
+    "current_ma_peak": 30,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "HC-SR04 Ultrasonic Distance Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Ultrasonic-Sensor-HC-SR04.jpg/640px-Ultrasonic-Sensor-HC-SR04.jpg",
+    "datasheet_url": "https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf",
+    "wiring_diagram_url": "https://www.electronicwings.com/raspberry-pi/raspberry-pi-and-ultrasonic-distance-sensor-hc-sr04",
+    "brand_variants": [
+      "Elegoo HC-SR04",
+      "HiLetGo HC-SR04",
+      "JSN-SR04T (waterproof variant)"
+    ],
+    "price_usd_range": [
+      1,
+      5
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

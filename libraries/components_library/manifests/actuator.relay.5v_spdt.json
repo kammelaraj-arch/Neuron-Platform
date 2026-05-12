@@ -1,0 +1,71 @@
+{
+  "stable_id": "actuator.relay.5v_spdt",
+  "name": "5V SPDT Relay Module (single channel)",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "relay",
+  "description": "Single SRD-05VDC-SL-C relay on a breakout with opto-isolator + driver transistor. Switches up to 10A 250VAC / 30VDC. Gold-standard switch for AC loads, heaters, fans, solenoid valves.",
+  "tags": [
+    "relay",
+    "spdt",
+    "opto-isolated",
+    "mains"
+  ],
+  "capabilities": [
+    "switch_load"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Active-low on most modules"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 70,
+    "current_ma_peak": 90,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "5V SPDT Relay Module (single channel) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Relay-module-5v-1ch.jpg/640px-Relay-module-5v-1ch.jpg",
+    "datasheet_url": "https://www.songle.com/eg/pdf/SRD%20Series%20RELAYS.pdf",
+    "brand_variants": [
+      "SunFounder 1-CH 5V",
+      "Keyestudio Relay",
+      "Elegoo Relay Module"
+    ],
+    "price_usd_range": [
+      1,
+      5
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

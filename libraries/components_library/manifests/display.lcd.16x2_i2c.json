@@ -1,0 +1,71 @@
+{
+  "stable_id": "display.lcd.16x2_i2c",
+  "name": "16×2 Character LCD with PCF8574 I2C Backpack",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "displays",
+  "subcategory": "character_lcd",
+  "description": "Classic 16-column × 2-row HD44780 LCD with I2C backpack. Backlit. Trivial to drive (no parallel pin sprawl). Used for control panels, recipe-step display, alarm banners.",
+  "tags": [
+    "lcd",
+    "character",
+    "i2c",
+    "hd44780"
+  ],
+  "capabilities": [
+    "display_text"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x27 or 0x3F",
+      "speed_hz": 100000,
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 25,
+    "current_ma_peak": 40,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "16×2 Character LCD with PCF8574 I2C Backpack reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/16x2_LCD_module.jpg/640px-16x2_LCD_module.jpg",
+    "datasheet_url": "https://www.sparkfun.com/datasheets/LCD/HD44780.pdf",
+    "brand_variants": [
+      "SunFounder LCD2004 (20x4 sibling)",
+      "Generic 1602A",
+      "Elegoo LCD1602"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

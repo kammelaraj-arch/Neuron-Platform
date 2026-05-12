@@ -1,0 +1,76 @@
+{
+  "stable_id": "sensor.temp.ir_mlx90614",
+  "name": "MLX90614 Non-Contact IR Temperature Sensor",
+  "vendor": "Melexis",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "temperature",
+  "description": "Non-contact infrared thermometer over I2C. Object temp -70~380°C, ±0.5°C in human-body range. Used for contactless surface temperature, body temp screening, hot-surface alarms.",
+  "tags": [
+    "temperature",
+    "infrared",
+    "non-contact",
+    "i2c"
+  ],
+  "capabilities": [
+    "temperature_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x5A",
+      "speed_hz": 100000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1.5,
+    "current_ma_peak": 2.5,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "mlx90614",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MLX90614 Non-Contact IR Temperature Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/MLX90614_Module.jpg/480px-MLX90614_Module.jpg",
+    "datasheet_url": "https://www.melexis.com/-/media/files/documents/datasheets/mlx90614-datasheet-melexis.pdf",
+    "brand_variants": [
+      "GY-906 module",
+      "Adafruit 1747"
+    ],
+    "price_usd_range": [
+      8,
+      25
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "stable_id": "actuator.buzzer.passive_5v",
+  "name": "Passive Piezo Buzzer (5V)",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "audio",
+  "description": "Passive piezo buzzer driven by PWM. Tone is set by PWM frequency. Used for audible alarms, button-press feedback, oven-done chime.",
+  "tags": [
+    "buzzer",
+    "alarm",
+    "audio"
+  ],
+  "capabilities": [
+    "alarm_audio",
+    "tone_play"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 30,
+    "current_ma_peak": 50,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Passive Piezo Buzzer (5V) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Piezo_Buzzer.jpg/640px-Piezo_Buzzer.jpg",
+    "brand_variants": [
+      "Generic passive piezo",
+      "PUI Audio AT-1224-TT-R",
+      "KY-006 module"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

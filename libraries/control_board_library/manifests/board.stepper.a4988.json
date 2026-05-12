@@ -1,0 +1,79 @@
+{
+  "stable_id": "board.stepper.a4988",
+  "name": "A4988 Stepper Motor Driver",
+  "vendor": "Allegro Microsystems",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "stepper",
+  "description": "Microstepping bipolar stepper driver, up to 35V / 2A per phase with heatsink. 1/16 microstep modes. Standard in RepRap 3D printers, small CNC. Pair with NEMA 17.",
+  "tags": [
+    "stepper",
+    "microstepping",
+    "a4988",
+    "3d_printer"
+  ],
+  "capabilities": [
+    "stepper_drive_bipolar"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "STEP + DIR"
+    },
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 3,
+      "voltage": 5.0,
+      "notes": "MS1/MS2/MS3 microstep select"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 100,
+    "current_ma_typical": 800,
+    "current_ma_peak": 2000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "A4988 Stepper Motor Driver reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/A4988_stepper_driver.jpg/640px-A4988_stepper_driver.jpg",
+    "datasheet_url": "https://www.pololu.com/file/0J450/A4988.pdf",
+    "wiring_diagram_url": "https://lastminuteengineers.com/a4988-stepper-motor-driver-arduino-tutorial/",
+    "brand_variants": [
+      "Pololu A4988",
+      "BIQU BIGTREETECH A4988",
+      "Generic StepStick"
+    ],
+    "price_usd_range": [
+      2,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

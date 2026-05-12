@@ -1,0 +1,72 @@
+{
+  "stable_id": "actuator.led_strip.ws2812b",
+  "name": "WS2812B Addressable RGB LED Strip (NeoPixel)",
+  "vendor": "Worldsemi",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "led",
+  "description": "5V individually addressable RGB LEDs, single data line. ~60mA per LED at full white. Use for status walls, alarm banners, machine state visualization.",
+  "tags": [
+    "led",
+    "rgb",
+    "neopixel",
+    "addressable"
+  ],
+  "capabilities": [
+    "display_color",
+    "alarm_visual"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 1,
+      "voltage": 5.0,
+      "notes": "Needs strict 800kHz timing — use PIO on Pico or rpi_ws281x on Pi"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 600,
+    "current_ma_peak": 6000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "WS2812B Addressable RGB LED Strip (NeoPixel) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/WS2812B_LED_strip.jpg/640px-WS2812B_LED_strip.jpg",
+    "datasheet_url": "https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf",
+    "brand_variants": [
+      "Adafruit NeoPixel",
+      "BTF-LIGHTING WS2812B",
+      "Worldsemi WS2812B"
+    ],
+    "price_usd_range": [
+      5,
+      40
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

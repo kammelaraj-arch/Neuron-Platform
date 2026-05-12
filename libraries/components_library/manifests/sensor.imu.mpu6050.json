@@ -1,0 +1,79 @@
+{
+  "stable_id": "sensor.imu.mpu6050",
+  "name": "MPU6050 6-Axis IMU (Gyro + Accelerometer)",
+  "vendor": "InvenSense / TDK",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "imu",
+  "description": "Triple-axis gyro (±250-2000°/s) + triple-axis accelerometer (±2-16g) on I2C. On-chip motion processor (DMP) handles sensor fusion. Used for tilt sensing, vibration monitoring, robotics.",
+  "tags": [
+    "imu",
+    "gyroscope",
+    "accelerometer",
+    "i2c"
+  ],
+  "capabilities": [
+    "acceleration_read",
+    "rotation_read",
+    "tilt_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x68 or 0x69",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 3.9,
+    "current_ma_peak": 6,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "mpu6050",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MPU6050 6-Axis IMU (Gyro + Accelerometer) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/MPU-6050_Module.jpg/640px-MPU-6050_Module.jpg",
+    "datasheet_url": "https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf",
+    "brand_variants": [
+      "GY-521 module",
+      "Adafruit 3886",
+      "InvenSense MPU-6050"
+    ],
+    "price_usd_range": [
+      2,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

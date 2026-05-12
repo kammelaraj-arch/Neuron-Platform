@@ -1,0 +1,70 @@
+{
+  "stable_id": "actuator.servo.sg90",
+  "name": "SG90 Micro Servo (9g)",
+  "vendor": "TowerPro",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Tiny 9g hobby servo, 180° range, 1.8kg·cm torque, PWM-controlled (50Hz, 1-2ms pulse). Use for small flaps, dampers, light gates. Plastic gears — NOT for continuous load.",
+  "tags": [
+    "servo",
+    "9g",
+    "hobby"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 250,
+    "current_ma_peak": 700,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "SG90 Micro Servo (9g) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/TowerPro_SG90_servo_motor.jpg/640px-TowerPro_SG90_servo_motor.jpg",
+    "datasheet_url": "http://www.ee.ic.ac.uk/pcheung/teaching/DE1_EE/stores/sg90_datasheet.pdf",
+    "brand_variants": [
+      "TowerPro SG90",
+      "Miuzei MS18",
+      "Generic SG90"
+    ],
+    "price_usd_range": [
+      1,
+      5
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

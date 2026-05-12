@@ -1,0 +1,75 @@
+{
+  "stable_id": "sensor.light.bh1750",
+  "name": "BH1750 Ambient Light Sensor",
+  "vendor": "Rohm",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "light",
+  "description": "Digital ambient light sensor with built-in 16-bit ADC, 1-65535 lux range over I2C. Cheap, accurate replacement for photoresistor + ADC combos.",
+  "tags": [
+    "light",
+    "lux",
+    "i2c"
+  ],
+  "capabilities": [
+    "light_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x23 or 0x5C",
+      "speed_hz": 100000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.12,
+    "current_ma_peak": 0.19,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "bh1750",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "BH1750 Ambient Light Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/BH1750_Light_Sensor.jpg/640px-BH1750_Light_Sensor.jpg",
+    "datasheet_url": "https://www.mouser.com/datasheet/2/348/bh1750fvi-e-186247.pdf",
+    "brand_variants": [
+      "GY-302 module",
+      "Rohm BH1750FVI"
+    ],
+    "price_usd_range": [
+      1,
+      5
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

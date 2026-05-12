@@ -1,0 +1,71 @@
+{
+  "stable_id": "board.adc.ads1115",
+  "name": "ADS1115 4-Channel 16-bit ADC (I2C)",
+  "vendor": "Texas Instruments",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "io_expansion",
+  "subcategory": "adc",
+  "description": "4-channel single-ended (or 2-channel differential) 16-bit ADC over I2C, internal PGA, 860 SPS. Much higher resolution than MCP3008 for low-frequency precision reads (pH probes, load cells).",
+  "tags": [
+    "adc",
+    "16-bit",
+    "i2c",
+    "precision"
+  ],
+  "capabilities": [
+    "analog_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x48-0x4B",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.15,
+    "current_ma_peak": 0.3,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "ADS1115 4-Channel 16-bit ADC (I2C) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/ADS1115_Module.jpg/640px-ADS1115_Module.jpg",
+    "datasheet_url": "https://www.ti.com/lit/ds/symlink/ads1115.pdf",
+    "brand_variants": [
+      "Adafruit 1085",
+      "Generic GY-ADS1115",
+      "Sparkfun BOB-15334"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

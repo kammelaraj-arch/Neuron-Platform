@@ -1,0 +1,70 @@
+{
+  "stable_id": "actuator.servo.mg996r",
+  "name": "MG996R Metal-Gear Servo",
+  "vendor": "TowerPro",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "servo",
+  "description": "Metal-gear high-torque servo, 180° range, 9.4-11kg·cm torque @ 6V. PWM-controlled. Workhorse for robotics, pan-tilt rigs, automated valves, garage door rotation.",
+  "tags": [
+    "servo",
+    "metal-gear",
+    "high-torque"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "speed_hz": 50,
+      "voltage": 6.0
+    }
+  ],
+  "power": {
+    "voltage_v": 6.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 500,
+    "current_ma_peak": 2500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MG996R Metal-Gear Servo reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Servo_Motor_MG996R.jpg/640px-Servo_Motor_MG996R.jpg",
+    "datasheet_url": "https://www.electronicoscaldas.com/datasheet/MG996R_Tower-Pro.pdf",
+    "brand_variants": [
+      "TowerPro MG996R",
+      "Hiwonder LD-1501MG",
+      "MG995 (cheaper sibling)"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

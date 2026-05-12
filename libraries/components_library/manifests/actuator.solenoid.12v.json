@@ -1,0 +1,71 @@
+{
+  "stable_id": "actuator.solenoid.12v",
+  "name": "12V Solenoid Valve (Plastic, 1/2 inch)",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "valve",
+  "description": "Normally-closed plastic solenoid valve, 1/2\" NPS, 0.02-0.8 MPa, 500ms response. 12V DC ~500mA. Drive via relay or MOSFET. Use for irrigation, water dosing, beverage filling.",
+  "tags": [
+    "solenoid",
+    "valve",
+    "water",
+    "12v"
+  ],
+  "capabilities": [
+    "valve_open",
+    "valve_close"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Drive via relay/MOSFET — never directly from a GPIO pin"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 500,
+    "current_ma_peak": 800,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "12V Solenoid Valve (Plastic, 1/2 inch) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Plastic_Solenoid_Valve_12V.jpg/640px-Plastic_Solenoid_Valve_12V.jpg",
+    "brand_variants": [
+      "U.S. Solid USS2-00002",
+      "Generic 1/2\" NPS NC",
+      "Adafruit 996"
+    ],
+    "price_usd_range": [
+      5,
+      20
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

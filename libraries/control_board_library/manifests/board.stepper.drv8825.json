@@ -1,0 +1,78 @@
+{
+  "stable_id": "board.stepper.drv8825",
+  "name": "DRV8825 Stepper Motor Driver",
+  "vendor": "Texas Instruments",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "stepper",
+  "description": "Higher-current upgrade over A4988: up to 45V / 2.2A per phase. 1/32 microstepping. Drop-in replacement on RepRap-style boards. Pair with NEMA 17/23 for 3D printers, CNC, conveyors.",
+  "tags": [
+    "stepper",
+    "microstepping",
+    "drv8825",
+    "high-current"
+  ],
+  "capabilities": [
+    "stepper_drive_bipolar"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "STEP + DIR"
+    },
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 3,
+      "voltage": 5.0,
+      "notes": "M0/M1/M2"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 90,
+    "current_ma_typical": 1500,
+    "current_ma_peak": 2200,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "DRV8825 Stepper Motor Driver reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/DRV8825_stepper_driver.jpg/640px-DRV8825_stepper_driver.jpg",
+    "datasheet_url": "https://www.ti.com/lit/ds/symlink/drv8825.pdf",
+    "brand_variants": [
+      "Pololu DRV8825",
+      "Polulu #2133",
+      "BIQU DRV8825"
+    ],
+    "price_usd_range": [
+      3,
+      10
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

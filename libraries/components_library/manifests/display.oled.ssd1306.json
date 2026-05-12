@@ -1,0 +1,77 @@
+{
+  "stable_id": "display.oled.ssd1306",
+  "name": "SSD1306 OLED Display (0.96\" 128×64 I2C)",
+  "vendor": "Solomon Systech",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "displays",
+  "subcategory": "oled",
+  "description": "Tiny monochrome OLED, 128×64 px, I2C or SPI. High contrast, low power, no backlight. Used for local status pages, IP-address display, recipe step preview.",
+  "tags": [
+    "oled",
+    "display",
+    "i2c"
+  ],
+  "capabilities": [
+    "display_text",
+    "display_graphics"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x3C or 0x3D",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 8,
+    "current_ma_peak": 20,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    {
+      "runtime": "micropython",
+      "module": "ssd1306",
+      "version_range": ">=0.1.0"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "SSD1306 OLED Display (0.96\" 128×64 I2C) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/OLED_Display_SSD1306.jpg/640px-OLED_Display_SSD1306.jpg",
+    "datasheet_url": "https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf",
+    "brand_variants": [
+      "Adafruit 326",
+      "DiyMall 0.96 OLED",
+      "Hosyond 4-pin OLED"
+    ],
+    "price_usd_range": [
+      3,
+      10
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

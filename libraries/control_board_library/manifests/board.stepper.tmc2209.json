@@ -1,0 +1,77 @@
+{
+  "stable_id": "board.stepper.tmc2209",
+  "name": "TMC2209 Silent Stepper Driver",
+  "vendor": "Trinamic / Analog Devices",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "stepper",
+  "description": "Ultra-quiet stepper driver with StealthChop2, up to 2A RMS / 2.8A peak. UART-controllable current and microstepping. Standard in modern Klipper 3D printers. Use for low-noise factory floors.",
+  "tags": [
+    "stepper",
+    "silent",
+    "tmc",
+    "uart"
+  ],
+  "capabilities": [
+    "stepper_drive_bipolar"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "STEP + DIR"
+    },
+    {
+      "type": "UART",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "Optional — for runtime current/microstep config"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 90,
+    "current_ma_typical": 1700,
+    "current_ma_peak": 2800,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TMC2209 Silent Stepper Driver reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/TMC2209_driver_board.jpg/640px-TMC2209_driver_board.jpg",
+    "datasheet_url": "https://www.trinamic.com/fileadmin/assets/Products/ICs_Documents/TMC2209_Datasheet.pdf",
+    "brand_variants": [
+      "BIGTREETECH TMC2209",
+      "Fysetc TMC2209",
+      "Watterott SilentStepStick"
+    ],
+    "price_usd_range": [
+      5,
+      15
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

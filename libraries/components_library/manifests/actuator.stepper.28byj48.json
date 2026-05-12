@@ -1,0 +1,71 @@
+{
+  "stable_id": "actuator.stepper.28byj48",
+  "name": "28BYJ-48 5V Stepper Motor (with ULN2003 driver)",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "stepper",
+  "description": "Tiny geared unipolar stepper, 4096 steps/rev (gearbox 1:64), 5V, ~0.3kg·cm. Always sold with ULN2003 driver board. Perfect for light positioning: blinds, dispensers, small dampers.",
+  "tags": [
+    "stepper",
+    "unipolar",
+    "geared",
+    "low-cost"
+  ],
+  "capabilities": [
+    "position_step",
+    "rotation_continuous"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 4,
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 160,
+    "current_ma_peak": 240,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "28BYJ-48 5V Stepper Motor (with ULN2003 driver) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Stepper_motor_28BYJ-48_with_ULN2003_driver.jpg/640px-Stepper_motor_28BYJ-48_with_ULN2003_driver.jpg",
+    "datasheet_url": "https://components101.com/sites/default/files/component_datasheet/28byj48-step-motor-datasheet.pdf",
+    "brand_variants": [
+      "Generic 28BYJ-48",
+      "Elegoo 28BYJ-48",
+      "Kuman 5V Stepper"
+    ],
+    "price_usd_range": [
+      2,
+      6
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}
