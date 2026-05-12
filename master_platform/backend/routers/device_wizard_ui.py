@@ -18,6 +18,7 @@ because each step's URL is bookmarkable: /ui/devices/wizard/<group_id>/<step>.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -141,7 +142,7 @@ async def wizard_lock_group(
         raise HTTPException(400, "PIN and confirmation don't match.")
     from argon2 import PasswordHasher
     group.lock_pin_hash = PasswordHasher().hash(pin)
-    group.locked_at = _now()
+    group.locked_at = datetime.now(timezone.utc)
     group.locked_by = actor.label or actor.owner or actor.id
     await record(
         session, actor=actor.id, actor_kind="ui_session",
