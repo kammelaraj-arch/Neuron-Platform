@@ -939,6 +939,35 @@ async def wizard_delete_component(
 
 
 # ─── Step 5: GPIO pin map ───────────────────────────────────────────────────
+def _suggest_board_pin(board_stable_id: str | None, function: str) -> str:
+    """Pick a sensible board pin name for an allocator's function output.
+    Looks at board_pinouts to find a pin whose kind matches; falls back
+    to a humanised version of the function name."""
+    po = pinout_for(board_stable_id)
+    fn = (function or "").upper()
+    # Function → preferred board kinds, in order.
+    pref: list[str] = []
+    if fn == "PWM":
+        pref = ["pwm_in"]
+    elif fn in ("I2C_SDA",):
+        pref = ["i2c_sda"]
+    elif fn in ("I2C_SCL",):
+        pref = ["i2c_scl"]
+    elif fn in ("GPIO_IN", "GPIO_OUT"):
+        pref = ["input", "output", "bidir", "enable", "reset"]
+    elif fn == "ADC":
+        pref = ["analog_in"]
+    elif fn == "1-WIRE":
+        pref = ["input", "bidir"]
+    if po:
+        for need in pref:
+            for name, kind, _desc, _hint in po:
+                if kind == need:
+                    return name
+    # Fallback: humanise the function name itself
+    return function or "—"
+
+
 async def _allocate_pins_for_group(
     session: AsyncSession,
     group: EdgeGroup,
@@ -1008,14 +1037,22 @@ async def _allocate_pins_for_group(
 
         for assn in result.get("assignments", []):
             for pin in assn.get("pins", []):
-                compute_pin = pin.get("compute_pin") or pin.get("pin")
+                # Allocator returns {"physical": "GP4", "function": "PWM"}.
+                # We previously read non-existent keys, so no rows ever got
+                # created (auto-allocate appeared broken).
+                compute_pin = pin.get("physical") or pin.get("compute_pin") or pin.get("pin")
                 if not compute_pin or compute_pin in locked:
+                    continue
+                function = pin.get("function") or pin.get("signal")
+                bpin = pin.get("board_pin") or _suggest_board_pin(b.board_stable_id, function or "")
+                # Skip if this compute_pin is already mapped to this board (UNIQUE constraint).
+                if any(em.compute_pin == compute_pin and em.board_instance_id == b.id for em in existing):
                     continue
                 m = GpioMapping(
                     board_instance_id=b.id,
                     compute_pin=compute_pin,
-                    board_pin=pin.get("board_pin", "—"),
-                    signal_name=pin.get("function") or pin.get("signal"),
+                    board_pin=bpin,
+                    signal_name=function,
                     direction=pin.get("direction"),
                     locked_by_operator=False,
                 )
