@@ -32,6 +32,7 @@ from sqlalchemy import delete as sa_delete
 
 from ..db import get_session
 from ..library_loader import load_catalog
+from ..compute_pinouts import PIN_KIND_COLORS, header_for
 from ..models import (
     FAILSAFE_ACTIONS,
     RISK_LEVELS,
@@ -926,6 +927,14 @@ async def wizard_step_pinmap(
             ).scalars().all()
             boards_pins.append((b, list(mappings)))
 
+    # Physical pin-header layout for the visual digital-twin view.
+    header = header_for(group.compute_stable_id)
+    # Build a quick lookup: compute_pin label → list of GpioMappings
+    used_pins: dict[str, list] = {}
+    for _b, _maps in boards_pins:
+        for m in _maps:
+            used_pins.setdefault(m.compute_pin, []).append(m)
+
     return templates.TemplateResponse(
         "device_wizard_step5.html",
         {
@@ -934,6 +943,9 @@ async def wizard_step_pinmap(
             "boards_pins": boards_pins,
             "conflicts": conflicts,
             "catalog": catalog,
+            "header": header,
+            "used_pins": used_pins,
+            "PIN_KIND_COLORS": PIN_KIND_COLORS,
             "steps": WIZARD_STEPS,
             "step_idx": 5,
         },

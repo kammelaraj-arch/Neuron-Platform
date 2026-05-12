@@ -6,11 +6,11 @@
   <section class="space-y-6">
     <div class="flex flex-wrap items-baseline justify-between gap-3">
       <div>
-        <h2 class="text-lg font-semibold">5. GPIO pin map</h2>
+        <h2 class="text-lg font-semibold">5. GPIO pin map · digital-twin view</h2>
         <p class="mt-1 text-sm text-slate-400">
-          Auto-allocated by the pin allocator. Tick the lock to pin a
-          row before re-running auto-allocate; edit compute/board pin
-          inline to override.
+          Physical pin header on the left ↔ wired board pins on the right.
+          Connecting lines show the auto-allocator's mapping. Click any pin
+          on the header to see / lock its assignment.
         </p>
       </div>
       <a href="/ui/devices/wizard/{{ group.id }}/pinmap?auto=true"
@@ -28,6 +28,164 @@
       </div>
     {% endif %}
 
+    {% if not header %}
+      <div class="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm text-amber-300">
+        No physical pin layout known for compute <code>{{ group.compute_stable_id or '—' }}</code>.
+        Showing the tabular fallback view below.
+      </div>
+    {% else %}
+      <!-- ── DIGITAL TWIN HEADER VIEW ──────────────────────────────────────── -->
+      {% set pin_kind_label = {
+        'power_5v':  '5V power',
+        'power_3v3': '3V3 power',
+        'ground':    'GND',
+        'gpio':      'GPIO',
+        'adc':       'ADC',
+        'special':   'Special function',
+        'reserved':  'Reserved',
+        'not_connected': 'Not connected',
+      } %}
+
+      <!-- Legend -->
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-3 flex flex-wrap gap-3 text-[11px]">
+        {% for kind, color in PIN_KIND_COLORS.items() %}
+          <span class="inline-flex items-center gap-1.5">
+            <span class="inline-block h-3 w-3 rounded-full ring-1 ring-slate-700"
+                  style="background:{{ color }}"></span>
+            <span class="text-slate-300">{{ pin_kind_label.get(kind, kind) }}</span>
+          </span>
+        {% endfor %}
+        <span class="ml-auto text-slate-500">
+          {{ header.name }} · {{ header.logic_voltage }}V logic
+        </span>
+      </div>
+
+      <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-slate-900 to-slate-950 p-5
+                  shadow-[0_0_40px_-20px_rgba(16,185,129,0.5)]">
+        <h3 class="font-semibold text-emerald-300 mb-4">{{ header.name }} — 40-pin header</h3>
+
+        {% if header.layout == '2x20_alternating' %}
+          <!-- Pi 40-pin header: pin 1 top-left, pin 2 top-right, pin 3 row-below-1, etc. -->
+          <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 text-[11px] font-mono">
+            <!-- Header column labels -->
+            <div class="text-right text-[10px] uppercase tracking-widest text-slate-500 pb-2">left column · odd pins</div>
+            <div></div>
+            <div class="text-[10px] uppercase tracking-widest text-slate-500 pb-2">right column · even pins</div>
+
+            {% set pin_map = {} %}
+            {% for p in header.pins %}{% set _ = pin_map.update({p[0]: p}) %}{% endfor %}
+
+            {% for row in range(20) %}
+              {% set left = pin_map.get(row * 2 + 1) %}
+              {% set right = pin_map.get(row * 2 + 2) %}
+              {% set lcolor = PIN_KIND_COLORS.get(left[2], '#475569') if left else '#475569' %}
+              {% set rcolor = PIN_KIND_COLORS.get(right[2], '#475569') if right else '#475569' %}
+              {% set lused = used_pins.get(left[1]) if left else None %}
+              {% set rused = used_pins.get(right[1]) if right else None %}
+
+              <!-- Left pin row -->
+              <div class="flex items-center justify-end gap-2 py-0.5
+                          {% if lused %}bg-emerald-500/10 rounded-l-md ring-1 ring-emerald-500/30{% endif %}">
+                {% if lused %}
+                  <span class="text-[10px] text-emerald-300 font-bold">
+                    → {{ lused[0].board_pin }}{% if lused | length > 1 %} (+{{ lused|length - 1 }}){% endif %}
+                  </span>
+                {% endif %}
+                <span class="text-slate-300">{{ left[1] }}</span>
+                {% if left[3] %}
+                  <span class="text-[9px] text-slate-500 hidden sm:inline">[{{ left[3] | join(' / ') }}]</span>
+                {% endif %}
+              </div>
+
+              <!-- Pin pair (visual pin holes) -->
+              <div class="flex items-center gap-1">
+                <div class="relative">
+                  <div class="h-5 w-5 rounded-full ring-2 ring-slate-700 grid place-items-center"
+                       style="background:{{ lcolor }};">
+                    <span class="text-[8px] font-bold text-white">{{ row*2+1 }}</span>
+                  </div>
+                  {% if lused %}
+                    <span class="pointer-events-none absolute -inset-1 rounded-full ring-2 ring-emerald-400 animate-pulse"></span>
+                  {% endif %}
+                </div>
+                <div class="relative">
+                  <div class="h-5 w-5 rounded-full ring-2 ring-slate-700 grid place-items-center"
+                       style="background:{{ rcolor }};">
+                    <span class="text-[8px] font-bold text-white">{{ row*2+2 }}</span>
+                  </div>
+                  {% if rused %}
+                    <span class="pointer-events-none absolute -inset-1 rounded-full ring-2 ring-emerald-400 animate-pulse"></span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Right pin row -->
+              <div class="flex items-center gap-2 py-0.5
+                          {% if rused %}bg-emerald-500/10 rounded-r-md ring-1 ring-emerald-500/30{% endif %}">
+                {% if right[3] %}
+                  <span class="text-[9px] text-slate-500 hidden sm:inline">[{{ right[3] | join(' / ') }}]</span>
+                {% endif %}
+                <span class="text-slate-300">{{ right[1] }}</span>
+                {% if rused %}
+                  <span class="text-[10px] text-emerald-300 font-bold">
+                    {{ rused[0].board_pin }} ←{% if rused | length > 1 %} (+{{ rused|length - 1 }}){% endif %}
+                  </span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+
+        {% elif header.layout == '2x20_silkscreen' %}
+          <!-- Pico-style: pins 1-20 down left, pins 40-21 down right (silkscreen order) -->
+          <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 text-[11px] font-mono">
+            {% set pin_map = {} %}
+            {% for p in header.pins %}{% set _ = pin_map.update({p[0]: p}) %}{% endfor %}
+
+            {% for row in range(20) %}
+              {% set left = pin_map.get(row + 1) %}
+              {% set right = pin_map.get(40 - row) %}
+              {% set lcolor = PIN_KIND_COLORS.get(left[2], '#475569') if left else '#475569' %}
+              {% set rcolor = PIN_KIND_COLORS.get(right[2], '#475569') if right else '#475569' %}
+              {% set lused = used_pins.get(left[1]) if left else None %}
+              {% set rused = used_pins.get(right[1]) if right else None %}
+
+              <div class="flex items-center justify-end gap-2 py-0.5
+                          {% if lused %}bg-emerald-500/10 rounded-l-md ring-1 ring-emerald-500/30{% endif %}">
+                {% if lused %}<span class="text-[10px] text-emerald-300 font-bold">→ {{ lused[0].board_pin }}</span>{% endif %}
+                <span class="text-slate-300">{{ left[1] }}</span>
+                {% if left[3] %}<span class="text-[9px] text-slate-500 hidden sm:inline">[{{ left[3] | join(' / ') }}]</span>{% endif %}
+              </div>
+
+              <div class="flex items-center gap-1">
+                <div class="relative">
+                  <div class="h-5 w-5 rounded-full ring-2 ring-slate-700 grid place-items-center"
+                       style="background:{{ lcolor }};">
+                    <span class="text-[8px] font-bold text-white">{{ row + 1 }}</span>
+                  </div>
+                  {% if lused %}<span class="pointer-events-none absolute -inset-1 rounded-full ring-2 ring-emerald-400 animate-pulse"></span>{% endif %}
+                </div>
+                <div class="relative">
+                  <div class="h-5 w-5 rounded-full ring-2 ring-slate-700 grid place-items-center"
+                       style="background:{{ rcolor }};">
+                    <span class="text-[8px] font-bold text-white">{{ 40 - row }}</span>
+                  </div>
+                  {% if rused %}<span class="pointer-events-none absolute -inset-1 rounded-full ring-2 ring-emerald-400 animate-pulse"></span>{% endif %}
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 py-0.5
+                          {% if rused %}bg-emerald-500/10 rounded-r-md ring-1 ring-emerald-500/30{% endif %}">
+                {% if right[3] %}<span class="text-[9px] text-slate-500 hidden sm:inline">[{{ right[3] | join(' / ') }}]</span>{% endif %}
+                <span class="text-slate-300">{{ right[1] }}</span>
+                {% if rused %}<span class="text-[10px] text-emerald-300 font-bold">{{ rused[0].board_pin }} ←</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- ── PER-BOARD WIRING TABLES ──────────────────────────────────────── -->
     {% for b, pins in boards_pins %}
       <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
         <header class="flex flex-wrap items-baseline justify-between gap-3">
@@ -39,21 +197,17 @@
         </header>
 
         {% if pins %}
-          <!-- Digital-twin split: compute pins (left) ─── board pins (right) -->
           <div class="mt-5 grid gap-2 sm:grid-cols-[1fr_auto_1fr] items-center text-xs">
             {% for m in pins %}
-              <form method="post" action="/ui/devices/wizard/{{ group.id }}/pinmap/lock"
-                    class="contents">
+              <form method="post" action="/ui/devices/wizard/{{ group.id }}/pinmap/lock" class="contents">
                 <input type="hidden" name="mapping_id" value="{{ m.id }}">
 
-                <!-- compute side -->
                 <div class="flex items-center gap-2 sm:justify-end">
                   <input name="compute_pin" value="{{ m.compute_pin }}"
                          class="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-emerald-300 text-right" />
                   <span class="hidden sm:inline text-slate-500">compute</span>
                 </div>
 
-                <!-- connector -->
                 <div class="relative flex items-center justify-center">
                   <svg viewBox="0 0 80 20" class="w-20 h-5">
                     <line x1="0" y1="10" x2="80" y2="10"
@@ -61,8 +215,7 @@
                           stroke-width="1.5"
                           stroke-dasharray="{% if m.locked_by_operator %}0{% else %}6 3{% endif %}">
                       {% if not m.locked_by_operator %}
-                        <animate attributeName="stroke-dashoffset"
-                                 values="9;0" dur="1.6s" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-dashoffset" values="9;0" dur="1.6s" repeatCount="indefinite"/>
                       {% endif %}
                     </line>
                     <circle cx="0" cy="10" r="2.5"
@@ -72,7 +225,6 @@
                   </svg>
                 </div>
 
-                <!-- board side -->
                 <div class="flex items-center gap-2">
                   <span class="hidden sm:inline text-slate-500">board</span>
                   <input name="board_pin" value="{{ m.board_pin }}"
