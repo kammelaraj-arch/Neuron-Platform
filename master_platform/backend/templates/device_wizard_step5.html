@@ -185,7 +185,7 @@
       </div>
     {% endif %}
 
-    <!-- ── PER-BOARD WIRING TABLES ──────────────────────────────────────── -->
+    <!-- ── PER-BOARD WIRING TABLES + LABELED PINOUT ────────────────────── -->
     {% for b, pins in boards_pins %}
       <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
         <header class="flex flex-wrap items-baseline justify-between gap-3">
@@ -195,6 +195,43 @@
           </div>
           <div class="text-xs text-slate-500">{{ pins | length }} pin(s)</div>
         </header>
+
+        {% set po = board_pinouts.get(b.id) %}
+        {% if po %}
+          <!-- Labeled board pinout (what each board pin does + connect-to hint) -->
+          <details open class="mt-4">
+            <summary class="cursor-pointer text-[11px] uppercase tracking-widest text-slate-400 hover:text-white">
+              Board pinout · what each pin does
+            </summary>
+            <div class="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3 text-[11px]">
+              {% set pin_kind_label = {
+                'power_5v': '5V', 'power_3v3': '3V3', 'ground': 'GND',
+                'input': 'IN', 'output': 'OUT', 'bidir': 'I/O',
+                'pwm_in': 'PWM', 'i2c_sda': 'SDA', 'i2c_scl': 'SCL',
+                'spi_mosi': 'MOSI', 'spi_miso': 'MISO', 'spi_sck': 'SCK', 'spi_cs': 'CS',
+                'uart_tx': 'TX', 'uart_rx': 'RX',
+                'analog_in': 'AIN', 'motor_out': 'MOUT',
+                'interrupt': 'INT', 'address_select': 'ADDR',
+                'reset': 'RST', 'enable': 'EN', 'vref': 'VREF', 'special': '★',
+              } %}
+              {% for pname, pkind, pdesc, pcompute in po %}
+                {% set color = PINOUT_KIND_COLORS.get(pkind, '#475569') %}
+                <div class="flex items-baseline gap-2 rounded border border-slate-800 bg-slate-950 p-1.5">
+                  <span class="inline-flex h-5 min-w-[3rem] items-center justify-center rounded px-1.5
+                               font-mono font-bold text-[10px] text-white"
+                        style="background:{{ color }};">
+                    {{ pname }}
+                  </span>
+                  <span class="text-[9px] uppercase tracking-wider text-slate-500 shrink-0">{{ pin_kind_label.get(pkind, pkind) }}</span>
+                  <span class="text-slate-300 text-[10px] flex-1">{{ pdesc }}</span>
+                  {% if pcompute %}
+                    <span class="text-[9px] font-mono text-cyan-300 shrink-0" title="suggested compute pin kind">→{{ pcompute }}</span>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
 
         {% if pins %}
           <div class="mt-5 grid gap-2 sm:grid-cols-[1fr_auto_1fr] items-center text-xs">

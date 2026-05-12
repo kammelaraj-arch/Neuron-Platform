@@ -2279,9 +2279,93 @@ def _write(target_dir: Path, manifest: dict) -> bool:
     return True
 
 
+# ─── Micro-compute additions ────────────────────────────────────────────────
+COMPUTES: list[dict] = [
+    {
+        "stable_id": "compute.rpi400",
+        "name": "Raspberry Pi 400",
+        "vendor": "Raspberry Pi Foundation",
+        "version": "1.0.0",
+        "category": "linux_edge_hosts", "subcategory": "single_board",
+        "description": "Raspberry Pi 4-class board integrated into a compact keyboard. Same BCM2711 quad-core Cortex-A72 @ 1.8GHz, 4GB RAM, 40-pin GPIO header at the back. Self-contained desk-ready Pi — no separate enclosure needed. Use for kiosk control panels, classroom rigs, on-machine HMIs.",
+        "tags": ["raspberry_pi", "pi400", "keyboard", "linux"],
+        "capabilities": ["linux_host", "docker", "gpio", "ethernet", "wifi", "bluetooth"],
+        "interfaces": [
+            {"type": "GPIO", "direction": "bidir", "pins_required": 40, "voltage": 3.3, "notes": "40-pin BCM header on rear"},
+            {"type": "Ethernet", "direction": "bidir"},
+            {"type": "WiFi", "direction": "bidir"},
+            {"type": "BLE", "direction": "bidir"},
+            {"type": "USB", "direction": "bidir"},
+        ],
+        "power": {"voltage_v": 5.0, "voltage_tolerance_pct": 5, "current_ma_typical": 800, "current_ma_peak": 3000, "power_source": "external"},
+        "compute": [],  # this IS the compute
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Raspberry_Pi_400.jpg/640px-Raspberry_Pi_400.jpg",
+        "datasheet_url": "https://www.raspberrypi.com/products/raspberry-pi-400/",
+        "brand_variants": ["Raspberry Pi 400 (US/UK/EU keyboard layouts)"],
+        "price_usd_range": [70, 100],
+    },
+    {
+        "stable_id": "compute.cm4",
+        "name": "Raspberry Pi Compute Module 4 (CM4)",
+        "vendor": "Raspberry Pi Foundation",
+        "version": "1.0.0",
+        "category": "linux_edge_hosts", "subcategory": "module",
+        "description": "Pi 4-class compute on a 55×40mm SODIMM-style 200-pin board-to-board connector. eMMC variants 8/16/32 GB; lite variant uses SD. Designed for OEM products. The 40-pin GPIO header is exposed via the CM4 IO Board (DEV-CM4IO) or custom carriers.",
+        "tags": ["raspberry_pi", "cm4", "compute_module", "embedded", "oem"],
+        "capabilities": ["linux_host", "docker", "gpio", "ethernet", "wifi", "pcie"],
+        "interfaces": [
+            {"type": "GPIO", "direction": "bidir", "pins_required": 40, "voltage": 3.3, "notes": "Via CM4 IO Board's 40-pin header"},
+            {"type": "Ethernet", "direction": "bidir"},
+            {"type": "WiFi", "direction": "bidir", "notes": "Optional (4 SKUs)"},
+            {"type": "USB", "direction": "bidir"},
+        ],
+        "power": {"voltage_v": 5.0, "voltage_tolerance_pct": 5, "current_ma_typical": 700, "current_ma_peak": 2500, "power_source": "external"},
+        "compute": [],
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Raspberry_Pi_CM4.jpg/640px-Raspberry_Pi_CM4.jpg",
+        "datasheet_url": "https://datasheets.raspberrypi.com/cm4/cm4-datasheet.pdf",
+        "brand_variants": ["CM4 (32 variants: RAM 1/2/4/8GB × eMMC 0/8/16/32GB × Wireless yes/no)", "CM4 IO Board (DEV-CM4IO)"],
+        "price_usd_range": [25, 120],
+    },
+    {
+        "stable_id": "compute.cm5",
+        "name": "Raspberry Pi Compute Module 5 (CM5)",
+        "vendor": "Raspberry Pi Foundation",
+        "version": "1.0.0",
+        "category": "linux_edge_hosts", "subcategory": "module",
+        "description": "Pi 5-class compute on the same 55×40mm CM4-compatible footprint. BCM2712 quad-core Cortex-A76 @ 2.4GHz, 2-16GB LPDDR4X, eMMC 0/16/32/64GB. Drop-in for new designs; pairs with the CM5 IO Board (or CM4 IO Board for limited features).",
+        "tags": ["raspberry_pi", "cm5", "compute_module", "embedded"],
+        "capabilities": ["linux_host", "docker", "gpio", "ethernet", "pcie"],
+        "interfaces": [
+            {"type": "GPIO", "direction": "bidir", "pins_required": 40, "voltage": 3.3},
+            {"type": "Ethernet", "direction": "bidir"},
+            {"type": "USB", "direction": "bidir"},
+        ],
+        "power": {"voltage_v": 5.0, "voltage_tolerance_pct": 5, "current_ma_typical": 1000, "current_ma_peak": 5000, "power_source": "external"},
+        "compute": [],
+        "image_url": "https://www.raspberrypi.com/app/uploads/2024/11/compute-module-5.png",
+        "datasheet_url": "https://datasheets.raspberrypi.com/cm5/cm5-datasheet.pdf",
+        "brand_variants": ["CM5 (RAM/eMMC/Wireless variants)", "CM5 IO Board"],
+        "price_usd_range": [45, 180],
+    },
+]
+
+
+def _manifest_compute(c: dict) -> dict:
+    m = _manifest_components(c)
+    m["library"] = "micro_compute_library"
+    return m
+
+
 def main() -> int:
     written = 0
     skipped = 0
+    computes_dir = REPO_ROOT / "libraries" / "micro_compute_library" / "manifests"
+    for c in COMPUTES:
+        if _write(computes_dir, _manifest_compute(c)):
+            written += 1
+            print(f"  + micro_compute_library/{c['stable_id']}")
+        else:
+            skipped += 1
     for c in COMPONENTS:
         if _write(COMPONENTS_DIR, _manifest_components(c)):
             written += 1

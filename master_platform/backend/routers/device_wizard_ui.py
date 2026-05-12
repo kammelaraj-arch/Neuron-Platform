@@ -33,6 +33,7 @@ from sqlalchemy import delete as sa_delete
 from ..db import get_session
 from ..library_loader import load_catalog
 from ..compute_pinouts import PIN_KIND_COLORS, header_for
+from ..board_pinouts import PINOUT_KIND_COLORS, pinout_for
 from ..models import (
     FAILSAFE_ACTIONS,
     RISK_LEVELS,
@@ -935,6 +936,13 @@ async def wizard_step_pinmap(
         for m in _maps:
             used_pins.setdefault(m.compute_pin, []).append(m)
 
+    # Per-board pinouts: stable_id → [(name, kind, description, suggest), ...]
+    board_pinouts: dict[str, list] = {}
+    for _b, _ in boards_pins:
+        po = pinout_for(_b.board_stable_id)
+        if po:
+            board_pinouts[_b.id] = po
+
     return templates.TemplateResponse(
         "device_wizard_step5.html",
         {
@@ -945,7 +953,9 @@ async def wizard_step_pinmap(
             "catalog": catalog,
             "header": header,
             "used_pins": used_pins,
+            "board_pinouts": board_pinouts,
             "PIN_KIND_COLORS": PIN_KIND_COLORS,
+            "PINOUT_KIND_COLORS": PINOUT_KIND_COLORS,
             "steps": WIZARD_STEPS,
             "step_idx": 5,
         },

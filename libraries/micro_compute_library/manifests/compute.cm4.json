@@ -1,0 +1,86 @@
+{
+  "stable_id": "compute.cm4",
+  "name": "Raspberry Pi Compute Module 4 (CM4)",
+  "vendor": "Raspberry Pi Foundation",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "subcategory": "module",
+  "description": "Pi 4-class compute on a 55×40mm SODIMM-style 200-pin board-to-board connector. eMMC variants 8/16/32 GB; lite variant uses SD. Designed for OEM products. The 40-pin GPIO header is exposed via the CM4 IO Board (DEV-CM4IO) or custom carriers.",
+  "tags": [
+    "raspberry_pi",
+    "cm4",
+    "compute_module",
+    "embedded",
+    "oem"
+  ],
+  "capabilities": [
+    "linux_host",
+    "docker",
+    "gpio",
+    "ethernet",
+    "wifi",
+    "pcie"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "bidir",
+      "pins_required": 40,
+      "voltage": 3.3,
+      "notes": "Via CM4 IO Board's 40-pin header"
+    },
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    },
+    {
+      "type": "WiFi",
+      "direction": "bidir",
+      "notes": "Optional (4 SKUs)"
+    },
+    {
+      "type": "USB",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 700,
+    "current_ma_peak": 2500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Raspberry Pi Compute Module 4 (CM4) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Raspberry_Pi_CM4.jpg/640px-Raspberry_Pi_CM4.jpg",
+    "datasheet_url": "https://datasheets.raspberrypi.com/cm4/cm4-datasheet.pdf",
+    "brand_variants": [
+      "CM4 (32 variants: RAM 1/2/4/8GB × eMMC 0/8/16/32GB × Wireless yes/no)",
+      "CM4 IO Board (DEV-CM4IO)"
+    ],
+    "price_usd_range": [
+      25,
+      120
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

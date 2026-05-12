@@ -1,0 +1,87 @@
+{
+  "stable_id": "compute.rpi400",
+  "name": "Raspberry Pi 400",
+  "vendor": "Raspberry Pi Foundation",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "subcategory": "single_board",
+  "description": "Raspberry Pi 4-class board integrated into a compact keyboard. Same BCM2711 quad-core Cortex-A72 @ 1.8GHz, 4GB RAM, 40-pin GPIO header at the back. Self-contained desk-ready Pi — no separate enclosure needed. Use for kiosk control panels, classroom rigs, on-machine HMIs.",
+  "tags": [
+    "raspberry_pi",
+    "pi400",
+    "keyboard",
+    "linux"
+  ],
+  "capabilities": [
+    "linux_host",
+    "docker",
+    "gpio",
+    "ethernet",
+    "wifi",
+    "bluetooth"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "bidir",
+      "pins_required": 40,
+      "voltage": 3.3,
+      "notes": "40-pin BCM header on rear"
+    },
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    },
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    },
+    {
+      "type": "BLE",
+      "direction": "bidir"
+    },
+    {
+      "type": "USB",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 800,
+    "current_ma_peak": 3000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Raspberry Pi 400 reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Raspberry_Pi_400.jpg/640px-Raspberry_Pi_400.jpg",
+    "datasheet_url": "https://www.raspberrypi.com/products/raspberry-pi-400/",
+    "brand_variants": [
+      "Raspberry Pi 400 (US/UK/EU keyboard layouts)"
+    ],
+    "price_usd_range": [
+      70,
+      100
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

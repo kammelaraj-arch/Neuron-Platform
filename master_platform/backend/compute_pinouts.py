@@ -115,43 +115,74 @@ PICO_40PIN_LAYOUT = [
 
 
 # Lookup table: compute.stable_id → header layout descriptor.
+# Keys match the actual stable_ids in libraries/micro_compute_library/manifests/.
 COMPUTE_HEADERS: dict[str, dict] = {
+    # Raspberry Pi single-board computers (Linux-class, 40-pin BCM header)
     "compute.rpi5": {
         "name": "Raspberry Pi 5",
-        "layout": "2x20_alternating",  # pin 1 top-left, 2 top-right, 3 row-below-1, 4 row-below-2, …
+        "layout": "2x20_alternating",
         "logic_voltage": 3.3,
         "pins": PI_40PIN_HEADER,
         "form_factor": "credit_card",
     },
     "compute.rpi4": {
-        "name": "Raspberry Pi 4",
+        "name": "Raspberry Pi 4 Model B",
         "layout": "2x20_alternating",
         "logic_voltage": 3.3,
         "pins": PI_40PIN_HEADER,
         "form_factor": "credit_card",
     },
     "compute.rpi3": {
-        "name": "Raspberry Pi 3 / 3B+",
+        "name": "Raspberry Pi 3 Model B / B+",
         "layout": "2x20_alternating",
         "logic_voltage": 3.3,
         "pins": PI_40PIN_HEADER,
         "form_factor": "credit_card",
     },
-    "compute.rpi_zero_2_w": {
+    "compute.rpi_zero_2w": {
         "name": "Raspberry Pi Zero 2 W",
         "layout": "2x20_alternating",
         "logic_voltage": 3.3,
         "pins": PI_40PIN_HEADER,
         "form_factor": "zero",
     },
+    "compute.rpi_zero": {
+        "name": "Raspberry Pi Zero / Zero W",
+        "layout": "2x20_alternating",
+        "logic_voltage": 3.3,
+        "pins": PI_40PIN_HEADER,
+        "form_factor": "zero",
+    },
+    "compute.rpi400": {
+        "name": "Raspberry Pi 400",
+        "layout": "2x20_alternating",
+        "logic_voltage": 3.3,
+        "pins": PI_40PIN_HEADER,
+        "form_factor": "keyboard",
+    },
+    "compute.cm4": {
+        "name": "Raspberry Pi Compute Module 4 (via IO Board)",
+        "layout": "2x20_alternating",
+        "logic_voltage": 3.3,
+        "pins": PI_40PIN_HEADER,
+        "form_factor": "module",
+    },
+    "compute.cm5": {
+        "name": "Raspberry Pi Compute Module 5 (via IO Board)",
+        "layout": "2x20_alternating",
+        "logic_voltage": 3.3,
+        "pins": PI_40PIN_HEADER,
+        "form_factor": "module",
+    },
+    # Raspberry Pi Pico family (RP2040 / RP2350, 40-pin two-row silkscreen)
     "compute.pico2w": {
         "name": "Raspberry Pi Pico 2 W",
-        "layout": "2x20_silkscreen",  # 1-20 down left, 40-21 down right
+        "layout": "2x20_silkscreen",
         "logic_voltage": 3.3,
         "pins": PICO_40PIN_LAYOUT,
         "form_factor": "pico",
     },
-    "compute.pico2": {
+    "compute.pico_2": {
         "name": "Raspberry Pi Pico 2",
         "layout": "2x20_silkscreen",
         "logic_voltage": 3.3,
@@ -166,7 +197,7 @@ COMPUTE_HEADERS: dict[str, dict] = {
         "form_factor": "pico",
     },
     "compute.pico": {
-        "name": "Raspberry Pi Pico",
+        "name": "Raspberry Pi Pico (original RP2040)",
         "layout": "2x20_silkscreen",
         "logic_voltage": 3.3,
         "pins": PICO_40PIN_LAYOUT,

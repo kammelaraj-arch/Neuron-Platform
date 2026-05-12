@@ -1,0 +1,78 @@
+{
+  "stable_id": "compute.cm5",
+  "name": "Raspberry Pi Compute Module 5 (CM5)",
+  "vendor": "Raspberry Pi Foundation",
+  "version": "1.0.0",
+  "library": "micro_compute_library",
+  "category": "linux_edge_hosts",
+  "subcategory": "module",
+  "description": "Pi 5-class compute on the same 55×40mm CM4-compatible footprint. BCM2712 quad-core Cortex-A76 @ 2.4GHz, 2-16GB LPDDR4X, eMMC 0/16/32/64GB. Drop-in for new designs; pairs with the CM5 IO Board (or CM4 IO Board for limited features).",
+  "tags": [
+    "raspberry_pi",
+    "cm5",
+    "compute_module",
+    "embedded"
+  ],
+  "capabilities": [
+    "linux_host",
+    "docker",
+    "gpio",
+    "ethernet",
+    "pcie"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "bidir",
+      "pins_required": 40,
+      "voltage": 3.3
+    },
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    },
+    {
+      "type": "USB",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 1000,
+    "current_ma_peak": 5000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Raspberry Pi Compute Module 5 (CM5) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.raspberrypi.com/app/uploads/2024/11/compute-module-5.png",
+    "datasheet_url": "https://datasheets.raspberrypi.com/cm5/cm5-datasheet.pdf",
+    "brand_variants": [
+      "CM5 (RAM/eMMC/Wireless variants)",
+      "CM5 IO Board"
+    ],
+    "price_usd_range": [
+      45,
+      180
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}
