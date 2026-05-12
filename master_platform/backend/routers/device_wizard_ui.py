@@ -125,6 +125,57 @@ def _require_unlocked(group: EdgeGroup, request: Request) -> None:
     )
 
 
+@router.post("/ui/devices/wizard/{group_id}/ssh")
+async def wizard_set_ssh(
+    group_id: str,
+    request: Request,
+    ssh_host: str = Form(""),
+    ssh_port: int = Form(22),
+    ssh_username: str = Form(""),
+    ssh_password: str = Form(""),
+    ssh_private_key: str = Form(""),
+    sudo_password: str = Form(""),
+    mdns_hostname: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Store the SSH / sudo credentials used by the edge runtime (or
+    Master, when directly reachable) to push firmware bundles to the
+    compute module. Sensitive fields are Fernet-encrypted via
+    security.secret_crypto so plaintext only ever appears in memory at
+    firmware-deploy time."""
+    from ..security.secret_crypto import encrypt_secret
+
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+
+    group.ssh_host = ssh_host.strip() or None
+    group.ssh_port = int(ssh_port) if ssh_port else 22
+    group.ssh_username = ssh_username.strip() or None
+    # Only re-encrypt secrets when the operator typed a new value;
+    # an empty submission means "keep existing".
+    if ssh_password.strip():
+        group.ssh_password_encrypted = encrypt_secret(ssh_password)
+    if ssh_private_key.strip():
+        group.ssh_private_key_encrypted = encrypt_secret(ssh_private_key)
+    if sudo_password.strip():
+        group.sudo_password_encrypted = encrypt_secret(sudo_password)
+    group.mdns_hostname = mdns_hostname.strip() or None
+
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.set_ssh", target_kind="edge_group", target_id=group.id,
+        detail={
+            "host": group.ssh_host, "port": group.ssh_port,
+            "username": group.ssh_username, "has_password": bool(group.ssh_password_encrypted),
+            "has_private_key": bool(group.ssh_private_key_encrypted),
+            "has_sudo_password": bool(group.sudo_password_encrypted),
+        },
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
 @router.post("/ui/devices/wizard/{group_id}/lock")
 async def wizard_lock_group(
     group_id: str,

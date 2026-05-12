@@ -110,6 +110,100 @@
       </div>
     </div>
 
+    <!-- ── SSH / DEPLOYMENT CREDENTIALS ──────────────────────────────────── -->
+    <div class="rounded-2xl border border-cyan-500/30 bg-cyan-500/[0.04] p-5">
+      <h3 class="font-semibold flex items-center gap-2 text-cyan-300">
+        🔑 SSH / first-boot deployment credentials
+        {% if group.ssh_host and group.ssh_username and (group.ssh_password_encrypted or group.ssh_private_key_encrypted) %}
+          <span class="rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5">configured</span>
+        {% else %}
+          <span class="rounded-full bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5">not configured</span>
+        {% endif %}
+      </h3>
+      <p class="mt-1 text-xs text-slate-400">
+        Used by the edge runtime (or Master, when the device is directly reachable) to copy the
+        firmware bundle on first registration and to push OTA updates. Passwords + private keys are
+        Fernet-encrypted at rest; plaintext only appears in memory at deploy time.
+      </p>
+
+      <form method="post" action="/ui/devices/wizard/{{ group.id }}/ssh"
+            class="mt-4 grid gap-3 max-w-3xl text-sm">
+        <div class="grid gap-3 sm:grid-cols-[2fr_1fr_2fr]">
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-slate-500">SSH host / IP</label>
+            <input name="ssh_host" value="{{ group.ssh_host or '' }}"
+                   placeholder="192.168.1.50 or raspberrypi.local"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-cyan-300" />
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-slate-500">Port</label>
+            <input name="ssh_port" type="number" min="1" max="65535" value="{{ group.ssh_port or 22 }}"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono" />
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-slate-500">mDNS / hostname (optional)</label>
+            <input name="mdns_hostname" value="{{ group.mdns_hostname or '' }}"
+                   placeholder="raspberrypi.local"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-slate-500">Username</label>
+          <input name="ssh_username" value="{{ group.ssh_username or '' }}"
+                 placeholder="pi  /  ubuntu  /  neuron"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono" />
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-slate-500">
+            SSH password
+            {% if group.ssh_password_encrypted %}<span class="text-slate-500">(leave blank to keep existing)</span>{% endif %}
+          </label>
+          <input name="ssh_password" type="password" autocomplete="new-password"
+                 placeholder="{{ '••••••••' if group.ssh_password_encrypted else '(only fill if not using a key)' }}"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono" />
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-slate-500">
+            SSH private key (PEM / OpenSSH)
+            {% if group.ssh_private_key_encrypted %}<span class="text-slate-500">(leave blank to keep existing)</span>{% endif %}
+          </label>
+          <textarea name="ssh_private_key" rows="6" autocomplete="new-password"
+                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"
+                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-[11px]"></textarea>
+          <p class="mt-1 text-[10px] text-slate-500">
+            Preferred over password. The key never leaves the Master in plaintext — it's decrypted
+            only inside the edge runtime / deploy worker at the moment a deploy fires.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-slate-500">
+            sudo password (optional)
+            {% if group.sudo_password_encrypted %}<span class="text-slate-500">(leave blank to keep existing)</span>{% endif %}
+          </label>
+          <input name="sudo_password" type="password" autocomplete="new-password"
+                 placeholder="{{ '••••••••' if group.sudo_password_encrypted else 'only if sudo requires a password' }}"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono" />
+          <p class="mt-1 text-[10px] text-slate-500">
+            Needed when installing system services / opening firewall ports. If your user is in the
+            passwordless-sudo group (typical for Pi), leave this blank.
+          </p>
+        </div>
+
+        <div class="flex gap-3 items-center">
+          <button class="rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400">
+            Save SSH credentials
+          </button>
+          <span class="text-[11px] text-slate-500">
+            Audited as <code>group.set_ssh</code> (no secret material in the audit log — just flags).
+          </span>
+        </div>
+      </form>
+    </div>
+
     <!-- ── CONFIGURATION LOCK ────────────────────────────────────────────── -->
     <div class="rounded-2xl border {% if group.lock_pin_hash %}border-amber-500/50 bg-amber-500/[0.05]{% else %}border-slate-800 bg-slate-900/40{% endif %} p-5">
       <h3 class="font-semibold flex items-center gap-2">

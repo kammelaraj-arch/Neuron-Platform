@@ -146,6 +146,32 @@ This bidirectionality is what makes the local-brain failsafe contract
 operationally meaningful — without parent-heartbeat-down detection,
 the child would never know it should fall back to autonomous mode.
 
+### SSH / first-boot deployment credentials
+
+Each `EdgeGroup` stores the SSH details used to push the firmware
+bundle to the compute module on first registration + later OTA:
+
+- `ssh_host`, `ssh_port` (default 22), `ssh_username`
+- `ssh_password_encrypted` — Fernet-encrypted, via
+  `security/secret_crypto.py`
+- `ssh_private_key_encrypted` — preferred over password
+- `sudo_password_encrypted` — when sudo needs a password
+- `mdns_hostname` — e.g. `raspberrypi.local`
+
+Plaintext is decrypted only at deploy time inside the worker that
+SSHes to the device. Audit log captures `group.set_ssh` events with
+flags (host, port, username, has_password, has_private_key,
+has_sudo_password) but never the actual secrets.
+
+End-to-end deploy flow (FR-0005 step 6 builder):
+  1. Wizard captures SSH creds + WiFi + boards + components + pin map.
+  2. Build action emits the firmware bundle (DNA + Brain + WiFi +
+     allowed-emergency cert + signed app bundle).
+  3. Deploy worker reads SSH creds via decrypt_secret, SSHes to the
+     compute, scp's the bundle, runs `install.sh` on the device,
+     verifies `/healthz` reachable, marks the group as deployed.
+  4. Subsequent OTA updates reuse the same SSH path.
+
 ### Configuration lock with PIN
 
 After an operator has physically tested a Group's configuration on

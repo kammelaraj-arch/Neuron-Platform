@@ -116,6 +116,21 @@ def _apply_lightweight_migrations(sync_conn) -> None:
         if not _has_column("edge_groups", "locked_by"):
             sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN locked_by VARCHAR(120)")
 
+    # 2026-05: SSH / first-boot deployment credentials on edge_groups.
+    # Sensitive fields stored Fernet-encrypted via secret_crypto.
+    if _has_table("edge_groups"):
+        for col, sql_type, default in [
+            ("ssh_host", "VARCHAR(200)", None),
+            ("ssh_port", "INTEGER NOT NULL DEFAULT 22", None),
+            ("ssh_username", "VARCHAR(120)", None),
+            ("ssh_password_encrypted", "TEXT", None),
+            ("ssh_private_key_encrypted", "TEXT", None),
+            ("sudo_password_encrypted", "TEXT", None),
+            ("mdns_hostname", "VARCHAR(200)", None),
+        ]:
+            if not _has_column("edge_groups", col):
+                sync_conn.exec_driver_sql(f"ALTER TABLE edge_groups ADD COLUMN {col} {sql_type}")
+
     # 2026-05: board-pin assignment + functional label on
     # component_instances so each output channel of a board carries a
     # named function ("stirring", "tilt-z", "mixer") + asset id.

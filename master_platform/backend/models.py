@@ -347,6 +347,18 @@ class EdgeGroup(Base):
     # fallback. Both may be NULL for offline-only groups.
     primary_wifi_id: Mapped[str | None] = mapped_column(ForeignKey("wifi_networks.id"))
     secondary_wifi_id: Mapped[str | None] = mapped_column(ForeignKey("wifi_networks.id"))
+    # SSH / first-boot deployment credentials. Used by the edge-runtime
+    # (or the master directly when the device is publicly reachable) to
+    # copy the firmware bundle on first registration + push OTA updates.
+    # Sensitive fields are Fernet-encrypted at rest using
+    # security.secret_crypto.
+    ssh_host: Mapped[str | None] = mapped_column(String(200))           # IP or hostname
+    ssh_port: Mapped[int] = mapped_column(default=22, nullable=False)
+    ssh_username: Mapped[str | None] = mapped_column(String(120))
+    ssh_password_encrypted: Mapped[str | None] = mapped_column(Text)
+    ssh_private_key_encrypted: Mapped[str | None] = mapped_column(Text)
+    sudo_password_encrypted: Mapped[str | None] = mapped_column(Text)
+    mdns_hostname: Mapped[str | None] = mapped_column(String(200))      # e.g. raspberrypi.local
     # Operator-set PIN that locks the wizard configuration after testing.
     # When lock_pin_hash is set, write endpoints (boards / components /
     # gpio mappings / wifi / risk) require the matching plaintext PIN
