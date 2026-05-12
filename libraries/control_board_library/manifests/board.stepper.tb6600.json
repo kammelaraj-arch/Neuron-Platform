@@ -1,0 +1,71 @@
+{
+  "stable_id": "board.stepper.tb6600",
+  "name": "TB6600 Stand-alone Stepper Driver (4.5A)",
+  "vendor": "Toshiba / Generic",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "stepper",
+  "description": "Industrial-grade enclosed stepper driver, 9-42V supply, 0.5-4.5A configurable. DIP switches set microstepping (1/1 to 1/32) and current. Pair with NEMA 17/23/34 for CNC, sliding gates, conveyors.",
+  "tags": [
+    "stepper",
+    "industrial",
+    "high_current",
+    "enclosed"
+  ],
+  "capabilities": [
+    "stepper_drive_bipolar"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 3,
+      "voltage": 5.0,
+      "notes": "PUL + DIR + ENA (opto-isolated)"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 75,
+    "current_ma_typical": 3000,
+    "current_ma_peak": 4500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TB6600 Stand-alone Stepper Driver (4.5A) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/TB6600_Stepper_Driver_Module.jpg/640px-TB6600_Stepper_Driver_Module.jpg",
+    "datasheet_url": "https://makerelectronics.co/wp-content/uploads/2017/06/TB6600-Stepper-Motor-Driver-User-Guide.pdf",
+    "brand_variants": [
+      "Generic TB6600",
+      "DROK TB6600",
+      "Kuman TB6600"
+    ],
+    "price_usd_range": [
+      10,
+      30
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

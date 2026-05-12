@@ -1,0 +1,69 @@
+{
+  "stable_id": "board.motor.mx1508",
+  "name": "MX1508 Mini Dual H-Bridge",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "h_bridge",
+  "description": "Tiny 5V dual H-bridge, 1.5A per channel (2.5A peak). Cheapest reliable option for two small DC motors. PWM-driven both inputs (no enable line). Common in micro robots, small fans.",
+  "tags": [
+    "motor_driver",
+    "h_bridge",
+    "budget",
+    "mini"
+  ],
+  "capabilities": [
+    "dc_motor_drive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 4,
+      "voltage": 3.3,
+      "notes": "IN1A/IN2A + IN1B/IN2B"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 80,
+    "current_ma_typical": 1500,
+    "current_ma_peak": 2500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MX1508 Mini Dual H-Bridge reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/MX1508_Motor_Driver.jpg/480px-MX1508_Motor_Driver.jpg",
+    "brand_variants": [
+      "Generic MX1508",
+      "ELEGOO MX1508"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

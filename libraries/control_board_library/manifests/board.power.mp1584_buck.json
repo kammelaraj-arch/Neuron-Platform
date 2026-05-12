@@ -1,0 +1,62 @@
+{
+  "stable_id": "board.power.mp1584_buck",
+  "name": "MP1584EN Mini Buck Converter (3A)",
+  "vendor": "Monolithic Power Systems",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "power",
+  "subcategory": "buck",
+  "description": "Tiny higher-efficiency alternative to LM2596 (often 90%+). 4.5-28V in, 0.8-20V out, 3A. Pin-compatible footprint with many LM2596 boards. Use when board space and heat matter.",
+  "tags": [
+    "power",
+    "buck",
+    "efficient",
+    "mini"
+  ],
+  "capabilities": [
+    "voltage_regulate"
+  ],
+  "dependencies": [],
+  "interfaces": [],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 75,
+    "current_ma_typical": 1500,
+    "current_ma_peak": 3000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MP1584EN Mini Buck Converter (3A) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/MP1584EN_Buck_Converter.jpg/480px-MP1584EN_Buck_Converter.jpg",
+    "datasheet_url": "https://www.monolithicpower.com/en/mp1584.html",
+    "brand_variants": [
+      "Generic MP1584EN module",
+      "HiLetGo MP1584"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

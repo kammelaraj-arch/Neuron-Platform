@@ -1,0 +1,68 @@
+{
+  "stable_id": "board.hat.pimoroni_pantilt",
+  "name": "Pimoroni Pan-Tilt HAT",
+  "vendor": "Pimoroni",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "servo",
+  "description": "Two-axis pan/tilt bracket + servo HAT for the Raspberry Pi Camera. I2C-driven, smooth motion, kit includes both servos and 3D-printable bracket files. Use for security cameras, time-lapse rigs, robot heads.",
+  "tags": [
+    "pi_hat",
+    "servo",
+    "pan_tilt",
+    "camera"
+  ],
+  "capabilities": [
+    "position_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x15",
+      "speed_hz": 100000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 250,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Pimoroni Pan-Tilt HAT reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn.shopify.com/s/files/1/0174/1800/products/pan-tilt-hat-1_1500x1500.jpg",
+    "datasheet_url": "https://shop.pimoroni.com/products/pan-tilt-hat",
+    "brand_variants": [
+      "Pimoroni PIM183"
+    ],
+    "price_usd_range": [
+      25,
+      45
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "stable_id": "board.motor.bts7960_43a",
+  "name": "BTS7960 43A High-Current Motor Driver (BTS7960B)",
+  "vendor": "Infineon (BTS7960B) / Generic module",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "h_bridge",
+  "description": "Budget high-current dual half-H built from two BTS7960B half-bridges. Up to 43A peak / 27A continuous with heatsink. Use for high-torque DC motors, electric wheelchairs, robotic actuators, golf-cart conversions.",
+  "tags": [
+    "motor_driver",
+    "h_bridge",
+    "high_current",
+    "infineon"
+  ],
+  "capabilities": [
+    "dc_motor_drive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "L_EN + R_EN enable"
+    },
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "LPWM + RPWM"
+    },
+    {
+      "type": "ADC",
+      "direction": "out",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "Current sense outputs (optional)"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 75,
+    "current_ma_typical": 10000,
+    "current_ma_peak": 43000,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "BTS7960 43A High-Current Motor Driver (BTS7960B) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/BTS7960_Motor_Driver_Module.jpg/640px-BTS7960_Motor_Driver_Module.jpg",
+    "datasheet_url": "https://www.handsontec.com/dataspecs/module/BTS7960%20Motor%20Driver.pdf",
+    "brand_variants": [
+      "HiLetGo BTS7960",
+      "IBT-2 module",
+      "DROK BTS7960"
+    ],
+    "price_usd_range": [
+      8,
+      25
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

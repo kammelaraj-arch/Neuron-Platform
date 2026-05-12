@@ -1,0 +1,68 @@
+{
+  "stable_id": "board.motor.l9110s",
+  "name": "L9110S / HG7881 Dual Motor Driver",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "h_bridge",
+  "description": "Cheap 2-channel motor driver, 800mA per channel, 2.5-12V supply. Two PWM inputs per motor (no enable). Common starter board for class projects, mini robots, small pumps.",
+  "tags": [
+    "motor_driver",
+    "h_bridge",
+    "starter"
+  ],
+  "capabilities": [
+    "dc_motor_drive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 4,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 6.0,
+    "voltage_tolerance_pct": 80,
+    "current_ma_typical": 800,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "L9110S / HG7881 Dual Motor Driver reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/HG7881_L9110S_Motor_Driver.jpg/480px-HG7881_L9110S_Motor_Driver.jpg",
+    "brand_variants": [
+      "L9110S",
+      "HG7881",
+      "Generic 2-CH motor module"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

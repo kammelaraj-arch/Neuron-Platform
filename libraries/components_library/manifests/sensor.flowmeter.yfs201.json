@@ -1,0 +1,69 @@
+{
+  "stable_id": "sensor.flowmeter.yfs201",
+  "name": "YF-S201 Water Flow Sensor (1-30 L/min)",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "flow",
+  "description": "Hall-effect water flow meter, 1/2\" thread, 7.5 pulses per litre, 1-30 L/min. Pulse output → count pulses, multiply by calibration constant. Used for irrigation, beverage filling, dispensing systems.",
+  "tags": [
+    "flow",
+    "water",
+    "hall_effect"
+  ],
+  "capabilities": [
+    "flow_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Open-collector pulse output — pull-up needed"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 15,
+    "current_ma_peak": 25,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "YF-S201 Water Flow Sensor (1-30 L/min) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/YF-S201_Flow_Sensor.jpg/640px-YF-S201_Flow_Sensor.jpg",
+    "brand_variants": [
+      "Generic YF-S201",
+      "Adafruit 828",
+      "DFRobot SEN0217"
+    ],
+    "price_usd_range": [
+      4,
+      15
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

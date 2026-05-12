@@ -1,0 +1,71 @@
+{
+  "stable_id": "board.wireless.hc05_bluetooth",
+  "name": "HC-05 Bluetooth Serial Module",
+  "vendor": "Generic / Bolutek",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "wireless",
+  "subcategory": "bluetooth",
+  "description": "Bluetooth Classic SPP module, transparent serial bridge over UART. Pair with phone Bluetooth-terminal apps for field-debug or low-bandwidth telemetry. Cheaper than full BLE for serial use cases.",
+  "tags": [
+    "wireless",
+    "bluetooth",
+    "uart",
+    "spp"
+  ],
+  "capabilities": [
+    "wireless_send",
+    "wireless_receive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "UART",
+      "direction": "bidir",
+      "voltage": 3.3,
+      "speed_hz": 38400
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 30,
+    "current_ma_peak": 80,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "HC-05 Bluetooth Serial Module reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/HC-05_Bluetooth_Module.jpg/640px-HC-05_Bluetooth_Module.jpg",
+    "datasheet_url": "https://components101.com/sites/default/files/component_datasheet/HC-05%20Datasheet.pdf",
+    "brand_variants": [
+      "HC-05 (master+slave)",
+      "HC-06 (slave only)",
+      "JDY-31"
+    ],
+    "price_usd_range": [
+      3,
+      10
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

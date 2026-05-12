@@ -1,0 +1,70 @@
+{
+  "stable_id": "sensor.temp.max6675",
+  "name": "MAX6675 K-Type Thermocouple Amplifier (basic)",
+  "vendor": "Maxim/Analog Devices",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "temperature",
+  "description": "Cheaper, lower-resolution sibling of MAX31855. K-type only, 0~1024°C, 0.25°C resolution, no fault detection. Good budget option for kilns, ovens, food production where 0°C-floor is fine.",
+  "tags": [
+    "temperature",
+    "thermocouple",
+    "k-type",
+    "spi",
+    "budget"
+  ],
+  "capabilities": [
+    "temperature_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "SPI",
+      "direction": "in",
+      "voltage": 5.0,
+      "speed_hz": 4300000
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1.5,
+    "current_ma_peak": 2,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MAX6675 K-Type Thermocouple Amplifier (basic) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/MAX6675_Module.jpg/640px-MAX6675_Module.jpg",
+    "datasheet_url": "https://datasheets.maximintegrated.com/en/ds/MAX6675.pdf",
+    "brand_variants": [
+      "Generic MAX6675 module",
+      "HiLetGo MAX6675"
+    ],
+    "price_usd_range": [
+      3,
+      10
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

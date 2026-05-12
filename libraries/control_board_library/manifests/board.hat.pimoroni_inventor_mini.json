@@ -1,0 +1,72 @@
+{
+  "stable_id": "board.hat.pimoroni_inventor_mini",
+  "name": "Pimoroni Inventor HAT Mini",
+  "vendor": "Pimoroni",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "multifunction",
+  "description": "All-in-one Pi-Zero-sized HAT: 2× DC motor drivers (1A), 4× servo headers, 6× ADC channels, audio amp, RGB LEDs. Perfect for compact robots / digital-twin sandboxes.",
+  "tags": [
+    "pi_hat",
+    "motor",
+    "servo",
+    "adc",
+    "all_in_one"
+  ],
+  "capabilities": [
+    "dc_motor_drive",
+    "servo_drive",
+    "analog_read",
+    "audio_out"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x56",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 200,
+    "current_ma_peak": 2000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Pimoroni Inventor HAT Mini reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn.shopify.com/s/files/1/0174/1800/products/inventor-hat-mini-1_1500x1500.jpg",
+    "datasheet_url": "https://learn.pimoroni.com/article/getting-started-with-inventor-hat-mini",
+    "brand_variants": [
+      "Pimoroni PIM583"
+    ],
+    "price_usd_range": [
+      30,
+      50
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

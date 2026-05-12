@@ -1,0 +1,71 @@
+{
+  "stable_id": "board.wireless.lora_sx1276",
+  "name": "SX1276 LoRa Module (RFM95W)",
+  "vendor": "Semtech (SX1276) / HopeRF (RFM95W)",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "wireless",
+  "subcategory": "lora",
+  "description": "LoRa-modulation sub-GHz radio over SPI. 868/915MHz, ~15km line-of-sight at low data rate. The chip behind The Things Network / Helium gateways. Use for kilometer-scale telemetry from remote sensors.",
+  "tags": [
+    "wireless",
+    "lora",
+    "long_range",
+    "spi"
+  ],
+  "capabilities": [
+    "wireless_send",
+    "wireless_receive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "SPI",
+      "direction": "bidir",
+      "voltage": 3.3,
+      "speed_hz": 10000000
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 13,
+    "current_ma_peak": 120,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "SX1276 LoRa Module (RFM95W) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/3072-00.jpg",
+    "datasheet_url": "https://www.semtech.com/products/wireless-rf/lora-core/sx1276",
+    "brand_variants": [
+      "Adafruit 3072 RFM95W",
+      "Dragino LoRa shield",
+      "Heltec LoRa modules"
+    ],
+    "price_usd_range": [
+      10,
+      30
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

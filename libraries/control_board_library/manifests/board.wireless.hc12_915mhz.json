@@ -1,0 +1,71 @@
+{
+  "stable_id": "board.wireless.hc12_915mhz",
+  "name": "HC-12 Long-Range 433MHz Serial Module",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "wireless",
+  "subcategory": "rf",
+  "description": "Sub-GHz serial bridge (433.4-473MHz), up to 1km line-of-sight at 100bps, 200m at 9600bps. Penetrates walls far better than 2.4GHz. Use for outdoor sensor links, farm gates, remote pumps.",
+  "tags": [
+    "wireless",
+    "rf",
+    "sub_ghz",
+    "long_range",
+    "uart"
+  ],
+  "capabilities": [
+    "wireless_send",
+    "wireless_receive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "UART",
+      "direction": "bidir",
+      "voltage": 3.3,
+      "speed_hz": 9600
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 22,
+    "current_ma_peak": 100,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "HC-12 Long-Range 433MHz Serial Module reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/HC-12_Module.jpg/640px-HC-12_Module.jpg",
+    "datasheet_url": "https://www.elecrow.com/download/HC-12.pdf",
+    "brand_variants": [
+      "Generic HC-12 (SI4463)",
+      "DSD TECH HC-12"
+    ],
+    "price_usd_range": [
+      3,
+      10
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

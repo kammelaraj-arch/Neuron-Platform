@@ -1,0 +1,83 @@
+{
+  "stable_id": "board.motor.vnh5019",
+  "name": "VNH5019 Motor Driver (Pololu)",
+  "vendor": "STMicroelectronics / Pololu",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "h_bridge",
+  "description": "Single-channel automotive-grade H-bridge, 12A continuous / 30A peak, integrated current sense and fault output. Designed for high-torque DC motors in robotics and small EVs.",
+  "tags": [
+    "motor_driver",
+    "h_bridge",
+    "high_current",
+    "automotive"
+  ],
+  "capabilities": [
+    "dc_motor_drive",
+    "current_sense"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 3,
+      "voltage": 5.0,
+      "notes": "INA + INB + EN/DIAG"
+    },
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 5.0
+    },
+    {
+      "type": "ADC",
+      "direction": "out",
+      "pins_required": 1,
+      "notes": "Current-sense output"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 60,
+    "current_ma_typical": 12000,
+    "current_ma_peak": 30000,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "VNH5019 Motor Driver (Pololu) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://a.pololu-files.com/picture/0J3923.1200.jpg",
+    "datasheet_url": "https://www.pololu.com/file/0J504/vnh5019.pdf",
+    "brand_variants": [
+      "Pololu #1451 (single)",
+      "Pololu #2507 (dual shield)"
+    ],
+    "price_usd_range": [
+      25,
+      60
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

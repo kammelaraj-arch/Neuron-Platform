@@ -1,0 +1,69 @@
+{
+  "stable_id": "sensor.encoder.ky040",
+  "name": "KY-040 Incremental Rotary Encoder",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "input",
+  "description": "20-detent rotary encoder with integrated push-switch. Used for menu navigation, set-point adjustment, manual override on control panels.",
+  "tags": [
+    "encoder",
+    "rotary",
+    "input"
+  ],
+  "capabilities": [
+    "encoder_read",
+    "switch_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 3,
+      "voltage": 3.3,
+      "notes": "CLK, DT, SW"
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.1,
+    "current_ma_peak": 0.5,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "KY-040 Incremental Rotary Encoder reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/KY-040_Rotary_Encoder_Module.jpg/640px-KY-040_Rotary_Encoder_Module.jpg",
+    "brand_variants": [
+      "KY-040",
+      "Generic rotary encoder"
+    ],
+    "price_usd_range": [
+      1,
+      3
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

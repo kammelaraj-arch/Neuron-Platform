@@ -1,0 +1,76 @@
+{
+  "stable_id": "board.stepper.tmc2208",
+  "name": "TMC2208 Silent Stepper Driver",
+  "vendor": "Trinamic / Analog Devices",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "stepper",
+  "description": "Predecessor to TMC2209 — StealthChop, 1.4A RMS / 2A peak, UART-configurable. Cheaper than 2209. Widely deployed in earlier silent 3D-printer boards (Creality silent boards, BTT boards).",
+  "tags": [
+    "stepper",
+    "silent",
+    "tmc"
+  ],
+  "capabilities": [
+    "stepper_drive_bipolar"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "STEP + DIR"
+    },
+    {
+      "type": "UART",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "Optional"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 90,
+    "current_ma_typical": 1400,
+    "current_ma_peak": 2000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TMC2208 Silent Stepper Driver reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/TMC2208_driver_module.jpg/640px-TMC2208_driver_module.jpg",
+    "datasheet_url": "https://www.trinamic.com/fileadmin/assets/Products/ICs_Documents/TMC2208_datasheet.pdf",
+    "brand_variants": [
+      "BIGTREETECH TMC2208",
+      "FYSETC TMC2208",
+      "Watterott SilentStepStick"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

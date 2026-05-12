@@ -1,0 +1,72 @@
+{
+  "stable_id": "board.power.tp4056_charger",
+  "name": "TP4056 Li-Po Charger Module (with Protection)",
+  "vendor": "TPower / NanJing Top Power ASIC",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "power",
+  "subcategory": "battery_charger",
+  "description": "Single-cell lithium charger with USB-C input, 1A charge current, optional load-protection IC (DW01A). Use to make battery-backed edge devices (alarm panels, garden monitors, mobile data loggers).",
+  "tags": [
+    "power",
+    "battery",
+    "lipo",
+    "charger"
+  ],
+  "capabilities": [
+    "battery_charge",
+    "battery_protect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "in",
+      "voltage": 5.0,
+      "notes": "Type-A / micro / USB-C variants"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 100,
+    "current_ma_peak": 1000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP4056 Li-Po Charger Module (with Protection) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/TP4056_Module.jpg/640px-TP4056_Module.jpg",
+    "datasheet_url": "https://dlnmh9ip6v2uc.cloudfront.net/datasheets/Prototyping/TP4056.pdf",
+    "brand_variants": [
+      "Generic TP4056 (no-protection)",
+      "TP4056+DW01A (with protection)",
+      "USB-C variant",
+      "Micro-USB variant"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

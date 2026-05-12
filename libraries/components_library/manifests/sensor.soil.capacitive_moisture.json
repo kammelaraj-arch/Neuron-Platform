@@ -1,0 +1,70 @@
+{
+  "stable_id": "sensor.soil.capacitive_moisture",
+  "name": "Capacitive Soil Moisture Sensor V1.2",
+  "vendor": "DFRobot / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "moisture",
+  "description": "Capacitive (non-corroding) soil moisture probe, analog output 0-3V. Far longer life than resistive probes (which electrolyze the contacts). Use for greenhouse, irrigation triggers, indoor plant care.",
+  "tags": [
+    "soil",
+    "moisture",
+    "analog",
+    "agriculture"
+  ],
+  "capabilities": [
+    "moisture_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 5,
+    "current_ma_peak": 10,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Capacitive Soil Moisture Sensor V1.2 reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Capacitive_Soil_Moisture_Sensor_v1.2.jpg/640px-Capacitive_Soil_Moisture_Sensor_v1.2.jpg",
+    "datasheet_url": "https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193",
+    "brand_variants": [
+      "DFRobot SEN0193",
+      "Generic v1.2",
+      "Adafruit 4026"
+    ],
+    "price_usd_range": [
+      2,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

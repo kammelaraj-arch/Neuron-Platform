@@ -1,0 +1,72 @@
+{
+  "stable_id": "sensor.gas.mq2",
+  "name": "MQ-2 Combustible Gas / Smoke Sensor",
+  "vendor": "Hanwei Electronics",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "gas",
+  "description": "Tin-dioxide gas sensor for LPG, methane, propane, hydrogen, smoke. Heater element + analog ratio output. Calibrate per gas type. Used for kitchen / boiler / industrial gas-leak alarms.",
+  "tags": [
+    "gas",
+    "smoke",
+    "analog",
+    "alarm"
+  ],
+  "capabilities": [
+    "gas_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 5.0,
+      "notes": "Logic 5V — needs divider on Pi/Pico"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 150,
+    "current_ma_peak": 200,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MQ-2 Combustible Gas / Smoke Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/MQ-2_Gas_Sensor.jpg/640px-MQ-2_Gas_Sensor.jpg",
+    "datasheet_url": "https://www.pololu.com/file/0J309/MQ2.pdf",
+    "brand_variants": [
+      "MQ-2 (combustible)",
+      "MQ-3 (alcohol)",
+      "MQ-7 (CO)",
+      "MQ-135 (air quality)"
+    ],
+    "price_usd_range": [
+      2,
+      7
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

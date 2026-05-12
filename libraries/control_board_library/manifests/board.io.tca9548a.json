@@ -1,0 +1,70 @@
+{
+  "stable_id": "board.io.tca9548a",
+  "name": "TCA9548A 8-Channel I2C Multiplexer",
+  "vendor": "Texas Instruments",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "io_expansion",
+  "subcategory": "i2c_mux",
+  "description": "Solves the 'multiple devices with the same I2C address' problem. Up to 8 isolated I2C buses behind one bus. Essential for arrays of identical sensors (e.g. 8 BME280s sampling different zones).",
+  "tags": [
+    "i2c",
+    "multiplexer",
+    "fan-out"
+  ],
+  "capabilities": [
+    "i2c_route"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x70-0x77",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.1,
+    "current_ma_peak": 0.2,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TCA9548A 8-Channel I2C Multiplexer reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/2717-00.jpg",
+    "datasheet_url": "https://www.ti.com/lit/ds/symlink/tca9548a.pdf",
+    "brand_variants": [
+      "Adafruit 2717",
+      "SparkFun BOB-16784",
+      "Generic GY-9548"
+    ],
+    "price_usd_range": [
+      3,
+      10
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

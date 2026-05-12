@@ -1,0 +1,72 @@
+{
+  "stable_id": "board.io.pcf8574",
+  "name": "PCF8574 8-Channel I/O Expander (I2C)",
+  "vendor": "NXP / Texas Instruments",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "io_expansion",
+  "subcategory": "gpio_expander",
+  "description": "8-bit quasi-bidirectional I/O expander over I2C, up to 8 chips per bus. Simpler and cheaper than MCP23017. Powers the I2C backpack on HD44780 LCDs. Use for small button banks, signal LEDs.",
+  "tags": [
+    "gpio",
+    "expander",
+    "i2c",
+    "8-channel"
+  ],
+  "capabilities": [
+    "gpio_read",
+    "gpio_write"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x20-0x27 or 0x38-0x3F",
+      "speed_hz": 100000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.1,
+    "current_ma_peak": 0.4,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "PCF8574 8-Channel I/O Expander (I2C) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/PCF8574_Module.jpg/480px-PCF8574_Module.jpg",
+    "datasheet_url": "https://www.ti.com/lit/ds/symlink/pcf8574.pdf",
+    "brand_variants": [
+      "NXP PCF8574T",
+      "TI PCF8574N",
+      "Generic GY-PCF8574"
+    ],
+    "price_usd_range": [
+      1,
+      5
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

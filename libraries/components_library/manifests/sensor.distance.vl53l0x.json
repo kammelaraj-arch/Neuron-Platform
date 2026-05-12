@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.distance.vl53l0x",
+  "name": "VL53L0X Laser Time-of-Flight Distance Sensor",
+  "vendor": "STMicroelectronics",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "distance",
+  "description": "Laser TOF rangefinder, 30-2000mm, ±3% accuracy, I2C. Far more precise than ultrasonic, immune to surface absorption issues. Use for liquid-level sensing in tanks, fine-grain conveyor positioning.",
+  "tags": [
+    "distance",
+    "laser",
+    "tof",
+    "i2c"
+  ],
+  "capabilities": [
+    "distance_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x29",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 20,
+    "current_ma_peak": 40,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "VL53L0X Laser Time-of-Flight Distance Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/3317-00.jpg",
+    "datasheet_url": "https://www.st.com/resource/en/datasheet/vl53l0x.pdf",
+    "brand_variants": [
+      "Adafruit 3317",
+      "Pololu #2490",
+      "GY-VL53L0X"
+    ],
+    "price_usd_range": [
+      5,
+      15
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

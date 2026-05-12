@@ -1,0 +1,68 @@
+{
+  "stable_id": "board.hat.poe_plus",
+  "name": "Raspberry Pi PoE+ HAT",
+  "vendor": "Raspberry Pi Foundation",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "power",
+  "description": "Official 802.3at PoE+ HAT for Pi 3B+/4/5. Powers the Pi from Ethernet (up to 25.5W). Eliminates a wall-wart for ceiling-mounted or industrial-cabinet Pis where a PoE switch already runs.",
+  "tags": [
+    "pi_hat",
+    "poe",
+    "ethernet"
+  ],
+  "capabilities": [
+    "power_from_ethernet"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir",
+      "voltage": 48.0,
+      "notes": "48V PoE+ input on the LAN jack"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 2000,
+    "current_ma_peak": 5000,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Raspberry Pi PoE+ HAT reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.raspberrypi.com/app/uploads/2022/11/PoE+-HAT-360x270.jpg",
+    "datasheet_url": "https://datasheets.raspberrypi.com/poe-plus/poe-plus-hat-product-brief.pdf",
+    "brand_variants": [
+      "Raspberry Pi PoE+ HAT",
+      "Waveshare PoE HAT",
+      "UCTRONICS PoE HAT"
+    ],
+    "price_usd_range": [
+      20,
+      40
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

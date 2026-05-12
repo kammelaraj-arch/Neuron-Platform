@@ -1,0 +1,73 @@
+{
+  "stable_id": "board.power.ina219_monitor",
+  "name": "INA219 Voltage / Current Monitor (I2C)",
+  "vendor": "Texas Instruments",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "power",
+  "subcategory": "monitor",
+  "description": "High-side bus-voltage + shunt-current monitor over I2C. 0-26V bus range, ±3.2A current via on-board 0.1Ω shunt (swap shunt for higher). Standard for telemetry on solar / battery / load lines.",
+  "tags": [
+    "current",
+    "voltage",
+    "i2c",
+    "monitor"
+  ],
+  "capabilities": [
+    "voltage_read",
+    "current_read",
+    "power_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x40-0x4F",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1,
+    "current_ma_peak": 1.2,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "INA219 Voltage / Current Monitor (I2C) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/INA219_module.jpg/640px-INA219_module.jpg",
+    "datasheet_url": "https://www.ti.com/lit/ds/symlink/ina219.pdf",
+    "brand_variants": [
+      "Adafruit 904",
+      "GY-219 module",
+      "Generic INA219 breakout"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "stable_id": "board.motor.drv8871",
+  "name": "DRV8871 Single H-Bridge (3.6A)",
+  "vendor": "Texas Instruments",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "h_bridge",
+  "description": "Single-channel H-bridge with internal current limit, 3.6A peak. Two PWM inputs control direction + speed. Good upgrade from L9110S when you need more current per channel.",
+  "tags": [
+    "motor_driver",
+    "h_bridge",
+    "single",
+    "current_limit"
+  ],
+  "capabilities": [
+    "dc_motor_drive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 75,
+    "current_ma_typical": 2000,
+    "current_ma_peak": 3600,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "DRV8871 Single H-Bridge (3.6A) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/3190-00.jpg",
+    "datasheet_url": "https://www.ti.com/lit/ds/symlink/drv8871.pdf",
+    "brand_variants": [
+      "Adafruit 3190",
+      "Generic DRV8871 breakout"
+    ],
+    "price_usd_range": [
+      5,
+      15
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

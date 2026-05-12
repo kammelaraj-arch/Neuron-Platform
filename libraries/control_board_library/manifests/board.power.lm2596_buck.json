@@ -1,0 +1,63 @@
+{
+  "stable_id": "board.power.lm2596_buck",
+  "name": "LM2596 Step-Down Buck Converter (3A)",
+  "vendor": "Texas Instruments / Generic module",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "power",
+  "subcategory": "buck",
+  "description": "Adjustable step-down switching regulator, 4.5-40V in → 1.25-37V out, up to 3A. Trim pot on every module. Standard for dropping 12-24V supplies to 5V/3.3V for Pi/Pico-powered builds.",
+  "tags": [
+    "power",
+    "buck",
+    "switching",
+    "adjustable"
+  ],
+  "capabilities": [
+    "voltage_regulate"
+  ],
+  "dependencies": [],
+  "interfaces": [],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 75,
+    "current_ma_typical": 1000,
+    "current_ma_peak": 3000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "LM2596 Step-Down Buck Converter (3A) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/LM2596_Buck_Converter.jpg/640px-LM2596_Buck_Converter.jpg",
+    "datasheet_url": "https://www.ti.com/lit/ds/symlink/lm2596.pdf",
+    "brand_variants": [
+      "Generic LM2596 module",
+      "DROK LM2596",
+      "DAOKI LM2596"
+    ],
+    "price_usd_range": [
+      1,
+      5
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}
