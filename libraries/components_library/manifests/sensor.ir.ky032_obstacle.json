@@ -1,0 +1,69 @@
+{
+  "stable_id": "sensor.ir.ky032_obstacle",
+  "name": "KY-032 IR Obstacle Avoidance Sensor",
+  "vendor": "Generic / Keyestudio",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "ir",
+  "description": "Active IR-emitter+receiver pair with adjustable distance threshold via trim pot (3-30cm). Digital binary output. Use for robot bumpers, conveyor presence, garage / cabinet door-open detection.",
+  "tags": [
+    "ir",
+    "obstacle",
+    "proximity",
+    "adjustable"
+  ],
+  "capabilities": [
+    "obstacle_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 20,
+    "current_ma_peak": 30,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "KY-032 IR Obstacle Avoidance Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/KY-032_Obstacle_Avoidance_Module.jpg/640px-KY-032_Obstacle_Avoidance_Module.jpg",
+    "brand_variants": [
+      "KY-032",
+      "FC-51 module",
+      "Generic IR obstacle"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "stable_id": "camera.dslr.gphoto2_generic",
+  "name": "Generic gphoto2-compatible DSLR / Mirrorless",
+  "vendor": "Generic / 2400+ supported models",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "dslr",
+  "description": "Catch-all for any camera in the gphoto2 driver list (~2400 models from Canon, Nikon, Sony, Fujifilm, Olympus, Panasonic). Tethered shooting over USB: trigger, configure ISO/aperture/shutter, download images, live-view streaming. Use for inspection, timelapse, AI training data capture, document scanning.",
+  "tags": [
+    "camera",
+    "dslr",
+    "mirrorless",
+    "gphoto2",
+    "tethered",
+    "usb"
+  ],
+  "capabilities": [
+    "snapshot",
+    "live_stream",
+    "timelapse",
+    "config_remote",
+    "raw_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB tether; cameras supply own power"
+    }
+  ],
+  "power": {
+    "voltage_v": 7.4,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 0,
+    "current_ma_peak": 0,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Generic gphoto2-compatible DSLR / Mirrorless reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Generic_DSLR_camera.jpg/640px-Generic_DSLR_camera.jpg",
+    "datasheet_url": "http://www.gphoto.org/proj/libgphoto2/support.php",
+    "brand_variants": [
+      "See gphoto.org for the 2400+ supported list — Canon EOS, Nikon Z/D, Sony Alpha, Fuji X, Olympus OM, Panasonic Lumix, etc."
+    ],
+    "price_usd_range": [
+      300,
+      6000
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

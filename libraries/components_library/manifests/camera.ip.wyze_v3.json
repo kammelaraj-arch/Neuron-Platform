@@ -1,0 +1,71 @@
+{
+  "stable_id": "camera.ip.wyze_v3",
+  "name": "Wyze Cam v3 (with RTSP firmware)",
+  "vendor": "Wyze Labs",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Ultra-cheap IP camera, 1080p, color night vision, ~$35. Native cloud-only but flashing the official RTSP firmware unlocks RTSP streaming for local NVR / Frigate integration.",
+  "tags": [
+    "camera",
+    "ip",
+    "wyze",
+    "rtsp",
+    "budget"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 400,
+    "current_ma_peak": 800,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Wyze Cam v3 (with RTSP firmware) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Wyze_Cam_v3.jpg/480px-Wyze_Cam_v3.jpg",
+    "wiring_diagram_url": "https://support.wyze.com/hc/en-us/articles/360024250252",
+    "brand_variants": [
+      "Wyze Cam v3",
+      "Wyze Cam v3 Pro",
+      "Wyze Cam OG"
+    ],
+    "price_usd_range": [
+      30,
+      60
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "stable_id": "camera.usb.logitech_c920",
+  "name": "Logitech C920 / C920s HD Pro Webcam",
+  "vendor": "Logitech",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "usb",
+  "description": "Industry-standard 1080p30 USB webcam. Hardware H.264 encoder, autofocus, dual mics. Workhorse for production-line monitoring, remote-supervision streams, time-lapse builds. C920s adds a privacy shutter.",
+  "tags": [
+    "camera",
+    "usb",
+    "1080p",
+    "h264",
+    "uvc"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "audio_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 350,
+    "current_ma_peak": 500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Logitech C920 / C920s HD Pro Webcam reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Logitech_HD_Pro_Webcam_C920.jpg/640px-Logitech_HD_Pro_Webcam_C920.jpg",
+    "datasheet_url": "https://www.logitech.com/en-us/products/webcams/c920-pro-hd-webcam.960-000764.html",
+    "brand_variants": [
+      "Logitech C920",
+      "Logitech C920s (with shutter)",
+      "Logitech C920x",
+      "Logitech C920e (business)"
+    ],
+    "price_usd_range": [
+      50,
+      90
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

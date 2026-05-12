@@ -1,0 +1,72 @@
+{
+  "stable_id": "camera.usb.uvc_generic",
+  "name": "Generic UVC USB Camera (V4L2)",
+  "vendor": "Generic / UVC-compliant",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "usb",
+  "description": "Catch-all entry for any UVC (USB Video Class) webcam — exposes as /dev/video* on Linux, accessible via V4L2, GStreamer, OpenCV, Frigate. Plug-and-play on Pi 5 with USB 3.0. Use when brand doesn't matter — e.g. cheap industrial 720p shooters.",
+  "tags": [
+    "camera",
+    "usb",
+    "uvc",
+    "v4l2"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB 2.0 minimum; 3.0 for 4K"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 200,
+    "current_ma_peak": 500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Generic UVC USB Camera (V4L2) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/USB_webcam_generic.jpg/640px-USB_webcam_generic.jpg",
+    "wiring_diagram_url": "https://www.kernel.org/doc/html/v6.0/userspace-api/media/v4l/v4l2grab.c.html",
+    "brand_variants": [
+      "Generic UVC",
+      "Anker PowerConf C200",
+      "Aukey PC-LM1E",
+      "Papalook PA452"
+    ],
+    "price_usd_range": [
+      15,
+      80
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

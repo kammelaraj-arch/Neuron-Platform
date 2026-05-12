@@ -1,0 +1,68 @@
+{
+  "stable_id": "sensor.contact.sw420_vibration",
+  "name": "SW-420 Vibration / Tilt Switch",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "input",
+  "description": "Ball-bearing vibration switch — closes briefly on shock or tilt. Cheap motion/impact trigger. Use for tamper detection on enclosed cabinets, vibration alarm on machinery, anti-theft on parked equipment.",
+  "tags": [
+    "vibration",
+    "tilt",
+    "switch"
+  ],
+  "capabilities": [
+    "vibration_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 5,
+    "current_ma_peak": 10,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "SW-420 Vibration / Tilt Switch reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/SW-420_Vibration_Module.jpg/480px-SW-420_Vibration_Module.jpg",
+    "brand_variants": [
+      "SW-420",
+      "SW-18020P",
+      "KY-002 / KY-031 module"
+    ],
+    "price_usd_range": [
+      1,
+      3
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

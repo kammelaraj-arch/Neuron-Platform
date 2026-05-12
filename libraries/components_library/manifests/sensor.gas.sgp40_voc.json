@@ -1,0 +1,73 @@
+{
+  "stable_id": "sensor.gas.sgp40_voc",
+  "name": "SGP40 / SGP41 VOC / NOx Air-Quality Sensor",
+  "vendor": "Sensirion",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "gas",
+  "description": "MOX gas sensor producing an Indoor Air Quality (IAQ) index (0-500) from total VOCs. SGP41 also outputs NOx. Use to flag cleaning products, paint fumes, cooking smoke. Pair with humidity reading for correction.",
+  "tags": [
+    "voc",
+    "iaq",
+    "i2c",
+    "mox",
+    "sensirion"
+  ],
+  "capabilities": [
+    "voc_read",
+    "iaq_index"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x59",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 3.5,
+    "current_ma_peak": 8,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "SGP40 / SGP41 VOC / NOx Air-Quality Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/4829-00.jpg",
+    "datasheet_url": "https://sensirion.com/products/catalog/SGP40/",
+    "brand_variants": [
+      "Sensirion SGP40",
+      "Sensirion SGP41 (with NOx)",
+      "Adafruit 4829"
+    ],
+    "price_usd_range": [
+      15,
+      30
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

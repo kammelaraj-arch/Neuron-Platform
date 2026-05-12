@@ -1,0 +1,74 @@
+{
+  "stable_id": "sensor.gas.scd30_co2",
+  "name": "SCD30 CO2 / Temp / Humidity Sensor (NDIR)",
+  "vendor": "Sensirion",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "gas",
+  "description": "NDIR CO2 (400-10000ppm ±30ppm), temp, humidity over I2C. Top-tier real CO2 (not eCO2 estimate). Use for indoor-air-quality dashboards, ventilation control, occupancy estimation in offices/schools.",
+  "tags": [
+    "co2",
+    "ndir",
+    "i2c",
+    "iaq",
+    "sensirion"
+  ],
+  "capabilities": [
+    "co2_read",
+    "temperature_read",
+    "humidity_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x61",
+      "speed_hz": 50000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 19,
+    "current_ma_peak": 75,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "SCD30 CO2 / Temp / Humidity Sensor (NDIR) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/SCD30_CO2_Sensor.jpg/640px-SCD30_CO2_Sensor.jpg",
+    "datasheet_url": "https://sensirion.com/products/catalog/SCD30/",
+    "brand_variants": [
+      "Sensirion SCD30",
+      "Adafruit 4867",
+      "SCD41 (smaller successor)"
+    ],
+    "price_usd_range": [
+      40,
+      70
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

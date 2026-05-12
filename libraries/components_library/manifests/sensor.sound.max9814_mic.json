@@ -1,0 +1,70 @@
+{
+  "stable_id": "sensor.sound.max9814_mic",
+  "name": "MAX9814 Electret Microphone Amplifier (AGC)",
+  "vendor": "Maxim/Analog Devices",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "sound",
+  "description": "Microphone amp with Automatic Gain Control (AGC) so loud + quiet sounds both stay in ADC range. Analog output. Use for sound-level monitoring, voice-activation triggers, leak / pump abnormal-noise detection.",
+  "tags": [
+    "microphone",
+    "audio",
+    "analog",
+    "agc"
+  ],
+  "capabilities": [
+    "audio_level_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 4,
+    "current_ma_peak": 6,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MAX9814 Electret Microphone Amplifier (AGC) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/1713-00.jpg",
+    "datasheet_url": "https://datasheets.maximintegrated.com/en/ds/MAX9814.pdf",
+    "brand_variants": [
+      "Adafruit 1713",
+      "Generic MAX9814 module",
+      "KY-038 (simpler alternative)"
+    ],
+    "price_usd_range": [
+      5,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

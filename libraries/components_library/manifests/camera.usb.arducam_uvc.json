@@ -1,0 +1,72 @@
+{
+  "stable_id": "camera.usb.arducam_uvc",
+  "name": "Arducam USB Camera Module (UVC)",
+  "vendor": "Arducam",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "usb",
+  "description": "Industrial UVC camera modules from 0.3MP to 16MP with M12 / CS-mount lenses. Wide range of sensors (OV9281 mono global-shutter, IMX477, etc.). Use for machine vision, fast-moving line inspection, low-light scenes.",
+  "tags": [
+    "camera",
+    "usb",
+    "industrial",
+    "uvc",
+    "global_shutter"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 250,
+    "current_ma_peak": 500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Arducam USB Camera Module (UVC) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.arducam.com/wp-content/uploads/2023/05/B0205-Arducam-1MP-Global-Shutter-USB-Camera-OV9281.jpg",
+    "datasheet_url": "https://www.arducam.com/category/cameras/usb-camera/",
+    "brand_variants": [
+      "Arducam B0205 (1MP global shutter)",
+      "Arducam UB0223 (16MP)",
+      "ELP USB industrial cameras",
+      "Innomaker USB cameras"
+    ],
+    "price_usd_range": [
+      30,
+      200
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

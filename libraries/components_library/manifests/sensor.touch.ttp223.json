@@ -1,0 +1,68 @@
+{
+  "stable_id": "sensor.touch.ttp223",
+  "name": "TTP223 Capacitive Touch Pad",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "input",
+  "description": "Single-pad capacitive touch with digital output. No moving parts — survive water/oil splashes. Use for sealed-panel buttons in food / medical / outdoor enclosures.",
+  "tags": [
+    "touch",
+    "capacitive",
+    "panel"
+  ],
+  "capabilities": [
+    "touch_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 1.5,
+    "current_ma_peak": 3,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TTP223 Capacitive Touch Pad reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/TTP223_Touch_Sensor.jpg/480px-TTP223_Touch_Sensor.jpg",
+    "brand_variants": [
+      "TTP223 module",
+      "MPR121 (12-channel I2C)",
+      "Adafruit 1374"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

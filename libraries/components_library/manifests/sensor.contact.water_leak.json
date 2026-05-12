@@ -1,0 +1,77 @@
+{
+  "stable_id": "sensor.contact.water_leak",
+  "name": "Water Leak / Rain Detection Module (FC-37)",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "environment",
+  "description": "Two interleaved PCB traces — water bridging them changes resistance. Digital + analog output. Use for under-sink leak alarms, server-rack flood detection, rainfall start trigger.",
+  "tags": [
+    "water",
+    "leak",
+    "rain",
+    "analog"
+  ],
+  "capabilities": [
+    "water_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Digital threshold"
+    },
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Optional analog severity"
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 8,
+    "current_ma_peak": 15,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Water Leak / Rain Detection Module (FC-37) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Water_Sensor_FC-37.jpg/480px-Water_Sensor_FC-37.jpg",
+    "brand_variants": [
+      "FC-37 module",
+      "Generic rain sensor",
+      "MH-RD module"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

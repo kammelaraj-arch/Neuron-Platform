@@ -1,0 +1,73 @@
+{
+  "stable_id": "camera.ip.rtsp_generic",
+  "name": "Generic RTSP IP Camera",
+  "vendor": "Generic / various",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Catch-all for any IP camera that exposes a standard rtsp://user:pass@host:554/stream URL. Use to ingest existing factory CCTV / smart-home cams into the platform without brand-specific drivers. Stream via Frigate, ffmpeg, OpenCV, GStreamer.",
+  "tags": [
+    "camera",
+    "ip",
+    "rtsp",
+    "network"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    },
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 500,
+    "current_ma_peak": 1200,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Generic RTSP IP Camera reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Generic_IP_Camera.jpg/640px-Generic_IP_Camera.jpg",
+    "wiring_diagram_url": "https://www.ispyconnect.com/cameras.aspx",
+    "brand_variants": [
+      "Any RTSP camera",
+      "ESP32-CAM with RTSP firmware",
+      "Generic bullet/dome IP cam"
+    ],
+    "price_usd_range": [
+      20,
+      300
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

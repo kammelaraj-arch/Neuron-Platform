@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.gas.pms5003_pm",
+  "name": "PMS5003 Particulate Matter Sensor (PM1.0/2.5/10)",
+  "vendor": "Plantower",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "gas",
+  "description": "Laser-scattering particulate sensor — measures PM1.0, PM2.5, PM10 (µg/m³). UART output, ~5-year fan life. Use for outdoor / industrial air-quality monitoring, dust alarms, woodshop ventilation control.",
+  "tags": [
+    "pm2.5",
+    "pm10",
+    "laser",
+    "uart",
+    "air_quality"
+  ],
+  "capabilities": [
+    "particulate_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "UART",
+      "direction": "out",
+      "voltage": 3.3,
+      "speed_hz": 9600
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 100,
+    "current_ma_peak": 200,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "PMS5003 Particulate Matter Sensor (PM1.0/2.5/10) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/PMS5003_Particle_Sensor.jpg/640px-PMS5003_Particle_Sensor.jpg",
+    "datasheet_url": "https://www.plantower.com/en/content/?108.html",
+    "brand_variants": [
+      "Plantower PMS5003",
+      "Plantower PMS7003 (smaller)",
+      "Sensirion SPS30 (alt)"
+    ],
+    "price_usd_range": [
+      15,
+      35
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

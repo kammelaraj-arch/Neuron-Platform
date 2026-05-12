@@ -1,0 +1,76 @@
+{
+  "stable_id": "sensor.ir.flame_ky026",
+  "name": "KY-026 Flame / IR-Light Detector",
+  "vendor": "Generic / Keyestudio",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "ir",
+  "description": "Phototransistor tuned to 760-1100nm (the wavelength flames emit strongly). Digital + analog output, adjustable sensitivity. Critical-safety part for unattended ovens, gas burners, candle / fireplace monitoring.",
+  "tags": [
+    "ir",
+    "flame",
+    "fire",
+    "safety"
+  ],
+  "capabilities": [
+    "flame_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Digital threshold"
+    },
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Optional analog intensity"
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 15,
+    "current_ma_peak": 25,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "KY-026 Flame / IR-Light Detector reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/KY-026_Flame_Sensor.jpg/480px-KY-026_Flame_Sensor.jpg",
+    "brand_variants": [
+      "KY-026",
+      "Generic flame module"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

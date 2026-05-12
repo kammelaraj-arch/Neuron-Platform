@@ -1,0 +1,70 @@
+{
+  "stable_id": "camera.usb.logitech_c922",
+  "name": "Logitech C922 Pro Stream Webcam",
+  "vendor": "Logitech",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "usb",
+  "description": "1080p30 / 720p60 USB webcam — 60fps mode is the win over C920. Same Carl Zeiss optics, autofocus, hardware H.264. Use when smoother motion matters (fast conveyors, sports).",
+  "tags": [
+    "camera",
+    "usb",
+    "1080p",
+    "60fps",
+    "uvc"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "audio_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 350,
+    "current_ma_peak": 500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Logitech C922 Pro Stream Webcam reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Logitech_C922_webcam.jpg/640px-Logitech_C922_webcam.jpg",
+    "brand_variants": [
+      "Logitech C922 Pro Stream",
+      "Logitech C922x (Pro Stream)"
+    ],
+    "price_usd_range": [
+      70,
+      120
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

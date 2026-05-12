@@ -1,0 +1,76 @@
+{
+  "stable_id": "camera.dslr.sony_alpha",
+  "name": "Sony Alpha (a7 / a7R / a6400 / FX3 series)",
+  "vendor": "Sony",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "dslr",
+  "description": "Sony E-mount mirrorless and cine. a7 IV / a7R V / a1 are pro stills + video; a6400 / a6700 for APS-C; FX3 / FX6 for cinema. Tethered via gphoto2 OR Sony Camera Remote SDK (officially supported on Linux ARM since 2023 — runs on Pi 5).",
+  "tags": [
+    "camera",
+    "mirrorless",
+    "sony",
+    "e_mount",
+    "alpha"
+  ],
+  "capabilities": [
+    "snapshot",
+    "live_stream",
+    "video_record",
+    "timelapse",
+    "config_remote",
+    "raw_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB-C; FX series also supports SDI / HDMI"
+    }
+  ],
+  "power": {
+    "voltage_v": 7.2,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 0,
+    "current_ma_peak": 0,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Sony Alpha (a7 / a7R / a6400 / FX3 series) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Sony_Alpha_7_IV.jpg/640px-Sony_Alpha_7_IV.jpg",
+    "datasheet_url": "https://www.sony.com/electronics/interchangeable-lens-cameras",
+    "brand_variants": [
+      "a7 III / a7 IV / a7R V / a7C II / a1",
+      "a6400 / a6700 (APS-C)",
+      "FX3 / FX6 (cinema)",
+      "ZV-E10 / ZV-E1 (vlog/photo)"
+    ],
+    "price_usd_range": [
+      700,
+      6500
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

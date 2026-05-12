@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.contact.hall_a3144",
+  "name": "A3144 Hall-Effect Switch",
+  "vendor": "Allegro Microsystems",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "input",
+  "description": "Solid-state magnetic switch — outputs low when subject to a south magnetic pole. Faster and longer-lasting than reed switches (no moving parts). Use for rotor RPM, contactless limit switches, tamper detection.",
+  "tags": [
+    "hall_effect",
+    "magnetic",
+    "digital"
+  ],
+  "capabilities": [
+    "magnetic_detect",
+    "rpm_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Open-collector — needs pull-up"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 4,
+    "current_ma_peak": 6,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "A3144 Hall-Effect Switch reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/A3144_Hall_Sensor.jpg/480px-A3144_Hall_Sensor.jpg",
+    "datasheet_url": "https://www.allegromicro.com/-/media/files/datasheets/a1101-2-3-4-datasheet.pdf",
+    "brand_variants": [
+      "Allegro A3144",
+      "KY-003 module",
+      "OH3144"
+    ],
+    "price_usd_range": [
+      1,
+      3
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

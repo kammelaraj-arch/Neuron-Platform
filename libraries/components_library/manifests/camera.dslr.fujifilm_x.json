@@ -1,0 +1,77 @@
+{
+  "stable_id": "camera.dslr.fujifilm_x",
+  "name": "Fujifilm X Series (X-T5 / X-H2 / X-S20 — APS-C)",
+  "vendor": "Fujifilm",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "dslr",
+  "description": "Fujifilm X-mount APS-C mirrorless. Renowned color science. Tethered via gphoto2 OR Fujifilm X Acquire (Windows/Mac). X-T5 / X-H2 are 40MP flagships; X-S20 is hybrid for video.",
+  "tags": [
+    "camera",
+    "mirrorless",
+    "fujifilm",
+    "x_mount",
+    "aps-c"
+  ],
+  "capabilities": [
+    "snapshot",
+    "live_stream",
+    "video_record",
+    "timelapse",
+    "config_remote",
+    "raw_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB-C"
+    }
+  ],
+  "power": {
+    "voltage_v": 7.2,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 0,
+    "current_ma_peak": 0,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Fujifilm X Series (X-T5 / X-H2 / X-S20 — APS-C) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Fujifilm_X-T5.jpg/640px-Fujifilm_X-T5.jpg",
+    "brand_variants": [
+      "X-T5 (40MP)",
+      "X-H2 (40MP hybrid)",
+      "X-H2S (26MP stacked)",
+      "X-S20 (hybrid)",
+      "X-T30 II",
+      "X-Pro3"
+    ],
+    "price_usd_range": [
+      1100,
+      2500
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

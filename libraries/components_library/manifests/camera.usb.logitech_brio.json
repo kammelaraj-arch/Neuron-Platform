@@ -1,0 +1,72 @@
+{
+  "stable_id": "camera.usb.logitech_brio",
+  "name": "Logitech BRIO 4K Webcam",
+  "vendor": "Logitech",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "usb",
+  "description": "4K30 / 1080p60 / 720p90 USB webcam with HDR. Wide-angle 90° field of view. Use for premium meeting rooms, AI training data capture, ultra-detailed inspection.",
+  "tags": [
+    "camera",
+    "usb",
+    "4k",
+    "hdr",
+    "uvc"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "audio_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB 3.0 required for 4K"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 450,
+    "current_ma_peak": 700,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Logitech BRIO 4K Webcam reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Logitech_Brio_4K_Pro.jpg/640px-Logitech_Brio_4K_Pro.jpg",
+    "brand_variants": [
+      "Logitech BRIO 4K",
+      "Logitech BRIO 500",
+      "Logitech BRIO 300 (1080p only)"
+    ],
+    "price_usd_range": [
+      150,
+      250
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

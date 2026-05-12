@@ -1,0 +1,70 @@
+{
+  "stable_id": "sensor.ir.tsop38238",
+  "name": "TSOP38238 IR Receiver (38kHz Universal Remote)",
+  "vendor": "Vishay",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "ir",
+  "description": "38kHz demodulating IR receiver — same module used in TVs / AC remotes. Decodes NEC, Sony, RC5/6 protocols via libraries like LIRC / pico-ir. Use for remote-control inputs, IR break-beam systems, retransmitting commands to legacy AC units.",
+  "tags": [
+    "ir",
+    "receiver",
+    "38khz",
+    "remote"
+  ],
+  "capabilities": [
+    "ir_receive"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 0.7,
+    "current_ma_peak": 1.5,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TSOP38238 IR Receiver (38kHz Universal Remote) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/TSOP38238_IR_Receiver.jpg/480px-TSOP38238_IR_Receiver.jpg",
+    "datasheet_url": "https://www.vishay.com/docs/82491/tsop382.pdf",
+    "brand_variants": [
+      "Vishay TSOP38238",
+      "TSOP4838",
+      "KY-022 module"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

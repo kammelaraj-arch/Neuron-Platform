@@ -1,0 +1,74 @@
+{
+  "stable_id": "camera.ip.hikvision_ds2cd",
+  "name": "Hikvision DS-2CD Series IP Camera",
+  "vendor": "Hikvision",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Hikvision pro-tier bullet/dome IP cameras (2-12MP), AcuSense AI, RTSP, ONVIF, ISAPI. Used in commercial security, factory perimeter, parking enforcement. RTSP path: /Streaming/Channels/101 (main) /102 (sub).",
+  "tags": [
+    "camera",
+    "ip",
+    "hikvision",
+    "ai",
+    "acusense"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect",
+    "onboard_ai",
+    "ptz_control"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 600,
+    "current_ma_peak": 1800,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Hikvision DS-2CD Series IP Camera reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Hikvision_DS-2CD_camera.jpg/640px-Hikvision_DS-2CD_camera.jpg",
+    "datasheet_url": "https://www.hikvision.com/en/products/IP-Products/Network-Cameras/",
+    "brand_variants": [
+      "DS-2CD2143G2-IS (4MP)",
+      "DS-2CD2387G2-LU (8MP ColorVu)",
+      "DS-2DE4A425IW (PTZ)",
+      "Hilook (sub-brand)"
+    ],
+    "price_usd_range": [
+      80,
+      600
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

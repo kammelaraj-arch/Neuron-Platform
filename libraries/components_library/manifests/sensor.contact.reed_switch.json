@@ -1,0 +1,69 @@
+{
+  "stable_id": "sensor.contact.reed_switch",
+  "name": "Reed Switch (Magnetic Contact)",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "input",
+  "description": "Hermetically-sealed contacts that close when a magnet is nearby. Industry-standard for door/window security, lid sensors, water-tank float level (paired with floating magnet).",
+  "tags": [
+    "magnetic",
+    "contact",
+    "security"
+  ],
+  "capabilities": [
+    "contact_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Use pull-up resistor"
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.1,
+    "current_ma_peak": 1,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Reed Switch (Magnetic Contact) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Reed_Switch_Module.jpg/480px-Reed_Switch_Module.jpg",
+    "brand_variants": [
+      "Generic glass reed",
+      "KY-021 module",
+      "Adafruit 375 (with magnet)"
+    ],
+    "price_usd_range": [
+      1,
+      3
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "stable_id": "sensor.id.rfid_rc522",
+  "name": "RC522 RFID Reader/Writer (13.56MHz)",
+  "vendor": "NXP",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "identification",
+  "description": "MIFARE Classic 13.56MHz RFID over SPI. Read+write capable. Use for tool-cabinet access control, employee badging, recipe-tag association on production line carts.",
+  "tags": [
+    "rfid",
+    "nfc",
+    "mifare",
+    "spi",
+    "access"
+  ],
+  "capabilities": [
+    "rfid_read",
+    "rfid_write"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "SPI",
+      "direction": "bidir",
+      "voltage": 3.3,
+      "speed_hz": 10000000
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 18,
+    "current_ma_peak": 30,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "RC522 RFID Reader/Writer (13.56MHz) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/RC522_RFID_Module.jpg/640px-RC522_RFID_Module.jpg",
+    "datasheet_url": "https://www.nxp.com/docs/en/data-sheet/MFRC522.pdf",
+    "brand_variants": [
+      "NXP MFRC522 (RC522 board)",
+      "PN532 (NFC + RFID, more capable)",
+      "RC522 kit with key fobs"
+    ],
+    "price_usd_range": [
+      3,
+      12
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

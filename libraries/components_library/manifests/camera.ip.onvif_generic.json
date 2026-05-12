@@ -1,0 +1,74 @@
+{
+  "stable_id": "camera.ip.onvif_generic",
+  "name": "Generic ONVIF IP Camera (Profile S/T)",
+  "vendor": "Generic / ONVIF-compliant",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "ONVIF-compliant IP camera (Profile S = streaming, Profile T = advanced streaming + analytics). Auto-discovery via WS-Discovery, RTSP URL via GetStreamUri, PTZ via Profile S. Universally supported by VMS and NVR platforms.",
+  "tags": [
+    "camera",
+    "ip",
+    "onvif",
+    "auto_discover",
+    "ptz"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "ptz_control",
+    "motion_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    },
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 600,
+    "current_ma_peak": 1500,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Generic ONVIF IP Camera (Profile S/T) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/IP_camera_outdoor.jpg/640px-IP_camera_outdoor.jpg",
+    "wiring_diagram_url": "https://www.onvif.org/profiles/profile-s/",
+    "brand_variants": [
+      "Any ONVIF Profile S/T camera"
+    ],
+    "price_usd_range": [
+      30,
+      500
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

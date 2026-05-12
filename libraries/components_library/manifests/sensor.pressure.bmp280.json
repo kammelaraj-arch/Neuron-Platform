@@ -1,0 +1,74 @@
+{
+  "stable_id": "sensor.pressure.bmp280",
+  "name": "BMP280 Barometric Pressure + Temperature",
+  "vendor": "Bosch Sensortec",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "environment",
+  "description": "Pressure-only sibling of BME280 (no humidity). I2C/SPI, ±1hPa abs, ±0.12hPa relative. Use for altitude estimation, weather, air-tightness leak detection.",
+  "tags": [
+    "pressure",
+    "barometer",
+    "i2c",
+    "spi",
+    "bosch"
+  ],
+  "capabilities": [
+    "pressure_read",
+    "temperature_read",
+    "altitude_compute"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x76 or 0x77",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.3,
+    "current_ma_peak": 0.7,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "BMP280 Barometric Pressure + Temperature reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/BMP280_Pressure_Sensor.jpg/480px-BMP280_Pressure_Sensor.jpg",
+    "datasheet_url": "https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmp280-ds001.pdf",
+    "brand_variants": [
+      "Bosch BMP280",
+      "GY-BMP280",
+      "Adafruit 2651"
+    ],
+    "price_usd_range": [
+      2,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

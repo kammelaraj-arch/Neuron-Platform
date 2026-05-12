@@ -1,0 +1,72 @@
+{
+  "stable_id": "camera.ip.dahua_ipc",
+  "name": "Dahua IPC-HFW Series IP Camera",
+  "vendor": "Dahua Technology",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Dahua pro IP cameras, 2-8MP, Starlight ultra-low-light, smart event detection, ONVIF + RTSP + proprietary HTTP API. RTSP path: /cam/realmonitor?channel=1&subtype=0.",
+  "tags": [
+    "camera",
+    "ip",
+    "dahua",
+    "starlight"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect",
+    "onboard_ai"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 550,
+    "current_ma_peak": 1800,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Dahua IPC-HFW Series IP Camera reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Dahua_IPC_HFW_camera.jpg/640px-Dahua_IPC_HFW_camera.jpg",
+    "brand_variants": [
+      "IPC-HFW2231S-S-S2 (2MP)",
+      "IPC-HFW5442T-ASE (4MP IVS)",
+      "DH-SD-49225XA (PTZ)",
+      "Lorex (sub-brand)",
+      "Amcrest (sub-brand)"
+    ],
+    "price_usd_range": [
+      80,
+      800
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

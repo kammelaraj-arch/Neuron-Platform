@@ -1,0 +1,75 @@
+{
+  "stable_id": "camera.ip.tapo_c210",
+  "name": "TP-Link Tapo C210 / C220 / C225 Pan-Tilt Camera",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "WiFi pan-tilt-zoom indoor cameras with native RTSP + ONVIF (after enabling 'Camera Account' in the app). C210=2K, C220=2K w/ AI, C225=2K w/ ColorPro low-light. Used for retail floor monitoring, indoor inspections.",
+  "tags": [
+    "camera",
+    "ip",
+    "tapo",
+    "ptz",
+    "wifi"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect",
+    "onboard_ai",
+    "ptz_control",
+    "audio_two_way"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 400,
+    "current_ma_peak": 1000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo C210 / C220 / C225 Pan-Tilt Camera reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/TP-Link_Tapo_C210.jpg/480px-TP-Link_Tapo_C210.jpg",
+    "brand_variants": [
+      "Tapo C210",
+      "Tapo C220",
+      "Tapo C225 (ColorPro)",
+      "Tapo C500 (outdoor PTZ)",
+      "Tapo C720"
+    ],
+    "price_usd_range": [
+      25,
+      80
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

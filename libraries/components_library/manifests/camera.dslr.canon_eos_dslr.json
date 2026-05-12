@@ -1,0 +1,74 @@
+{
+  "stable_id": "camera.dslr.canon_eos_dslr",
+  "name": "Canon EOS DSLR (5D / 6D / 7D / 90D series)",
+  "vendor": "Canon",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "dslr",
+  "description": "Canon EF/EF-S DSLR bodies. Long supported by gphoto2 and EDSDK. Older but still pro-grade — 5D series for full-frame stills, 7D / 90D for fast APS-C action, Rebel for budget builds.",
+  "tags": [
+    "camera",
+    "dslr",
+    "canon",
+    "ef_mount"
+  ],
+  "capabilities": [
+    "snapshot",
+    "live_stream",
+    "video_record",
+    "timelapse",
+    "config_remote",
+    "raw_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 7.4,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 0,
+    "current_ma_peak": 0,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Canon EOS DSLR (5D / 6D / 7D / 90D series) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Canon_EOS_5D_Mark_IV.jpg/640px-Canon_EOS_5D_Mark_IV.jpg",
+    "brand_variants": [
+      "EOS 5D Mark IV",
+      "EOS 6D Mark II",
+      "EOS 7D Mark II",
+      "EOS 90D",
+      "EOS Rebel T8i / 850D"
+    ],
+    "price_usd_range": [
+      400,
+      2500
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

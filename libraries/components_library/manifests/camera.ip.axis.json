@@ -1,0 +1,76 @@
+{
+  "stable_id": "camera.ip.axis",
+  "name": "Axis Network Camera (Industrial)",
+  "vendor": "Axis Communications",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Industrial / enterprise IP cameras — ONVIF Profile S/T/G, VAPIX API, hardened housings, certified explosion-proof variants. Used in heavy industry, transport hubs, government facilities.",
+  "tags": [
+    "camera",
+    "ip",
+    "axis",
+    "industrial",
+    "onvif",
+    "vapix"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect",
+    "onboard_ai",
+    "ptz_control",
+    "audio_two_way"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 800,
+    "current_ma_peak": 2500,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Axis Network Camera (Industrial) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Axis_Network_Camera.jpg/640px-Axis_Network_Camera.jpg",
+    "datasheet_url": "https://www.axis.com/products/network-cameras",
+    "brand_variants": [
+      "Axis P3245-LVE",
+      "Axis Q1798-LE",
+      "Axis M3057-PLVE",
+      "Axis P5676-LE PTZ"
+    ],
+    "price_usd_range": [
+      500,
+      3500
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

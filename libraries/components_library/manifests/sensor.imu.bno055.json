@@ -1,0 +1,74 @@
+{
+  "stable_id": "sensor.imu.bno055",
+  "name": "BNO055 Absolute 9-DOF Orientation Sensor",
+  "vendor": "Bosch Sensortec",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "imu",
+  "description": "Accelerometer + gyroscope + magnetometer with on-chip sensor fusion producing absolute quaternion orientation. Just read angles — no Madgwick / Kalman math needed. Use for stabilized cameras, robotic arm pose, AR/VR demos.",
+  "tags": [
+    "imu",
+    "9dof",
+    "fusion",
+    "quaternion",
+    "i2c"
+  ],
+  "capabilities": [
+    "orientation_read",
+    "acceleration_read",
+    "rotation_read",
+    "compass_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x28 or 0x29",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 12.3,
+    "current_ma_peak": 13,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "BNO055 Absolute 9-DOF Orientation Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/2472-00.jpg",
+    "datasheet_url": "https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bno055-ds000.pdf",
+    "brand_variants": [
+      "Adafruit 2472 BNO055",
+      "Generic GY-BNO055"
+    ],
+    "price_usd_range": [
+      15,
+      35
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

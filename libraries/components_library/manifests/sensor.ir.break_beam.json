@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.ir.break_beam",
+  "name": "IR Break-Beam Sensor Pair (5mm / 3mm)",
+  "vendor": "Generic / Adafruit",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "ir",
+  "description": "Two pieces: IR emitter LED + IR phototransistor receiver. Place facing each other across a gap (up to ~2m). Object blocking the beam pulls receiver pin low. Use for counting (passing items, people), door open/close, security trip wires.",
+  "tags": [
+    "ir",
+    "break_beam",
+    "counter",
+    "security"
+  ],
+  "capabilities": [
+    "beam_break_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Receiver pulls low when beam blocked"
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 15,
+    "current_ma_peak": 30,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "IR Break-Beam Sensor Pair (5mm / 3mm) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/2168-00.jpg",
+    "datasheet_url": "https://learn.adafruit.com/ir-breakbeam-sensors",
+    "brand_variants": [
+      "Adafruit 2167 (5mm)",
+      "Adafruit 2168 (3mm)",
+      "Generic LED+phototransistor pair"
+    ],
+    "price_usd_range": [
+      2,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "stable_id": "camera.dslr.nikon_z",
+  "name": "Nikon Z Series (Z6 / Z7 / Z8 / Z9 — Mirrorless)",
+  "vendor": "Nikon",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "dslr",
+  "description": "Nikon Z-mount full-frame mirrorless. Tethered via gphoto2 OR Nikon SDK. Z8/Z9 are flagship — stacked CMOS, no mechanical shutter on Z9, 8K video. Use for high-FPS scientific imaging, pro studio, advanced inspection.",
+  "tags": [
+    "camera",
+    "mirrorless",
+    "nikon",
+    "z_mount",
+    "8k"
+  ],
+  "capabilities": [
+    "snapshot",
+    "live_stream",
+    "video_record",
+    "timelapse",
+    "config_remote",
+    "raw_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB-C"
+    }
+  ],
+  "power": {
+    "voltage_v": 7.4,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 0,
+    "current_ma_peak": 0,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Nikon Z Series (Z6 / Z7 / Z8 / Z9 — Mirrorless) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Nikon_Z_8.jpg/640px-Nikon_Z_8.jpg",
+    "datasheet_url": "https://www.nikonusa.com/p/mirrorless-cameras",
+    "brand_variants": [
+      "Z6 II (24MP)",
+      "Z7 II (45MP)",
+      "Z8 (45MP stacked)",
+      "Z9 (45MP stacked flagship)",
+      "Z fc (retro APS-C)",
+      "Z30 / Z50 (APS-C entry)"
+    ],
+    "price_usd_range": [
+      900,
+      5500
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.color.tcs34725",
+  "name": "TCS34725 RGB Color Light Sensor",
+  "vendor": "ams OSRAM",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "light",
+  "description": "RGB + clear-channel digital light sensor over I2C with IR-blocking filter. Built-in LED for active illumination. Use for material color sorting, quality inspection, fruit-ripeness detection.",
+  "tags": [
+    "color",
+    "rgb",
+    "light",
+    "i2c"
+  ],
+  "capabilities": [
+    "color_read",
+    "light_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "I2C",
+      "direction": "bidir",
+      "address": "0x29",
+      "speed_hz": 400000,
+      "voltage": 3.3
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0.65,
+    "current_ma_peak": 12,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TCS34725 RGB Color Light Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/1334-04.jpg",
+    "datasheet_url": "https://cdn-shop.adafruit.com/datasheets/TCS34725.pdf",
+    "brand_variants": [
+      "Adafruit 1334",
+      "Generic GY-33 TCS34725 module"
+    ],
+    "price_usd_range": [
+      7,
+      18
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

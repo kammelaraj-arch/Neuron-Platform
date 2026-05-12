@@ -1,0 +1,73 @@
+{
+  "stable_id": "camera.ip.amcrest",
+  "name": "Amcrest IP Camera (Dahua OEM)",
+  "vendor": "Amcrest",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "US-brand re-badge of Dahua hardware, 2-8MP, ONVIF + RTSP. Same Dahua RTSP URL pattern. Popular for home / SMB Frigate setups.",
+  "tags": [
+    "camera",
+    "ip",
+    "amcrest",
+    "rtsp"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    },
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 500,
+    "current_ma_peak": 1500,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Amcrest IP Camera (Dahua OEM) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Amcrest_IP_camera.jpg/640px-Amcrest_IP_camera.jpg",
+    "brand_variants": [
+      "IP4M-1051EW",
+      "IP8M-2496EB",
+      "IP5M-T1179EW-AI"
+    ],
+    "price_usd_range": [
+      60,
+      250
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

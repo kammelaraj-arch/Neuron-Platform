@@ -1,0 +1,73 @@
+{
+  "stable_id": "sensor.gas.mq135_aq",
+  "name": "MQ-135 Air-Quality / Multi-Gas Sensor",
+  "vendor": "Hanwei",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "gas",
+  "description": "MOX gas sensor sensitive to ammonia, NOx, alcohol, benzene, smoke, CO2. Analog output. Coarse air-quality indicator — used for budget IAQ alarms, exhaust monitoring.",
+  "tags": [
+    "air_quality",
+    "multi_gas",
+    "analog",
+    "mq_series"
+  ],
+  "capabilities": [
+    "air_quality_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 5.0
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 150,
+    "current_ma_peak": 200,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "MQ-135 Air-Quality / Multi-Gas Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/MQ-135_Sensor.jpg/640px-MQ-135_Sensor.jpg",
+    "datasheet_url": "https://www.olimex.com/Products/Components/Sensors/Gas/SNS-MQ135/resources/SNS-MQ135.pdf",
+    "brand_variants": [
+      "MQ-135 (air quality)",
+      "MQ-3 (alcohol)",
+      "MQ-4 (methane)",
+      "MQ-7 (carbon monoxide)",
+      "MQ-8 (hydrogen)",
+      "MQ-9 (CO+combustible)"
+    ],
+    "price_usd_range": [
+      2,
+      8
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

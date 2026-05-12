@@ -1,0 +1,77 @@
+{
+  "stable_id": "camera.ip.reolink_rlc",
+  "name": "Reolink RLC Series IP Camera",
+  "vendor": "Reolink",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Consumer-friendly RTSP-capable IP cameras, 4-12MP, ONVIF Profile T. RTSP path: /h264Preview_01_main. Some models have local AI (person/vehicle detection). Use for SMB security, home labs, makerspace monitoring.",
+  "tags": [
+    "camera",
+    "ip",
+    "reolink",
+    "rtsp",
+    "onvif"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect",
+    "onboard_ai"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    },
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 500,
+    "current_ma_peak": 1500,
+    "power_source": "poe"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Reolink RLC Series IP Camera reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Reolink_RLC_811A.jpg/640px-Reolink_RLC_811A.jpg",
+    "brand_variants": [
+      "RLC-510A (5MP)",
+      "RLC-811A (4K)",
+      "RLC-823A (8MP PTZ)",
+      "Reolink Argus Eco (battery)",
+      "Reolink Duo 2 (dual lens)"
+    ],
+    "price_usd_range": [
+      60,
+      400
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

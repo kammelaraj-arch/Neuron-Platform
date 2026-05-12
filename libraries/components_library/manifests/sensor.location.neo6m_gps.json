@@ -1,0 +1,72 @@
+{
+  "stable_id": "sensor.location.neo6m_gps",
+  "name": "NEO-6M / NEO-M9N GPS Module",
+  "vendor": "u-blox",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "location",
+  "description": "GPS/GNSS module with NMEA-0183 output over UART. NEO-6M is the cheap classic (GPS-only); NEO-M9N is the modern multi-constellation upgrade. Use for asset tracking, geofence-aware automation, time-of-day from satellite atomic clocks.",
+  "tags": [
+    "gps",
+    "gnss",
+    "uart",
+    "ublox"
+  ],
+  "capabilities": [
+    "location_read",
+    "time_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "UART",
+      "direction": "bidir",
+      "voltage": 3.3,
+      "speed_hz": 9600
+    }
+  ],
+  "power": {
+    "voltage_v": 3.3,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 25,
+    "current_ma_peak": 67,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "NEO-6M / NEO-M9N GPS Module reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/U-blox_NEO-6M_GPS_module.jpg/640px-U-blox_NEO-6M_GPS_module.jpg",
+    "datasheet_url": "https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_%28GPS.G6-HW-09005%29.pdf",
+    "brand_variants": [
+      "u-blox NEO-6M (GPS)",
+      "u-blox NEO-M8N (GPS+GLONASS+Galileo+BeiDou)",
+      "u-blox NEO-M9N (modern multi-band)",
+      "Adafruit Ultimate GPS"
+    ],
+    "price_usd_range": [
+      10,
+      50
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "stable_id": "camera.dslr.canon_eos_r",
+  "name": "Canon EOS R / R5 / R6 / R7 / R8 (Mirrorless)",
+  "vendor": "Canon",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "dslr",
+  "description": "Canon EOS R-series full-frame / APS-C mirrorless. Tethered via gphoto2 OR Canon EDSDK (official SDK, Windows/Linux/macOS). 24-45MP, 4K/8K video, USB-C charging while shooting. Use for high-end inspection, advanced AI training datasets, professional documentation.",
+  "tags": [
+    "camera",
+    "mirrorless",
+    "canon",
+    "eos_r",
+    "4k",
+    "edsdk"
+  ],
+  "capabilities": [
+    "snapshot",
+    "live_stream",
+    "video_record",
+    "timelapse",
+    "config_remote",
+    "raw_capture"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB-C"
+    }
+  ],
+  "power": {
+    "voltage_v": 7.4,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 0,
+    "current_ma_peak": 0,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Canon EOS R / R5 / R6 / R7 / R8 (Mirrorless) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Canon_EOS_R5.jpg/640px-Canon_EOS_R5.jpg",
+    "datasheet_url": "https://www.usa.canon.com/cameras/eos-r-series",
+    "brand_variants": [
+      "EOS R (founder, 30MP)",
+      "EOS R5 (45MP, 8K)",
+      "EOS R6 Mark II (24MP, 6K oversampled)",
+      "EOS R7 (APS-C 33MP)",
+      "EOS R8 (24MP entry-FF)",
+      "EOS R10 (APS-C entry)",
+      "EOS R50 (small)"
+    ],
+    "price_usd_range": [
+      600,
+      3900
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

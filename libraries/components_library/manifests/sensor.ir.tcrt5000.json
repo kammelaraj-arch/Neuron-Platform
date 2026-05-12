@@ -1,0 +1,71 @@
+{
+  "stable_id": "sensor.ir.tcrt5000",
+  "name": "TCRT5000 IR Reflective / Line Sensor",
+  "vendor": "Vishay",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "ir",
+  "description": "Reflective optical sensor — IR LED + phototransistor in one package, 950nm. Detects nearby reflective surfaces 0-25mm. Used for line-following robots, edge detection on conveyors, presence detection in chutes.",
+  "tags": [
+    "ir",
+    "reflective",
+    "line_follower"
+  ],
+  "capabilities": [
+    "proximity_detect",
+    "line_detect"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 1,
+      "voltage": 3.3,
+      "notes": "Digital threshold + analog output on most modules"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 60,
+    "current_ma_peak": 100,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TCRT5000 IR Reflective / Line Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/TCRT5000_Module.jpg/640px-TCRT5000_Module.jpg",
+    "datasheet_url": "https://www.vishay.com/docs/83760/tcrt5000.pdf",
+    "brand_variants": [
+      "Vishay TCRT5000",
+      "KY-033 module",
+      "Generic line-follow module"
+    ],
+    "price_usd_range": [
+      1,
+      4
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}
