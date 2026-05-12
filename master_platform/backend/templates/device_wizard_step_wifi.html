@@ -63,12 +63,14 @@
     <!-- ─── CLIENT-SIDE SCAN ─────────────────────────────────────────────── -->
     <div id="pane-client" class="hidden rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5">
       <h3 class="font-semibold text-emerald-300">💻 Scan from this device</h3>
-      <p class="mt-1 text-[11px] text-slate-400">
-        Use this when YOU are physically at the site and your laptop / phone
-        can see the local WiFi + devices. Browsers can't scan WiFi directly
-        (security restriction), so a tiny helper script runs in your terminal
-        and uploads the results to this wizard.
-      </p>
+      <div class="mt-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-[11px] text-amber-200">
+        <strong>⚠ Browsers cannot scan WiFi directly</strong> — a hard security restriction in
+        Chrome / Firefox / Safari / Edge (no JS API exists). The "client-side" scan works by running a
+        tiny shell command in YOUR laptop's terminal that does the scan and uploads the result here.
+        <br><br>
+        <strong>Workflow:</strong> (1) copy the command below, (2) paste into a terminal on your laptop
+        (Linux / macOS / WSL), (3) wait ~5 seconds, (4) click "🔄 Load latest client scan" to see the result.
+      </div>
 
       <details open class="mt-4">
         <summary class="cursor-pointer text-xs text-emerald-300 hover:text-white">
@@ -121,7 +123,7 @@
         status.textContent = '⏳ Fetching latest client-side scan…';
         status.className = 'text-[11px] text-cyan-300';
         try {
-          const r = await fetch(`/api/wizard/${GROUP_ID}/client-scan`);
+          const r = await fetch(`/api/wizard/${window.GROUP_ID}/client-scan`);
           if (!r.ok) {
             status.textContent = '❌ ' + r.status; status.className = 'text-[11px] text-red-300'; return;
           }
@@ -174,7 +176,11 @@
     </script>
 
     <script>
-      const GROUP_ID = "{{ group.id }}";
+      // Defined as a window property so the other <script> blocks
+      // (loadClientScan, scanDevices, etc.) can reference it. `const`
+      // at top-of-script is block-scoped per-script, not global.
+      window.GROUP_ID = "{{ group.id }}";
+      var GROUP_ID = window.GROUP_ID;
       async function scanWifi(ev) {
         ev.preventDefault();
         const status = document.getElementById('scan-status');
