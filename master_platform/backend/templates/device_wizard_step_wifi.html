@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Device wizard · WiFi{% endblock %}
+{% block content %}
+  {% include "_wizard_header.html" %}
+
+  <form method="post" action="/ui/devices/wizard/{{ group.id }}/wifi" class="space-y-6">
+    <div class="flex flex-wrap items-baseline justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold">3. Assign WiFi networks</h2>
+        <p class="mt-1 text-sm text-slate-400">
+          Devices in this group will try Primary first; if that fails or
+          drops, they roam to Secondary. Both can be left blank for
+          offline-only deployments.
+        </p>
+      </div>
+      <a href="/ui/wifi/new" target="_blank"
+         class="rounded-md border border-emerald-500/40 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10">
+        + Manage WiFi profiles
+      </a>
+    </div>
+
+    {% if not wifis %}
+      <div class="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm text-amber-300">
+        No WiFi profiles defined yet. <a class="underline" href="/ui/wifi/new">Create one</a>
+        (you can come back and assign it here).
+      </div>
+    {% endif %}
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <!-- PRIMARY -->
+      <fieldset class="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5 space-y-3">
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Primary network</legend>
+        <select name="primary_wifi_id"
+                class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+          <option value="">— none (offline) —</option>
+          {% for w in wifis %}
+            <option value="{{ w.id }}" {% if group.primary_wifi_id == w.id %}selected{% endif %}>
+              {{ w.name }} · SSID: {{ w.ssid }} · {{ w.security }}
+            </option>
+          {% endfor %}
+        </select>
+        <p class="text-[11px] text-slate-500">First connection target on boot.</p>
+      </fieldset>
+
+      <!-- SECONDARY -->
+      <fieldset class="rounded-2xl border border-cyan-500/30 bg-cyan-500/[0.04] p-5 space-y-3">
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Secondary network</legend>
+        <select name="secondary_wifi_id"
+                class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+          <option value="">— none —</option>
+          {% for w in wifis %}
+            <option value="{{ w.id }}" {% if group.secondary_wifi_id == w.id %}selected{% endif %}>
+              {{ w.name }} · SSID: {{ w.ssid }} · {{ w.security }}
+            </option>
+          {% endfor %}
+        </select>
+        <p class="text-[11px] text-slate-500">Fallback if primary is unreachable. Must differ from primary.</p>
+      </fieldset>
+    </div>
+
+    <div class="flex gap-3">
+      <a href="/ui/devices/wizard/{{ group.id }}/compute"
+         class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">← Back</a>
+      <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+        Continue →
+      </button>
+    </div>
+  </form>
+{% endblock %}

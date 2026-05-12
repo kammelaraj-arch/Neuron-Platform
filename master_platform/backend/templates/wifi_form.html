@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{% if row %}{{ row.name }}{% else %}New WiFi{% endif %}{% endblock %}
+{% block content %}
+  <header>
+    <nav class="text-xs text-slate-500"><a href="/ui/wifi" class="hover:underline">WiFi</a> · {% if row %}{{ row.name }}{% else %}new{% endif %}</nav>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">
+      {% if row %}Edit WiFi profile{% else %}New WiFi profile{% endif %}
+    </h1>
+  </header>
+
+  <form method="post" action="{% if row %}/ui/wifi/{{ row.id }}{% else %}/ui/wifi/new{% endif %}"
+        class="mt-6 grid gap-4 max-w-2xl">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Name (label)</label>
+        <input name="name" required maxlength="120" value="{{ row.name if row else '' }}"
+               placeholder="e.g. Production-WiFi"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">SSID (broadcast name)</label>
+        <input name="ssid" required maxlength="120" value="{{ row.ssid if row else '' }}"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Security</label>
+        <select name="security" id="sec"
+                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+          {% for s in SECURITY_TYPES %}
+            <option value="{{ s }}" {% if row and row.security == s %}selected{% elif not row and s == 'wpa2' %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Country code (optional)</label>
+        <input name="country_code" maxlength="4" value="{{ row.country_code if row else '' }}"
+               placeholder="GB / US / IN …"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono uppercase" />
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-slate-400">Hidden network</label>
+        <label class="mt-2 inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" name="hidden" value="on"
+                 {% if row and row.hidden %}checked{% endif %}
+                 class="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500">
+          <span>SSID not broadcast</span>
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">
+        Username <span class="text-slate-500">(WPA2-Enterprise only)</span>
+      </label>
+      <input name="username" maxlength="120" value="{{ row.username if row else '' }}"
+             class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">
+        Password
+        {% if row %}<span class="text-slate-500">(leave blank to keep existing)</span>{% endif %}
+      </label>
+      <input name="password" type="password" autocomplete="new-password"
+             placeholder="{{ '••••••••' if row else '' }}"
+             class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      <p class="mt-1 text-[11px] text-slate-500">
+        Stored encrypted at rest. Plaintext only appears in memory at firmware-build time.
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wider text-slate-400">Notes</label>
+      <textarea name="notes" rows="2"
+                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">{{ row.notes if row else '' }}</textarea>
+    </div>
+
+    {% if row and using_groups %}
+      <div class="rounded-md border border-cyan-500/30 bg-cyan-500/5 p-3 text-xs">
+        <strong class="text-cyan-300">In use by:</strong>
+        <ul class="mt-1 list-disc pl-5">
+          {% for g in using_groups %}<li>{{ g.name }} <span class="text-slate-500">·</span> <code>{{ g.id[:8] }}</code></li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="flex gap-3">
+      <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+        {% if row %}Save{% else %}Create{% endif %}
+      </button>
+      <a href="/ui/wifi" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

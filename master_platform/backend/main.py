@@ -38,6 +38,7 @@ from .routers import (
     systems,
     twin_push,
     ui,
+    wifi_ui,
 )
 from .security.keys import issue_payload
 from .security.ui_auth import UILoginRequired, UIPermissionDenied
@@ -244,6 +245,7 @@ app.include_router(library_manage_ui.router)
 app.include_router(sysops_ui.router)
 app.include_router(features_ui.router)
 app.include_router(functions_ui.router)
+app.include_router(wifi_ui.router)
 
 # JSON API routers
 app.include_router(library.router)

@@ -271,6 +271,33 @@ FUNCTION_LANGUAGES = (
 # life_safety functions without an explicit human-in-the-loop override.
 FUNCTION_CRITICALITIES = ("nominal", "advisory", "critical", "life_safety")
 
+WIFI_SECURITY_TYPES = ("wpa2", "wpa3", "wpa2_enterprise", "open")
+
+
+class WifiNetwork(Base):
+    """A WiFi network profile that devices can be configured to connect to.
+
+    Password is stored encrypted (Fernet with a key derived from the
+    deployment session secret); plaintext is only decrypted at firmware-
+    bundle build time. Operators can mark a network 'hidden' if it
+    doesn't broadcast its SSID.
+    """
+    __tablename__ = "wifi_networks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
+    ssid: Mapped[str] = mapped_column(String(120), nullable=False)
+    security: Mapped[str] = mapped_column(String(20), default="wpa2", nullable=False)
+    # WPA2-Enterprise also needs a username; for WPA2-Personal it stays NULL.
+    username: Mapped[str | None] = mapped_column(String(120))
+    # Always encrypted at rest. NULL for open networks.
+    password_encrypted: Mapped[str | None] = mapped_column(Text)
+    hidden: Mapped[bool] = mapped_column(default=False, nullable=False)
+    country_code: Mapped[str | None] = mapped_column(String(4))  # e.g. "GB", "US"
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
 
 class FeatureRequest(Base):
     __tablename__ = "feature_requests"
@@ -315,6 +342,11 @@ class EdgeGroup(Base):
     dna_json: Mapped[dict | None] = mapped_column(JSON)
     brain_json: Mapped[dict | None] = mapped_column(JSON)
     firmware_bundle_path: Mapped[str | None] = mapped_column(Text)
+    # WiFi networks the devices in this group will try on boot. Primary
+    # is required for groups that need network; secondary is the
+    # fallback. Both may be NULL for offline-only groups.
+    primary_wifi_id: Mapped[str | None] = mapped_column(ForeignKey("wifi_networks.id"))
+    secondary_wifi_id: Mapped[str | None] = mapped_column(ForeignKey("wifi_networks.id"))
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
@@ -322,6 +354,12 @@ class EdgeGroup(Base):
     boards: Mapped[list["BoardInstance"]] = relationship(
         back_populates="group", cascade="all, delete-orphan",
         order_by="BoardInstance.position",
+    )
+    primary_wifi: Mapped["WifiNetwork | None"] = relationship(
+        foreign_keys=[primary_wifi_id]
+    )
+    secondary_wifi: Mapped["WifiNetwork | None"] = relationship(
+        foreign_keys=[secondary_wifi_id]
     )
 
     __table_args__ = (UniqueConstraint("edge_id", "name", name="uq_group_per_edge"),)

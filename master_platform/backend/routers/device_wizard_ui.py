@@ -40,6 +40,7 @@ from ..models import (
     GpioMapping,
     NodeSystem,
     RootSystem,
+    WifiNetwork,
 )
 from ..pin_allocator import PinAllocationError, auto_allocate
 from ..security.audit import record
@@ -55,6 +56,7 @@ router = APIRouter(tags=["ui-device-wizard"])
 WIZARD_STEPS = [
     ("group", "Group"),
     ("compute", "Compute"),
+    ("wifi", "WiFi"),
     ("boards", "Boards"),
     ("components", "Components"),
     ("pinmap", "Pin map"),
@@ -269,10 +271,57 @@ async def wizard_save_compute(
         detail={"compute": compute_stable_id},
     )
     await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/wifi", status_code=303)
+
+
+# ─── Step 3: WiFi networks ──────────────────────────────────────────────────
+@router.get("/ui/devices/wizard/{group_id}/wifi", response_class=HTMLResponse)
+async def wizard_step_wifi(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    wifis = (
+        await session.execute(select(WifiNetwork).order_by(WifiNetwork.name))
+    ).scalars().all()
+    return templates.TemplateResponse(
+        "device_wizard_step_wifi.html",
+        {
+            "request": request,
+            "group": group,
+            "wifis": wifis,
+            "steps": WIZARD_STEPS,
+            "step_idx": 2,
+        },
+    )
+
+
+@router.post("/ui/devices/wizard/{group_id}/wifi")
+async def wizard_save_wifi(
+    group_id: str,
+    request: Request,
+    primary_wifi_id: str = Form(""),
+    secondary_wifi_id: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    group.primary_wifi_id = primary_wifi_id.strip() or None
+    group.secondary_wifi_id = secondary_wifi_id.strip() or None
+    if group.primary_wifi_id and group.primary_wifi_id == group.secondary_wifi_id:
+        raise HTTPException(400, "primary and secondary must be different (or leave secondary blank)")
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.set_wifi", target_kind="edge_group", target_id=group.id,
+        detail={"primary": group.primary_wifi_id, "secondary": group.secondary_wifi_id},
+    )
+    await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/boards", status_code=303)
 
 
-# ─── Step 3: add control boards ─────────────────────────────────────────────
+# ─── Step 4: add control boards ─────────────────────────────────────────────
 @router.get("/ui/devices/wizard/{group_id}/boards", response_class=HTMLResponse)
 async def wizard_step_boards(
     group_id: str,
@@ -298,7 +347,7 @@ async def wizard_step_boards(
             "boards": boards,
             "catalog": catalog,
             "steps": WIZARD_STEPS,
-            "step_idx": 2,
+            "step_idx": 3,
         },
     )
 
@@ -421,7 +470,7 @@ async def wizard_step_components(
             "available_components": available_components,
             "catalog": catalog,
             "steps": WIZARD_STEPS,
-            "step_idx": 3,
+            "step_idx": 4,
         },
     )
 
@@ -650,7 +699,7 @@ async def wizard_step_pinmap(
             "conflicts": conflicts,
             "catalog": catalog,
             "steps": WIZARD_STEPS,
-            "step_idx": 4,
+            "step_idx": 5,
         },
     )
 
@@ -724,6 +773,6 @@ async def wizard_step_review(
             "detail": detail,
             "catalog": catalog,
             "steps": WIZARD_STEPS,
-            "step_idx": 5,
+            "step_idx": 6,
         },
     )

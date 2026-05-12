@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}WiFi networks{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">WiFi networks</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Profiles that devices connect to on boot. Each group assigns a
+        primary + (optional) secondary. Passwords are stored encrypted.
+      </p>
+    </div>
+    <a href="/ui/wifi/new"
+       class="rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+      + New WiFi profile
+    </a>
+  </header>
+
+  <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+        <tr>
+          <th class="px-4 py-3">Name</th>
+          <th class="px-4 py-3">SSID</th>
+          <th class="px-4 py-3">Security</th>
+          <th class="px-4 py-3">Hidden</th>
+          <th class="px-4 py-3">Country</th>
+          <th class="px-4 py-3">In use</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/70">
+        {% for r in rows %}
+          <tr class="hover:bg-slate-900/60">
+            <td class="px-4 py-3">
+              <a href="/ui/wifi/{{ r.id }}" class="font-medium text-emerald-300 hover:underline">{{ r.name }}</a>
+              {% if r.notes %}<div class="text-xs text-slate-500 line-clamp-1">{{ r.notes }}</div>{% endif %}
+            </td>
+            <td class="px-4 py-3 font-mono text-xs">{{ r.ssid }}</td>
+            <td class="px-4 py-3"><span class="rounded bg-slate-800 px-2 py-0.5 text-[11px] font-mono">{{ r.security }}</span></td>
+            <td class="px-4 py-3 text-center">{% if r.hidden %}🔒{% else %}—{% endif %}</td>
+            <td class="px-4 py-3 font-mono text-xs">{{ r.country_code or '—' }}</td>
+            <td class="px-4 py-3 text-xs">
+              {% set n = usage.get(r.id, 0) %}
+              {% if n %}<span class="text-emerald-300">{{ n }} group(s)</span>{% else %}<span class="text-slate-500">unused</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <form method="post" action="/ui/wifi/{{ r.id }}/delete" class="inline"
+                    onsubmit="return confirm('Delete WiFi profile {{ r.name }}?');">
+                <button class="text-[11px] text-red-400 hover:text-red-300">delete</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">
+            No WiFi profiles yet — <a class="text-emerald-300 underline" href="/ui/wifi/new">create the first</a>.
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

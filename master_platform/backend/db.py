@@ -69,6 +69,18 @@ def _apply_lightweight_migrations(sync_conn) -> None:
                 "ALTER TABLE code_functions ADD COLUMN agent_accessible BOOLEAN NOT NULL DEFAULT 1"
             )
 
+    # 2026-05: WiFi primary/secondary on edge_groups. wifi_networks table
+    # itself is created by Base.metadata.create_all when new.
+    if _has_table("edge_groups"):
+        if not _has_column("edge_groups", "primary_wifi_id"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE edge_groups ADD COLUMN primary_wifi_id VARCHAR(36)"
+            )
+        if not _has_column("edge_groups", "secondary_wifi_id"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE edge_groups ADD COLUMN secondary_wifi_id VARCHAR(36)"
+            )
+
 
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
