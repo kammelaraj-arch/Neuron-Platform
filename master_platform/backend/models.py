@@ -347,6 +347,14 @@ class EdgeGroup(Base):
     # fallback. Both may be NULL for offline-only groups.
     primary_wifi_id: Mapped[str | None] = mapped_column(ForeignKey("wifi_networks.id"))
     secondary_wifi_id: Mapped[str | None] = mapped_column(ForeignKey("wifi_networks.id"))
+    # Operator-set PIN that locks the wizard configuration after testing.
+    # When lock_pin_hash is set, write endpoints (boards / components /
+    # gpio mappings / wifi / risk) require the matching plaintext PIN
+    # passed as form field 'unlock_pin'. Hash uses Argon2id same as
+    # the API-key store.
+    lock_pin_hash: Mapped[str | None] = mapped_column(Text)
+    locked_at: Mapped[datetime | None] = mapped_column()
+    locked_by: Mapped[str | None] = mapped_column(String(120))
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 

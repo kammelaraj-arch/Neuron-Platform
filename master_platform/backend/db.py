@@ -107,6 +107,15 @@ def _apply_lightweight_migrations(sync_conn) -> None:
                 "ALTER TABLE edge_groups ADD COLUMN secondary_wifi_id VARCHAR(36)"
             )
 
+    # 2026-05: lock-with-pincode on edge_groups for tested configs.
+    if _has_table("edge_groups"):
+        if not _has_column("edge_groups", "lock_pin_hash"):
+            sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN lock_pin_hash TEXT")
+        if not _has_column("edge_groups", "locked_at"):
+            sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN locked_at DATETIME")
+        if not _has_column("edge_groups", "locked_by"):
+            sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN locked_by VARCHAR(120)")
+
     # 2026-05: per-instance risk + failsafe on component_instances. The
     # local brain enforces these autonomously when the edge/master link
     # is dead — they are the last line of defence.

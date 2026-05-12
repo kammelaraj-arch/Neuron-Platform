@@ -86,6 +86,93 @@ async def _load_group(session: AsyncSession, group_id: str) -> EdgeGroup:
     return g
 
 
+# ─── Configuration lock (session-backed) ─────────────────────────────────
+def _session_unlocked(request: Request, group_id: str) -> bool:
+    """True if this session has previously unlocked this group with the
+    correct PIN. Stored in session as {'unlocked_groups': {gid: ts}}."""
+    info = request.session.get("unlocked_groups", {}) or {}
+    return bool(info.get(group_id))
+
+
+def _set_session_unlocked(request: Request, group_id: str) -> None:
+    import time
+    info = request.session.get("unlocked_groups", {}) or {}
+    info[group_id] = int(time.time())
+    request.session["unlocked_groups"] = info
+
+
+def _clear_session_unlocked(request: Request, group_id: str) -> None:
+    info = request.session.get("unlocked_groups", {}) or {}
+    info.pop(group_id, None)
+    request.session["unlocked_groups"] = info
+
+
+def _require_unlocked(group: EdgeGroup, request: Request) -> None:
+    """If the group is locked, allow only when the operator has unlocked
+    it in this session. Raises 403 otherwise."""
+    if not group.lock_pin_hash:
+        return
+    if _session_unlocked(request, group.id):
+        return
+    raise HTTPException(
+        403,
+        "This configuration is locked. Open the Review page and enter the "
+        "unlock PIN before making changes.",
+    )
+
+
+@router.post("/ui/devices/wizard/{group_id}/lock")
+async def wizard_lock_group(
+    group_id: str,
+    request: Request,
+    pin: str = Form(...),
+    pin_confirm: str = Form(...),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Set a PIN that locks the configuration. 4-12 digits."""
+    group = await _load_group(session, group_id)
+    pin = (pin or "").strip()
+    if not pin.isdigit() or not (4 <= len(pin) <= 12):
+        raise HTTPException(400, "PIN must be 4-12 digits.")
+    if pin != pin_confirm.strip():
+        raise HTTPException(400, "PIN and confirmation don't match.")
+    from argon2 import PasswordHasher
+    group.lock_pin_hash = PasswordHasher().hash(pin)
+    group.locked_at = _now()
+    group.locked_by = actor.label or actor.owner or actor.id
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.lock", target_kind="edge_group", target_id=group.id,
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/unlock")
+async def wizard_unlock_group(
+    group_id: str,
+    request: Request,
+    pin: str = Form(...),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Remove the lock — requires the current PIN."""
+    group = await _load_group(session, group_id)
+    if not group.lock_pin_hash:
+        return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+    _require_unlocked(group, pin)  # verifies
+    group.lock_pin_hash = None
+    group.locked_at = None
+    group.locked_by = None
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.unlock", target_kind="edge_group", target_id=group.id,
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
 def _step_index(step: str) -> int:
     for i, (k, _) in enumerate(WIZARD_STEPS):
         if k == step:
@@ -359,6 +446,7 @@ async def wizard_scan_wifi(
     actor: APIKey = Depends(ui_require_login),
 ):
     group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
     edge = await session.get(EdgeSystem, group.edge_id)
     if edge is None:
         raise HTTPException(404, "group's edge not found")

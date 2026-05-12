@@ -101,6 +101,66 @@ should default to `off` or `fail_closed`. Sensors default to
 `alarm_only`. The firmware-bundle builder (FR-0005 step 6) translates
 these per-instance rules into `brain.json` interlocks.
 
+### Firmware default-channel contract
+
+Every firmware bundle (FR-0005 step 6 builder) MUST include these channels
+by default — no operator opt-in required:
+
+1. **Command-and-control channel** — bi-directional link to the parent
+   (Edge or, if Edge unavailable, direct Master) over mTLS. Carries
+   recipe commands, parameter updates, telemetry uploads.
+2. **Emergency channel** — separate mTLS channel with a separate cert
+   and a strictly-limited command set (`safe_stop`, `safe_shutdown`,
+   `status`). Even when the main control channel is jammed / dead,
+   the emergency channel must remain reachable from authorised
+   operators. Schema already drafted in
+   `shared_schemas/access_policy_schema.json`.
+3. **OTA channel** — configured by default in every bundle so devices
+   can receive base-firmware / app-bundle / config updates without
+   manual provisioning. Subject to the OTA base-version gating rules
+   in `docs/ota_base_version_policy.md`.
+
+### State-change auto-push to parent
+
+Any state change at the Edge (device coming online, device going offline,
+twin desired/reported drift, recipe step transition, alarm raised,
+allow-list violation, cert revocation) MUST be pushed up to the parent
+(Node if present, else Root/Master) automatically, without operator
+intervention. Push-up is fire-and-forget at the Edge — the Edge
+continues running even if Master is unreachable, but it queues missed
+state updates and replays them on reconnect.
+
+### Bi-directional heartbeat monitoring
+
+Every link in the hierarchy runs heartbeat both ways:
+
+- **Child → Parent**: the device / Edge periodically heartbeats its
+  presence + uptime + summary metrics to the parent. Parent flags
+  the child `offline` after a configurable grace period.
+- **Parent → Child**: the parent also heartbeats DOWN to the child.
+  When the child detects parent-heartbeat loss for longer than the
+  child's `disconnect_grace_seconds`, the local brain enforces the
+  per-instance failsafe action defined per ComponentInstance.
+
+This bidirectionality is what makes the local-brain failsafe contract
+operationally meaningful — without parent-heartbeat-down detection,
+the child would never know it should fall back to autonomous mode.
+
+### Configuration lock with PIN
+
+After an operator has physically tested a Group's configuration on
+hardware, they can lock it from the wizard's Review page (step 6) with
+a 4-12 digit PIN (Argon2id-hashed at rest). When locked:
+
+- Write endpoints (pin-map create/delete/lock, component add/delete/
+  risk, WiFi assignment, compute change, board add/delete) refuse
+  mutations until the PIN is entered.
+- Unlock is per-session: enter the PIN once on the Review page and
+  the session's `unlocked_groups[<gid>] = <ts>` flag stays set for
+  the life of the session.
+- Schema fields on `EdgeGroup`: `lock_pin_hash`, `locked_at`,
+  `locked_by`. Routes: `POST .../{gid}/lock`, `POST .../{gid}/unlock`.
+
 ## Durable feature requirements (from product owner)
 
 ### 1. Feature / capability request tracker

@@ -109,5 +109,51 @@
            class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">← Back to pin map</a>
       </div>
     </div>
+
+    <!-- ── CONFIGURATION LOCK ────────────────────────────────────────────── -->
+    <div class="rounded-2xl border {% if group.lock_pin_hash %}border-amber-500/50 bg-amber-500/[0.05]{% else %}border-slate-800 bg-slate-900/40{% endif %} p-5">
+      <h3 class="font-semibold flex items-center gap-2">
+        {% if group.lock_pin_hash %}
+          <span class="text-amber-300">🔒 Configuration locked</span>
+        {% else %}
+          <span>🔓 Configuration unlocked</span>
+        {% endif %}
+      </h3>
+
+      {% if group.lock_pin_hash %}
+        <p class="mt-1 text-xs text-amber-200/80">
+          Locked {% if group.locked_at %}on <code class="text-amber-300">{{ group.locked_at.strftime('%Y-%m-%d %H:%M') }}</code>{% endif %}
+          {% if group.locked_by %}by <code class="text-amber-300">{{ group.locked_by }}</code>{% endif %}.
+          Write endpoints (pin map, components, risk, WiFi, build) refuse to mutate the group until the unlock PIN is entered for this session.
+        </p>
+
+        <form method="post" action="/ui/devices/wizard/{{ group.id }}/unlock" class="mt-3 flex flex-wrap gap-2 text-sm">
+          <input name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,12}" maxlength="12" required
+                 placeholder="enter PIN to unlock"
+                 class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-amber-200 placeholder-slate-600" />
+          <button class="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-amber-400">
+            🔓 Unlock (clears the lock)
+          </button>
+        </form>
+      {% else %}
+        <p class="mt-1 text-xs text-slate-400">
+          Once you've physically tested the configuration on hardware, lock it with a 4-12 digit PIN.
+          After locking, write endpoints will refuse changes until the PIN is entered for the session.
+          This prevents accidental edits to a known-good deployment.
+        </p>
+
+        <form method="post" action="/ui/devices/wizard/{{ group.id }}/lock" class="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] text-sm max-w-2xl">
+          <input name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,12}" maxlength="12" required
+                 placeholder="set PIN (4-12 digits)"
+                 class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono" />
+          <input name="pin_confirm" type="password" inputmode="numeric" pattern="[0-9]{4,12}" maxlength="12" required
+                 placeholder="confirm PIN"
+                 class="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono" />
+          <button class="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-amber-400">
+            🔒 Lock configuration
+          </button>
+        </form>
+      {% endif %}
+    </div>
   </section>
 {% endblock %}
