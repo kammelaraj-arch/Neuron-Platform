@@ -107,6 +107,35 @@ def _apply_lightweight_migrations(sync_conn) -> None:
                 "ALTER TABLE edge_groups ADD COLUMN secondary_wifi_id VARCHAR(36)"
             )
 
+    # 2026-05: per-instance risk + failsafe on component_instances. The
+    # local brain enforces these autonomously when the edge/master link
+    # is dead — they are the last line of defence.
+    if _has_table("component_instances"):
+        if not _has_column("component_instances", "risk_level"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN risk_level VARCHAR(20) NOT NULL DEFAULT 'nominal'"
+            )
+        if not _has_column("component_instances", "risk_types_json"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN risk_types_json JSON"
+            )
+        if not _has_column("component_instances", "failsafe_action"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN failsafe_action VARCHAR(20)"
+            )
+        if not _has_column("component_instances", "failsafe_value_json"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN failsafe_value_json JSON"
+            )
+        if not _has_column("component_instances", "disconnect_grace_seconds"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN disconnect_grace_seconds INTEGER NOT NULL DEFAULT 30"
+            )
+        if not _has_column("component_instances", "watchdog_ms"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN watchdog_ms INTEGER NOT NULL DEFAULT 1000"
+            )
+
 
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:

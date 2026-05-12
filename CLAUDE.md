@@ -75,6 +75,32 @@ Implementation rule: `EdgeSystem` must accept EITHER a `node_id` OR a
 The System Designer page (`/ui/systems`) must offer both placement
 options when creating an Edge ("under Node X" / "directly under Root Y").
 
+### Per-instance risk + local brain failsafe contract
+
+Every `ComponentInstance` carries operator-set risk metadata that gets
+baked into the firmware bundle's `brain.json`:
+
+- `risk_level`: `nominal | advisory | critical | life_safety`
+- `risk_types_json`: list from `RISK_TYPES`
+  (`fire | scald | burn | shock | chemical | biohazard | pinch |
+   crush | cut | fall | freeze | asphyxiation | explosion | uv | laser |
+   noise | pressure`)
+- `failsafe_action`: `off | hold_last | go_to_safe_value | alarm_only |
+  stop | fail_open | fail_closed`
+- `failsafe_value_json`: optional concrete value for `go_to_safe_value`
+- `disconnect_grace_seconds`: how long the brain tolerates link loss
+  before enforcing failsafe (default 30s)
+- `watchdog_ms`: max gap between commands before link considered dead
+  (default 1000ms)
+
+**Hard rule**: the local brain on the device MUST be able to enforce
+the failsafe action without any network connectivity. It is the last
+line of defence. The Master and Edge are advisory; the brain is
+authoritative for safety. Heaters / pumps / mains-switched relays
+should default to `off` or `fail_closed`. Sensors default to
+`alarm_only`. The firmware-bundle builder (FR-0005 step 6) translates
+these per-instance rules into `brain.json` interlocks.
+
 ## Durable feature requirements (from product owner)
 
 ### 1. Feature / capability request tracker

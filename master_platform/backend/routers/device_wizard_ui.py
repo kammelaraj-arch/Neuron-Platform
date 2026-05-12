@@ -33,6 +33,9 @@ from sqlalchemy import delete as sa_delete
 from ..db import get_session
 from ..library_loader import load_catalog
 from ..models import (
+    FAILSAFE_ACTIONS,
+    RISK_LEVELS,
+    RISK_TYPES,
     APIKey,
     BoardInstance,
     ComponentInstance,
@@ -628,6 +631,9 @@ async def wizard_step_components(
             "boards_with_components": boards_with_components,
             "available_components": available_components,
             "catalog": catalog,
+            "RISK_LEVELS": RISK_LEVELS,
+            "RISK_TYPES": RISK_TYPES,
+            "FAILSAFE_ACTIONS": FAILSAFE_ACTIONS,
             "steps": WIZARD_STEPS,
             "step_idx": 4,
         },
@@ -692,6 +698,77 @@ async def wizard_add_component(
         session, actor=actor.id, actor_kind="ui_session",
         action="component.add", target_kind="component_instance", target_id=comp.id,
         detail={"board_id": board.id, "component": component_stable_id, "instance_id": instance_id},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/components/{comp_id}/risk")
+async def wizard_set_component_risk(
+    group_id: str,
+    comp_id: str,
+    request: Request,
+    risk_level: str = Form("nominal"),
+    risk_types: str = Form(""),          # comma-separated
+    failsafe_action: str = Form(""),     # blank = inherit
+    failsafe_value_json: str = Form(""), # JSON, optional
+    disconnect_grace_seconds: int = Form(30),
+    watchdog_ms: int = Form(1000),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Set / update the per-instance risk + failsafe rules.
+
+    These get baked into the firmware bundle's brain.json so the device's
+    LOCAL brain enforces them autonomously when the edge/master link is
+    dead. Sensors typically inherit nominal+alarm_only; high-energy
+    actuators (heaters, motors, valves) need a concrete failsafe_action.
+    """
+    import json as _json
+
+    group = await _load_group(session, group_id)
+    comp = await session.get(ComponentInstance, comp_id)
+    if comp is None:
+        raise HTTPException(404, "component not found")
+    board = await session.get(BoardInstance, comp.board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "component not in this group")
+
+    if risk_level not in RISK_LEVELS:
+        raise HTTPException(400, f"invalid risk_level: {risk_level}")
+    fa = (failsafe_action or "").strip() or None
+    if fa is not None and fa not in FAILSAFE_ACTIONS:
+        raise HTTPException(400, f"invalid failsafe_action: {fa}")
+
+    types = [t.strip() for t in risk_types.split(",") if t.strip()]
+    # Drop anything not in the canonical list (silent — operator can
+    # extend RISK_TYPES later if they need a new category).
+    types = [t for t in types if t in RISK_TYPES]
+
+    fv = None
+    if failsafe_value_json.strip():
+        try:
+            fv = _json.loads(failsafe_value_json)
+        except _json.JSONDecodeError as exc:
+            raise HTTPException(400, f"failsafe_value_json is not valid JSON: {exc}") from exc
+
+    comp.risk_level = risk_level
+    comp.risk_types_json = types
+    comp.failsafe_action = fa
+    comp.failsafe_value_json = fv
+    comp.disconnect_grace_seconds = max(0, int(disconnect_grace_seconds))
+    comp.watchdog_ms = max(100, int(watchdog_ms))
+
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="component.set_risk", target_kind="component_instance", target_id=comp.id,
+        detail={
+            "risk_level": risk_level,
+            "risk_types": types,
+            "failsafe_action": fa,
+            "disconnect_grace_seconds": comp.disconnect_grace_seconds,
+            "watchdog_ms": comp.watchdog_ms,
+        },
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)

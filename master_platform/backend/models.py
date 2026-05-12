@@ -390,6 +390,31 @@ class BoardInstance(Base):
     __table_args__ = (UniqueConstraint("group_id", "label", name="uq_board_per_group"),)
 
 
+# Risk levels and types for ComponentInstance — overrides the manifest's
+# safety_class with the operator's per-install judgement (a heater wired
+# next to flammable material is a different risk class from the same
+# heater wired into a temperature-controlled water bath).
+RISK_LEVELS = ("nominal", "advisory", "critical", "life_safety")
+RISK_TYPES = (
+    "fire", "scald", "burn", "shock", "chemical", "biohazard",
+    "pinch", "crush", "cut", "fall", "freeze", "asphyxiation",
+    "explosion", "uv", "laser", "noise", "pressure",
+)
+# Failsafe action — what the local brain does when it has lost the
+# connection to the edge/master for longer than disconnect_grace_seconds.
+# The brain MUST be able to enforce these locally — it is the last line
+# of defence and runs on the device itself.
+FAILSAFE_ACTIONS = (
+    "off",                # cut power / set duty cycle to 0 (heaters, pumps)
+    "hold_last",          # freeze at last commanded value (slow conveyors)
+    "go_to_safe_value",   # drive to failsafe_value_json (e.g. setpoint 0)
+    "alarm_only",         # raise alarm but keep running (advisory only)
+    "stop",               # halt motion / cycle (motors)
+    "fail_open",          # open contact / valve (water dump valves)
+    "fail_closed",        # close contact / valve (gas shut-off)
+)
+
+
 class ComponentInstance(Base):
     """A sensor / actuator / camera wired to a specific board.
     Picked from components_library."""
@@ -405,6 +430,16 @@ class ComponentInstance(Base):
     role: Mapped[str | None] = mapped_column(String(80))
     params_json: Mapped[dict] = mapped_column(JSON, default=dict)
     position: Mapped[int] = mapped_column(default=0, nullable=False)
+    # ── Risk + failsafe (operator-set per install) ─────────────────────────
+    risk_level: Mapped[str] = mapped_column(String(20), default="nominal", nullable=False)
+    risk_types_json: Mapped[list] = mapped_column(JSON, default=list)
+    failsafe_action: Mapped[str | None] = mapped_column(String(20))  # NULL = inherit from manifest
+    failsafe_value_json: Mapped[dict | None] = mapped_column(JSON)
+    # On disconnect: wait this long (heartbeat-loss tolerance) before the
+    # brain enforces failsafe_action locally. 0 = immediate.
+    disconnect_grace_seconds: Mapped[int] = mapped_column(default=30, nullable=False)
+    # Maximum gap between commands before the brain assumes the link is dead.
+    watchdog_ms: Mapped[int] = mapped_column(default=1000, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
     board: Mapped[BoardInstance] = relationship(back_populates="components")

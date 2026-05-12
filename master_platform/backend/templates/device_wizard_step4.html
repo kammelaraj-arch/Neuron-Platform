@@ -29,13 +29,25 @@
           <div class="text-xs text-slate-500">{{ comps | length }} component(s)</div>
         </header>
 
-        <!-- already-attached components -->
+        <!-- already-attached components — full card with Risk & Failsafe panel -->
         {% if comps %}
-          <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {% set risk_colors = {
+            'nominal':     'border-slate-700',
+            'advisory':    'border-cyan-500/50 shadow-[0_0_18px_-10px_rgba(34,211,238,0.5)]',
+            'critical':    'border-amber-500/60 shadow-[0_0_22px_-8px_rgba(245,158,11,0.6)]',
+            'life_safety': 'border-red-500/70 shadow-[0_0_24px_-6px_rgba(239,68,68,0.7)]',
+          } %}
+          {% set risk_pill = {
+            'nominal':     'bg-slate-700 text-slate-200',
+            'advisory':    'bg-cyan-500/20 text-cyan-300',
+            'critical':    'bg-amber-500/20 text-amber-300',
+            'life_safety': 'bg-red-500/25 text-red-300',
+          } %}
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {% for c in comps %}
               {% set cdef = catalog.get(c.component_stable_id) %}
-              <div class="relative rounded-md border border-emerald-500/30 bg-slate-950 p-3
-                          shadow-[0_0_18px_-10px_rgba(16,185,129,0.5)]">
+              {% set effective_failsafe = c.failsafe_action or (cdef.manifest.get('failsafe_action') if cdef else None) or '—' %}
+              <div class="relative rounded-xl border {{ risk_colors.get(c.risk_level, 'border-slate-700') }} bg-slate-950 p-3">
                 <div class="flex items-baseline justify-between gap-2">
                   <div class="font-mono text-xs text-emerald-300">{{ c.instance_id }}</div>
                   <form method="post" action="/ui/devices/wizard/{{ group.id }}/components/{{ c.id }}/delete"
@@ -45,6 +57,81 @@
                 </div>
                 <div class="mt-1 text-sm text-slate-200">{{ cdef.name if cdef else c.component_stable_id }}</div>
                 <div class="mt-1 font-mono text-[10px] text-slate-500">{{ c.component_stable_id }}</div>
+
+                <!-- Risk summary line -->
+                <div class="mt-2 flex flex-wrap items-baseline gap-1.5 text-[10px]">
+                  <span class="rounded-full px-2 py-0.5 {{ risk_pill.get(c.risk_level, 'bg-slate-700') }}">
+                    ⚠ {{ c.risk_level }}
+                  </span>
+                  {% for t in (c.risk_types_json or []) %}
+                    <span class="rounded-full bg-slate-800 px-1.5 py-0.5 text-slate-300">{{ t }}</span>
+                  {% endfor %}
+                  <span class="text-slate-500">·</span>
+                  <span class="text-slate-400">failsafe: <span class="text-cyan-300 font-mono">{{ effective_failsafe }}</span></span>
+                </div>
+
+                <!-- Edit Risk panel -->
+                <details class="mt-2">
+                  <summary class="cursor-pointer text-[11px] text-slate-300 hover:text-white">⚠ Edit risk &amp; failsafe</summary>
+                  <form method="post" action="/ui/devices/wizard/{{ group.id }}/components/{{ c.id }}/risk"
+                        class="mt-2 space-y-2 text-[11px]">
+                    <div>
+                      <label class="block uppercase tracking-wider text-slate-500">Risk level</label>
+                      <select name="risk_level" class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1">
+                        {% for l in RISK_LEVELS %}<option value="{{ l }}" {% if l == c.risk_level %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block uppercase tracking-wider text-slate-500">Risk types (comma-separated)</label>
+                      <input name="risk_types" value="{{ (c.risk_types_json or []) | join(', ') }}"
+                             placeholder="fire, scald, shock…"
+                             class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono">
+                      <p class="mt-0.5 text-[10px] text-slate-500">
+                        Known: {{ RISK_TYPES | join(', ') }}
+                      </p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="block uppercase tracking-wider text-slate-500">Failsafe action</label>
+                        <select name="failsafe_action" class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1">
+                          <option value="">— inherit / none —</option>
+                          {% for a in FAILSAFE_ACTIONS %}<option value="{{ a }}" {% if a == c.failsafe_action %}selected{% endif %}>{{ a }}</option>{% endfor %}
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block uppercase tracking-wider text-slate-500">Failsafe value (JSON)</label>
+                        <input name="failsafe_value_json" value="{{ c.failsafe_value_json | tojson if c.failsafe_value_json else '' }}"
+                               placeholder='{"setpoint_c":0}'
+                               class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono">
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="block uppercase tracking-wider text-slate-500">Disconnect grace (s)</label>
+                        <input type="number" min="0" max="3600" name="disconnect_grace_seconds"
+                               value="{{ c.disconnect_grace_seconds }}"
+                               class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono">
+                      </div>
+                      <div>
+                        <label class="block uppercase tracking-wider text-slate-500">Watchdog (ms)</label>
+                        <input type="number" min="100" max="600000" name="watchdog_ms"
+                               value="{{ c.watchdog_ms }}"
+                               class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono">
+                      </div>
+                    </div>
+                    <p class="text-[10px] text-slate-500 leading-relaxed">
+                      The <strong class="text-slate-300">local brain on the device</strong> enforces these autonomously:
+                      after <code>{{ c.watchdog_ms }}ms</code> without a command, the link is treated as dead;
+                      after <code>{{ c.disconnect_grace_seconds }}s</code> total, the brain executes the
+                      <code>failsafe_action</code> regardless of edge/master state. Heaters / pumps / valves
+                      should usually be <code>off</code> or <code>fail_closed</code>; sensors are usually
+                      <code>alarm_only</code>.
+                    </p>
+                    <button class="rounded bg-amber-500/20 border border-amber-500/40 px-3 py-1 text-amber-200 hover:bg-amber-500 hover:text-slate-950">
+                      Save risk
+                    </button>
+                  </form>
+                </details>
               </div>
             {% endfor %}
           </div>
