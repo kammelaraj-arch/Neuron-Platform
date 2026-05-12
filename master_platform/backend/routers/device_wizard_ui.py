@@ -218,10 +218,19 @@ async def wizard_unlock_group(
     group = await _load_group(session, group_id)
     if not group.lock_pin_hash:
         return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
-    _require_unlocked(group, pin)  # verifies
+
+    from argon2 import PasswordHasher
+    from argon2.exceptions import VerifyMismatchError, InvalidHashError
+    pin = (pin or "").strip()
+    try:
+        PasswordHasher().verify(group.lock_pin_hash, pin)
+    except (VerifyMismatchError, InvalidHashError, Exception):
+        raise HTTPException(403, "Incorrect PIN.")
+
     group.lock_pin_hash = None
     group.locked_at = None
     group.locked_by = None
+    _clear_session_unlocked(request, group.id)
     await record(
         session, actor=actor.id, actor_kind="ui_session",
         action="group.unlock", target_kind="edge_group", target_id=group.id,
