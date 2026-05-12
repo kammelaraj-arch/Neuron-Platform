@@ -116,6 +116,17 @@ def _apply_lightweight_migrations(sync_conn) -> None:
         if not _has_column("edge_groups", "locked_by"):
             sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN locked_by VARCHAR(120)")
 
+    # 2026-05: board-pin assignment + functional label on
+    # component_instances so each output channel of a board carries a
+    # named function ("stirring", "tilt-z", "mixer") + asset id.
+    if _has_table("component_instances"):
+        if not _has_column("component_instances", "board_pin"):
+            sync_conn.exec_driver_sql("ALTER TABLE component_instances ADD COLUMN board_pin VARCHAR(40)")
+        if not _has_column("component_instances", "function_label"):
+            sync_conn.exec_driver_sql("ALTER TABLE component_instances ADD COLUMN function_label VARCHAR(80)")
+        if not _has_column("component_instances", "asset_id"):
+            sync_conn.exec_driver_sql("ALTER TABLE component_instances ADD COLUMN asset_id VARCHAR(60)")
+
     # 2026-05: per-instance risk + failsafe on component_instances. The
     # local brain enforces these autonomously when the edge/master link
     # is dead — they are the last line of defence.

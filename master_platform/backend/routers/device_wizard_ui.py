@@ -36,10 +36,12 @@ from ..compute_pinouts import PIN_KIND_COLORS, header_for
 from ..board_pinouts import (
     PIN_COMPAT,
     PINOUT_KIND_COLORS,
+    PINOUT_KIND_COLORS_OUT,
     board_pin_kind,
     connection_type,
     is_compatible,
     pinout_for,
+    split_pinout,
 )
 from ..models import (
     FAILSAFE_ACTIONS,
@@ -745,6 +747,9 @@ async def wizard_add_component(
     component_stable_id: str = Form(...),
     instance_id: str = Form(""),
     label: str = Form(""),
+    board_pin: str = Form(""),
+    function_label: str = Form(""),
+    asset_id: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
@@ -788,6 +793,9 @@ async def wizard_add_component(
         instance_id=instance_id,
         label=(label or "").strip() or None,
         position=pos + 1,
+        board_pin=(board_pin or "").strip() or None,
+        function_label=(function_label or "").strip() or None,
+        asset_id=(asset_id or "").strip() or None,
     )
     session.add(comp)
     await session.flush()
@@ -795,6 +803,40 @@ async def wizard_add_component(
         session, actor=actor.id, actor_kind="ui_session",
         action="component.add", target_kind="component_instance", target_id=comp.id,
         detail={"board_id": board.id, "component": component_stable_id, "instance_id": instance_id},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/components/{comp_id}/pin")
+async def wizard_set_component_pin(
+    group_id: str,
+    comp_id: str,
+    request: Request,
+    board_pin: str = Form(""),
+    function_label: str = Form(""),
+    asset_id: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Assign / re-assign a ComponentInstance to a specific output pin
+    of its parent board, and label its function ("stirring", "tilt",
+    "mixer", "feed-pump") + asset ID for inventory tracking."""
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    comp = await session.get(ComponentInstance, comp_id)
+    if comp is None:
+        raise HTTPException(404, "component not found")
+    board = await session.get(BoardInstance, comp.board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "component not in this group")
+    comp.board_pin = board_pin.strip() or None
+    comp.function_label = function_label.strip() or None
+    comp.asset_id = asset_id.strip() or None
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="component.pin_assign", target_kind="component_instance", target_id=comp.id,
+        detail={"board_pin": comp.board_pin, "function_label": comp.function_label, "asset_id": comp.asset_id},
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
@@ -1033,10 +1075,23 @@ async def wizard_step_pinmap(
 
     # Per-board pinouts: stable_id → [(name, kind, description, suggest), ...]
     board_pinouts: dict[str, list] = {}
+    board_pinouts_split: dict[str, tuple[list, list]] = {}
     for _b, _ in boards_pins:
         po = pinout_for(_b.board_stable_id)
         if po:
             board_pinouts[_b.id] = po
+            board_pinouts_split[_b.id] = split_pinout(po)
+
+    # Components per board, indexed by board_pin so the actuator-side
+    # rail can show which component is wired to each output pin.
+    components_by_board_pin: dict[str, dict] = {}
+    for _b, _ in boards_pins:
+        rows = (
+            await session.execute(
+                select(ComponentInstance).where(ComponentInstance.board_instance_id == _b.id)
+            )
+        ).scalars().all()
+        components_by_board_pin[_b.id] = {c.board_pin: c for c in rows if c.board_pin}
 
     # Connection-type label per existing GpioMapping, for the table view.
     conn_types: dict[str, str] = {}
@@ -1066,10 +1121,13 @@ async def wizard_step_pinmap(
             "header": header,
             "used_pins": used_pins,
             "board_pinouts": board_pinouts,
+            "board_pinouts_split": board_pinouts_split,
+            "components_by_board_pin": components_by_board_pin,
             "conn_types": conn_types,
             "compat_for_js": compat_for_js,
             "PIN_KIND_COLORS": PIN_KIND_COLORS,
             "PINOUT_KIND_COLORS": PINOUT_KIND_COLORS,
+            "PINOUT_KIND_COLORS_OUT": PINOUT_KIND_COLORS_OUT,
             "steps": WIZARD_STEPS,
             "step_idx": 5,
         },

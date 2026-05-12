@@ -438,6 +438,16 @@ class ComponentInstance(Base):
     role: Mapped[str | None] = mapped_column(String(80))
     params_json: Mapped[dict] = mapped_column(JSON, default=dict)
     position: Mapped[int] = mapped_column(default=0, nullable=False)
+    # ── Board-pin assignment (which output channel of the board this
+    # component is wired to, e.g. PCA9685 CH3 or L298N OUT1+OUT2) ───────────
+    board_pin: Mapped[str | None] = mapped_column(String(40))
+    # Operator-defined functional label for this instance — what it
+    # physically does in the deployed system (e.g. "stirring",
+    # "tilt-axis-z", "mixer", "feed-pump", "lid-open"). Used by twin
+    # UI + AI agent for human-language references.
+    function_label: Mapped[str | None] = mapped_column(String(80))
+    # Operator's asset / inventory ID (e.g. "MTR-0042", "SRV-A12-3").
+    asset_id: Mapped[str | None] = mapped_column(String(60))
     # ── Risk + failsafe (operator-set per install) ─────────────────────────
     risk_level: Mapped[str] = mapped_column(String(20), default="nominal", nullable=False)
     risk_types_json: Mapped[list] = mapped_column(JSON, default=list)

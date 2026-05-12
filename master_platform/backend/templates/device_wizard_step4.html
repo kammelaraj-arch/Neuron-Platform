@@ -58,6 +58,29 @@
                 <div class="mt-1 text-sm text-slate-200">{{ cdef.name if cdef else c.component_stable_id }}</div>
                 <div class="mt-1 font-mono text-[10px] text-slate-500">{{ c.component_stable_id }}</div>
 
+                {% if c.board_pin or c.function_label or c.asset_id %}
+                  <div class="mt-2 space-y-0.5 text-[10px]">
+                    {% if c.board_pin %}
+                      <div class="flex items-center gap-1">
+                        <span class="text-slate-500">pin</span>
+                        <span class="font-mono text-cyan-300">{{ c.board_pin }}</span>
+                      </div>
+                    {% endif %}
+                    {% if c.function_label %}
+                      <div class="flex items-center gap-1">
+                        <span class="text-slate-500">func</span>
+                        <span class="rounded bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5">{{ c.function_label }}</span>
+                      </div>
+                    {% endif %}
+                    {% if c.asset_id %}
+                      <div class="flex items-center gap-1">
+                        <span class="text-slate-500">asset</span>
+                        <span class="font-mono text-amber-300">{{ c.asset_id }}</span>
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
                 <!-- Risk summary line -->
                 <div class="mt-2 flex flex-wrap items-baseline gap-1.5 text-[10px]">
                   <span class="rounded-full px-2 py-0.5 {{ risk_pill.get(c.risk_level, 'bg-slate-700') }}">
@@ -274,6 +297,15 @@
                 <input name="instance_id" type="text" placeholder="instance id (auto)"
                        onclick="event.stopPropagation()"
                        class="mt-2 w-full rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] placeholder-slate-600 font-mono">
+                <input name="board_pin" type="text" placeholder="board pin (CH0 / OUT1 …)"
+                       onclick="event.stopPropagation()"
+                       class="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] placeholder-slate-600 font-mono">
+                <input name="function_label" type="text" placeholder="function (stirring / mixer / tilt)"
+                       onclick="event.stopPropagation()"
+                       class="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] placeholder-slate-600">
+                <input name="asset_id" type="text" placeholder="asset id (optional)"
+                       onclick="event.stopPropagation()"
+                       class="mt-1 w-full rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] placeholder-slate-600 font-mono">
 
                 <button class="mt-2 w-full rounded-md bg-emerald-500/10 border border-emerald-500/40 text-emerald-300
                                text-[11px] py-1.5 hover:bg-emerald-500 hover:text-slate-950 transition">

@@ -76,12 +76,22 @@ BOARD_PINOUTS: dict[str, list[tuple[str, str, str, str | None]]] = {
         ("SDA",  "i2c_sda",    "I2C data",                                      "i2c_sda"),
         ("OE",   "enable",     "Output enable — pull LOW to enable outputs",    "gpio"),
         ("V+",   "power_5v",   "Servo / LED power (separate, typically 5-6V)",  None),
-        ("CH0",  "pwm_in",     "PWM channel 0 — connect to servo signal",       None),
-        ("CH1",  "pwm_in",     "PWM channel 1",                                 None),
-        ("CH2",  "pwm_in",     "PWM channel 2",                                 None),
-        ("CH3",  "pwm_in",     "PWM channel 3",                                 None),
-        ("…",    "pwm_in",     "…channels 4-14…",                               None),
-        ("CH15", "pwm_in",     "PWM channel 15",                                None),
+        ("CH0",  "pwm_out",    "PWM channel 0 — wire to a servo / LED / motor signal", None),
+        ("CH1",  "pwm_out",    "PWM channel 1",                                 None),
+        ("CH2",  "pwm_out",    "PWM channel 2",                                 None),
+        ("CH3",  "pwm_out",    "PWM channel 3",                                 None),
+        ("CH4",  "pwm_out",    "PWM channel 4",                                 None),
+        ("CH5",  "pwm_out",    "PWM channel 5",                                 None),
+        ("CH6",  "pwm_out",    "PWM channel 6",                                 None),
+        ("CH7",  "pwm_out",    "PWM channel 7",                                 None),
+        ("CH8",  "pwm_out",    "PWM channel 8",                                 None),
+        ("CH9",  "pwm_out",    "PWM channel 9",                                 None),
+        ("CH10", "pwm_out",    "PWM channel 10",                                None),
+        ("CH11", "pwm_out",    "PWM channel 11",                                None),
+        ("CH12", "pwm_out",    "PWM channel 12",                                None),
+        ("CH13", "pwm_out",    "PWM channel 13",                                None),
+        ("CH14", "pwm_out",    "PWM channel 14",                                None),
+        ("CH15", "pwm_out",    "PWM channel 15",                                None),
     ],
     # ── A4988 Stepper Driver ──────────────────────────────────────────
     "board.stepper.a4988": [
@@ -236,6 +246,14 @@ BOARD_PINOUTS: dict[str, list[tuple[str, str, str, str | None]]] = {
 }
 
 
+PINOUT_KIND_COLORS_OUT = {  # for the actuator-side rail (matches the legend)
+    "pwm_out":      "#a855f7",
+    "motor_out":    "#ef4444",
+    "led_out":      "#22d3ee",
+    "analog_out":   "#06b6d4",
+}
+
+
 PINOUT_KIND_COLORS = {
     "power_5v":        "#dc2626",
     "power_3v3":       "#f97316",
@@ -261,6 +279,27 @@ PINOUT_KIND_COLORS = {
     "vref":            "#a78bfa",
     "special":         "#a855f7",
 }
+
+
+ACTUATOR_SIDE_KINDS = {"pwm_out", "motor_out", "led_out", "analog_out"}
+
+
+def pin_side(kind: str | None) -> str:
+    """compute (wires to Pi side) vs actuator (wires to motor / sensor)."""
+    if kind in ACTUATOR_SIDE_KINDS:
+        return "actuator"
+    return "compute"
+
+
+def split_pinout(po: list) -> tuple[list, list]:
+    """Split a board pinout into (compute_side_pins, actuator_side_pins)."""
+    cs, ac = [], []
+    for row in po or []:
+        if pin_side(row[1]) == "actuator":
+            ac.append(row)
+        else:
+            cs.append(row)
+    return cs, ac
 
 
 def pinout_for(board_stable_id: str | None) -> list | None:

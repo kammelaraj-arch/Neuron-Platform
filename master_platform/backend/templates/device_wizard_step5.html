@@ -112,37 +112,91 @@
           <!-- ── LEFT BOARDS ──────────────────────────────────────────── -->
           <div class="space-y-6">
             {% for b, pins, po in left_boards %}
+              {% set split = board_pinouts_split.get(b.id) %}
+              {% set compute_pins = split[0] if split else po %}
+              {% set actuator_pins = split[1] if split else [] %}
+              {% set comp_by_pin = components_by_board_pin.get(b.id, {}) %}
               <div class="relative rounded-xl border border-cyan-500/40 bg-gradient-to-br from-cyan-900/30 to-slate-900 p-4 shadow-[0_0_24px_-12px_rgba(34,211,238,0.5)]">
-                <div class="text-right text-sm font-semibold text-cyan-300">{{ b.label }}</div>
-                <div class="text-right font-mono text-[10px] text-cyan-400/70">{{ b.board_stable_id }}</div>
+                <div class="text-center text-sm font-semibold text-cyan-300">{{ b.label }}</div>
+                <div class="text-center font-mono text-[10px] text-cyan-400/70">{{ b.board_stable_id }}</div>
 
-                <!-- Board pinout column on the RIGHT edge (facing the Pi header in the middle) -->
-                <div class="mt-3 space-y-1.5">
-                  {% if po %}
-                    {% for pname, pkind, pdesc, _ in po %}
-                      {% set color = PINOUT_KIND_COLORS.get(pkind, '#475569') %}
-                      <div class="flex items-center justify-end gap-2 text-[11px]">
-                        <span class="text-slate-300 truncate" title="{{ pdesc }}">{{ pname }}</span>
-                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 cursor-pointer"
-                             style="background:{{ color }};"
-                             data-pin-side="left"
-                             data-pin-id="board-{{ b.id }}-{{ pname }}"
-                             data-pin-kind="{{ pkind }}"
-                             data-board-id="{{ b.id }}"
-                             data-board-pin="{{ pname }}"
-                             title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
-                      </div>
-                    {% endfor %}
-                  {% else %}
-                    {% for m in pins %}
-                      <div class="flex items-center justify-end gap-2 text-[11px]">
-                        <span class="text-slate-300 truncate">{{ m.board_pin }}</span>
-                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 bg-emerald-500"
-                             data-pin-side="left"
-                             data-pin-id="board-{{ b.id }}-{{ m.board_pin }}"></div>
-                      </div>
-                    {% endfor %}
-                  {% endif %}
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                  <!-- ACTUATOR side (LEFT, away from Pi) -->
+                  <div class="space-y-1.5">
+                    <div class="text-[9px] uppercase tracking-widest text-amber-300/70 text-left">actuator side →</div>
+                    {% if actuator_pins %}
+                      {% for pname, pkind, pdesc, _ in actuator_pins %}
+                        {% set color = PINOUT_KIND_COLORS_OUT.get(pkind, PINOUT_KIND_COLORS.get(pkind, '#475569')) %}
+                        {% set assigned = comp_by_pin.get(pname) %}
+                        <details class="board-out-pin">
+                          <summary class="flex items-center justify-start gap-2 text-[11px] cursor-pointer list-none">
+                            <div class="h-4 w-4 rounded-full ring-2 {% if assigned %}ring-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]{% else %}ring-slate-700{% endif %} flex-shrink-0"
+                                 style="background:{{ color }};"
+                                 title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
+                            <span class="text-slate-300 truncate">{{ pname }}</span>
+                            {% if assigned %}
+                              <span class="text-[9px] text-emerald-300 truncate">· {{ assigned.function_label or assigned.instance_id }}</span>
+                            {% endif %}
+                          </summary>
+                          <form method="post" action="/ui/devices/wizard/{{ group.id }}/components/{{ assigned.id }}/pin"
+                                class="mt-1 ml-6 grid gap-1 text-[10px] {% if not assigned %}hidden{% endif %}">
+                            {% if assigned %}
+                              <input type="hidden" name="board_pin" value="{{ pname }}">
+                              <input name="function_label" value="{{ assigned.function_label or '' }}"
+                                     placeholder="function (stirring / mixing / tilt …)"
+                                     class="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5 font-mono">
+                              <input name="asset_id" value="{{ assigned.asset_id or '' }}"
+                                     placeholder="asset id (e.g. MTR-0042)"
+                                     class="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5 font-mono">
+                              <button class="rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 py-0.5">save</button>
+                            {% endif %}
+                          </form>
+                          {% if not assigned %}
+                            <div class="mt-1 ml-6 text-[10px] text-slate-500 italic">
+                              No component on this pin.
+                              <a href="/ui/devices/wizard/{{ group.id }}/components"
+                                 class="text-emerald-300 underline">add via Components step</a>
+                              (set <code>board_pin = {{ pname }}</code>).
+                            </div>
+                          {% endif %}
+                        </details>
+                      {% endfor %}
+                    {% else %}
+                      <div class="text-[10px] text-slate-500 italic">No output channels.</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- COMPUTE side (RIGHT, facing Pi) -->
+                  <div class="space-y-1.5">
+                    <div class="text-[9px] uppercase tracking-widest text-cyan-300/70 text-right">← compute side</div>
+                    {% if compute_pins %}
+                      {% for pname, pkind, pdesc, _ in compute_pins %}
+                        {% set color = PINOUT_KIND_COLORS.get(pkind, '#475569') %}
+                        <div class="flex items-center justify-end gap-2 text-[11px]">
+                          <span class="text-slate-300 truncate" title="{{ pdesc }}">{{ pname }}</span>
+                          <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 cursor-pointer"
+                               style="background:{{ color }};"
+                               data-pin-side="left"
+                               data-pin-id="board-{{ b.id }}-{{ pname }}"
+                               data-pin-kind="{{ pkind }}"
+                               data-board-id="{{ b.id }}"
+                               data-board-pin="{{ pname }}"
+                               title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      {% for m in pins %}
+                        <div class="flex items-center justify-end gap-2 text-[11px]">
+                          <span class="text-slate-300 truncate">{{ m.board_pin }}</span>
+                          <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 bg-emerald-500 cursor-pointer"
+                               data-pin-side="left"
+                               data-pin-id="board-{{ b.id }}-{{ m.board_pin }}"
+                               data-board-id="{{ b.id }}"
+                               data-board-pin="{{ m.board_pin }}"></div>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  </div>
                 </div>
               </div>
             {% endfor %}
@@ -240,37 +294,90 @@
           <!-- ── RIGHT BOARDS ─────────────────────────────────────────── -->
           <div class="space-y-6">
             {% for b, pins, po in right_boards %}
+              {% set split = board_pinouts_split.get(b.id) %}
+              {% set compute_pins = split[0] if split else po %}
+              {% set actuator_pins = split[1] if split else [] %}
+              {% set comp_by_pin = components_by_board_pin.get(b.id, {}) %}
               <div class="relative rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-900/30 to-slate-900 p-4 shadow-[0_0_24px_-12px_rgba(245,158,11,0.5)]">
-                <div class="text-left text-sm font-semibold text-amber-300">{{ b.label }}</div>
-                <div class="text-left font-mono text-[10px] text-amber-400/70">{{ b.board_stable_id }}</div>
+                <div class="text-center text-sm font-semibold text-amber-300">{{ b.label }}</div>
+                <div class="text-center font-mono text-[10px] text-amber-400/70">{{ b.board_stable_id }}</div>
 
-                <!-- Board pinout column on the LEFT edge (facing the Pi header) -->
-                <div class="mt-3 space-y-1.5">
-                  {% if po %}
-                    {% for pname, pkind, pdesc, _ in po %}
-                      {% set color = PINOUT_KIND_COLORS.get(pkind, '#475569') %}
-                      <div class="flex items-center justify-start gap-2 text-[11px]">
-                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 cursor-pointer"
-                             style="background:{{ color }};"
-                             data-pin-side="right"
-                             data-pin-id="board-{{ b.id }}-{{ pname }}"
-                             data-pin-kind="{{ pkind }}"
-                             data-board-id="{{ b.id }}"
-                             data-board-pin="{{ pname }}"
-                             title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
-                        <span class="text-slate-300 truncate" title="{{ pdesc }}">{{ pname }}</span>
-                      </div>
-                    {% endfor %}
-                  {% else %}
-                    {% for m in pins %}
-                      <div class="flex items-center justify-start gap-2 text-[11px]">
-                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 bg-emerald-500"
-                             data-pin-side="right"
-                             data-pin-id="board-{{ b.id }}-{{ m.board_pin }}"></div>
-                        <span class="text-slate-300 truncate">{{ m.board_pin }}</span>
-                      </div>
-                    {% endfor %}
-                  {% endif %}
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                  <!-- COMPUTE side (LEFT, facing Pi) -->
+                  <div class="space-y-1.5">
+                    <div class="text-[9px] uppercase tracking-widest text-cyan-300/70 text-left">compute side →</div>
+                    {% if compute_pins %}
+                      {% for pname, pkind, pdesc, _ in compute_pins %}
+                        {% set color = PINOUT_KIND_COLORS.get(pkind, '#475569') %}
+                        <div class="flex items-center justify-start gap-2 text-[11px]">
+                          <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 cursor-pointer"
+                               style="background:{{ color }};"
+                               data-pin-side="right"
+                               data-pin-id="board-{{ b.id }}-{{ pname }}"
+                               data-pin-kind="{{ pkind }}"
+                               data-board-id="{{ b.id }}"
+                               data-board-pin="{{ pname }}"
+                               title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
+                          <span class="text-slate-300 truncate" title="{{ pdesc }}">{{ pname }}</span>
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      {% for m in pins %}
+                        <div class="flex items-center justify-start gap-2 text-[11px]">
+                          <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 bg-emerald-500 cursor-pointer"
+                               data-pin-side="right"
+                               data-pin-id="board-{{ b.id }}-{{ m.board_pin }}"
+                               data-board-id="{{ b.id }}"
+                               data-board-pin="{{ m.board_pin }}"></div>
+                          <span class="text-slate-300 truncate">{{ m.board_pin }}</span>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  </div>
+
+                  <!-- ACTUATOR side (RIGHT, away from Pi) -->
+                  <div class="space-y-1.5">
+                    <div class="text-[9px] uppercase tracking-widest text-amber-300/70 text-right">← actuator side</div>
+                    {% if actuator_pins %}
+                      {% for pname, pkind, pdesc, _ in actuator_pins %}
+                        {% set color = PINOUT_KIND_COLORS_OUT.get(pkind, PINOUT_KIND_COLORS.get(pkind, '#475569')) %}
+                        {% set assigned = comp_by_pin.get(pname) %}
+                        <details class="board-out-pin">
+                          <summary class="flex items-center justify-end gap-2 text-[11px] cursor-pointer list-none">
+                            {% if assigned %}
+                              <span class="text-[9px] text-emerald-300 truncate">{{ assigned.function_label or assigned.instance_id }} ·</span>
+                            {% endif %}
+                            <span class="text-slate-300 truncate">{{ pname }}</span>
+                            <div class="h-4 w-4 rounded-full ring-2 {% if assigned %}ring-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]{% else %}ring-slate-700{% endif %} flex-shrink-0"
+                                 style="background:{{ color }};"
+                                 title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
+                          </summary>
+                          {% if assigned %}
+                            <form method="post" action="/ui/devices/wizard/{{ group.id }}/components/{{ assigned.id }}/pin"
+                                  class="mt-1 mr-6 grid gap-1 text-[10px]">
+                              <input type="hidden" name="board_pin" value="{{ pname }}">
+                              <input name="function_label" value="{{ assigned.function_label or '' }}"
+                                     placeholder="function (stirring / mixing / tilt …)"
+                                     class="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5 font-mono text-right">
+                              <input name="asset_id" value="{{ assigned.asset_id or '' }}"
+                                     placeholder="asset id"
+                                     class="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5 font-mono text-right">
+                              <button class="rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 py-0.5">save</button>
+                            </form>
+                          {% else %}
+                            <div class="mt-1 mr-6 text-[10px] text-slate-500 italic text-right">
+                              No component yet.
+                              <a href="/ui/devices/wizard/{{ group.id }}/components"
+                                 class="text-emerald-300 underline">add component</a>
+                              and set <code>board_pin = {{ pname }}</code>.
+                            </div>
+                          {% endif %}
+                        </details>
+                      {% endfor %}
+                    {% else %}
+                      <div class="text-[10px] text-slate-500 italic">No output channels.</div>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
             {% endfor %}
