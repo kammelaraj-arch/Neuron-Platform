@@ -1,72 +1,193 @@
 {% extends "base.html" %}
-{% block title %}Device wizard · Group{% endblock %}
+{% block title %}Device wizard · Start{% endblock %}
 {% block content %}
   {% include "_wizard_header.html" %}
 
-  <section class="grid gap-6 lg:grid-cols-2">
+  <section class="grid gap-6 lg:grid-cols-[2fr_1fr]">
     <!-- LEFT: form -->
     <form method="post" action="/ui/devices/wizard/create-group"
-          class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-5">
+          class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6">
       <div>
-        <h2 class="text-lg font-semibold">1. Pick Edge & name a Group</h2>
+        <h2 class="text-lg font-semibold">1. Place the new group in the system</h2>
         <p class="mt-1 text-sm text-slate-400">
-          A <em>Group</em> is a logical sub-section of an Edge (a "Heater bank",
-          "Production Line A") that owns one compute module and one or more
-          control boards. Name it after the physical thing it represents.
+          Pick an existing parent at any level, or create a new one inline.
+          Node is optional — Edge can attach directly to a Root for small
+          deployments.
         </p>
       </div>
 
-      <div>
-        <label class="block text-xs uppercase tracking-wider text-slate-400">Edge</label>
-        <select name="edge_id" required
-                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
-          {% if not edges %}
-            <option value="">— no edges yet, create one in System Designer first —</option>
+      <!-- ─── ROOT ──────────────────────────────────────────────────────── -->
+      <fieldset class="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Root / Master</legend>
+        {% if roots %}
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Pick existing Root</label>
+            <select name="root_id" id="root-pick"
+                    onchange="document.getElementById('new-root-name').value=''"
+                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+              <option value="">— none / create new below —</option>
+              {% for r in roots %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">…or create a new Root</label>
+          <input id="new-root-name" name="new_root_name" maxlength="120"
+                 placeholder="e.g. Acme Foods"
+                 oninput="if(this.value && document.getElementById('root-pick')){document.getElementById('root-pick').value=''}"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+        </div>
+      </fieldset>
+
+      <!-- ─── NODE ──────────────────────────────────────────────────────── -->
+      <fieldset class="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Node (optional)</legend>
+        <div class="flex flex-wrap gap-3 text-xs">
+          <label class="inline-flex items-center gap-2">
+            <input type="radio" name="node_mode" value="skip" checked class="text-emerald-500">
+            <span>Skip Node — attach Edge directly to Root</span>
+          </label>
+          {% if nodes %}
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="node_mode" value="existing" class="text-emerald-500">
+              <span>Pick existing Node</span>
+            </label>
           {% endif %}
-          {% for e in edges %}
-            <option value="{{ e.id }}">{{ e.name }} · {{ e.site_id }}</option>
-          {% endfor %}
-        </select>
-      </div>
+          <label class="inline-flex items-center gap-2">
+            <input type="radio" name="node_mode" value="new" class="text-emerald-500">
+            <span>Create new Node</span>
+          </label>
+        </div>
 
-      <div>
-        <label class="block text-xs uppercase tracking-wider text-slate-400">Group name</label>
-        <input name="name" required maxlength="120"
-               placeholder="e.g. Heater bank · Line A"
-               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
-      </div>
+        {% if nodes %}
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Existing Node</label>
+            <select name="node_id"
+                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+              <option value="">— select —</option>
+              {% for n in nodes %}<option value="{{ n.id }}">{{ n.name }} {% if n.region %}· {{ n.region }}{% endif %}</option>{% endfor %}
+            </select>
+          </div>
+        {% endif %}
 
-      <div>
-        <label class="block text-xs uppercase tracking-wider text-slate-400">Description (optional)</label>
-        <textarea name="description" rows="3"
-                  class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm"
-                  placeholder="What this group controls"></textarea>
-      </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">New Node name</label>
+            <input name="new_node_name" maxlength="120" placeholder="e.g. UK"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Region (optional)</label>
+            <input name="new_node_region" maxlength="120" placeholder="e.g. London"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ─── EDGE ──────────────────────────────────────────────────────── -->
+      <fieldset class="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Edge (factory site) *</legend>
+        <div class="flex flex-wrap gap-3 text-xs">
+          {% if edges %}
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="edge_mode" value="existing" {% if edges %}checked{% endif %} class="text-emerald-500">
+              <span>Pick existing Edge</span>
+            </label>
+          {% endif %}
+          <label class="inline-flex items-center gap-2">
+            <input type="radio" name="edge_mode" value="new" {% if not edges %}checked{% endif %} class="text-emerald-500">
+            <span>Create new Edge</span>
+          </label>
+        </div>
+
+        {% if edges %}
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Existing Edge</label>
+            <select name="edge_id"
+                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+              <option value="">— select —</option>
+              {% for e in edges %}<option value="{{ e.id }}">{{ e.name }} · {{ e.site_id }}</option>{% endfor %}
+            </select>
+          </div>
+        {% endif %}
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">New Edge name</label>
+            <input name="new_edge_name" maxlength="120" placeholder="e.g. Wembley factory"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Site id</label>
+            <input name="new_edge_site_id" maxlength="120" placeholder="e.g. wembley-1"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Edge URL (optional)</label>
+            <input name="new_edge_address" maxlength="200" placeholder="http://192.168.10.10:8090"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ─── GROUP ─────────────────────────────────────────────────────── -->
+      <fieldset class="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-4 space-y-3">
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Group *</legend>
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">Group name</label>
+          <input name="name" required maxlength="120"
+                 placeholder="e.g. Heater bank · Line A"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+          <p class="mt-1 text-[11px] text-slate-500">
+            A logical sub-section of the Edge — owns one compute module and one+ control boards.
+          </p>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">Description (optional)</label>
+          <textarea name="description" rows="2"
+                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm"
+                    placeholder="What this group controls"></textarea>
+        </div>
+      </fieldset>
 
       <div class="flex gap-3">
-        <button {% if not edges %}disabled{% endif %}
-                class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed">
+        <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
           Continue →
         </button>
         <a href="/ui/devices" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Cancel</a>
       </div>
     </form>
 
-    <!-- RIGHT: visual preview / explanation -->
+    <!-- RIGHT: live hierarchy preview -->
     <aside class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/60 to-slate-900/20 p-6 relative overflow-hidden">
       <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_60%)]"></div>
-      <h3 class="font-semibold text-slate-200">Hierarchy preview</h3>
-      <pre class="mt-4 font-mono text-xs text-slate-400 leading-6">
-<span class="text-cyan-400">Edge</span>
-  └─ <span class="text-emerald-300">Group</span>        ← you are here
-       └─ Compute
-       └─ Board(s)
-            └─ Component(s)
-                 └─ GPIO Pin Map</pre>
-      <p class="mt-6 text-xs text-slate-500 leading-relaxed">
-        Each step in the wizard adds a layer. You can come back and edit any
-        layer before building firmware. Existing devices keep working.
+      <h3 class="font-semibold text-slate-200">Hierarchy</h3>
+      <pre class="mt-4 font-mono text-xs leading-6 text-slate-400">
+<span class="text-cyan-300">Root</span>          ← required
+  └─ <span class="text-cyan-300">Node</span>    ← optional
+       └─ <span class="text-cyan-300">Edge</span>      ← required, attaches to Node OR Root
+            └─ <span class="text-emerald-300">Group</span>     ← you create this
+                 └─ Compute
+                 └─ Board(s)
+                      └─ Component(s)
+                           └─ GPIO pin map</pre>
+      <p class="mt-4 text-xs text-slate-500">
+        Already-existing systems below — pick one or replace with a new entry inline.
       </p>
+      <div class="mt-4 space-y-2 text-xs">
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-500">Existing roots ({{ roots | length }})</div>
+          {% for r in roots %}<div class="font-mono text-slate-300">· {{ r.name }}</div>{% else %}<div class="italic text-slate-600">— none —</div>{% endfor %}
+        </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-500">Existing nodes ({{ nodes | length }})</div>
+          {% for n in nodes %}<div class="font-mono text-slate-300">· {{ n.name }}</div>{% else %}<div class="italic text-slate-600">— none —</div>{% endfor %}
+        </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-500">Existing edges ({{ edges | length }})</div>
+          {% for e in edges %}<div class="font-mono text-slate-300">· {{ e.name }} <span class="text-slate-500">·</span> {{ e.site_id }}</div>{% else %}<div class="italic text-slate-600">— none —</div>{% endfor %}
+        </div>
+      </div>
     </aside>
   </section>
 {% endblock %}

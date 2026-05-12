@@ -234,15 +234,16 @@ async def _ui_admin_redirect(request: Request, exc: UIPermissionDenied):
 _static_dir = Path(__file__).resolve().parent / "static"
 app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
-# UI routers
+# UI routers — device_wizard_ui MUST come before ui.router so the
+# literal /ui/devices/wizard path wins over /ui/devices/{device_dna}.
 app.include_router(auth_ui.router)
+app.include_router(device_wizard_ui.router)
 app.include_router(ui.router)
 app.include_router(secrets_ui.router)
 app.include_router(library_manage_ui.router)
 app.include_router(sysops_ui.router)
 app.include_router(features_ui.router)
 app.include_router(functions_ui.router)
-app.include_router(device_wizard_ui.router)
 
 # JSON API routers
 app.include_router(library.router)

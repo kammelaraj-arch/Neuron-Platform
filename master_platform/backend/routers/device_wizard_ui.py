@@ -38,6 +38,8 @@ from ..models import (
     EdgeGroup,
     EdgeSystem,
     GpioMapping,
+    NodeSystem,
+    RootSystem,
 )
 from ..pin_allocator import PinAllocationError, auto_allocate
 from ..security.audit import record
@@ -76,13 +78,19 @@ def _step_index(step: str) -> int:
     raise HTTPException(404, f"unknown wizard step: {step}")
 
 
-# ─── Entry point: choose Edge + name Group ──────────────────────────────────
+# ─── Entry point: pick or create Root/Node/Edge + name Group ────────────────
 @router.get("/ui/devices/wizard", response_class=HTMLResponse)
 async def wizard_entry(
     request: Request,
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
+    roots = (await session.execute(
+        select(RootSystem).order_by(RootSystem.created_at)
+    )).scalars().all()
+    nodes = (await session.execute(
+        select(NodeSystem).order_by(NodeSystem.created_at)
+    )).scalars().all()
     edges = (await session.execute(
         select(EdgeSystem).order_by(EdgeSystem.created_at)
     )).scalars().all()
@@ -90,6 +98,8 @@ async def wizard_entry(
         "device_wizard_step1.html",
         {
             "request": request,
+            "roots": roots,
+            "nodes": nodes,
             "edges": edges,
             "steps": WIZARD_STEPS,
             "step_idx": 0,
@@ -100,29 +110,111 @@ async def wizard_entry(
 @router.post("/ui/devices/wizard/create-group")
 async def wizard_create_group(
     request: Request,
-    edge_id: str = Form(...),
+    # Root: pick existing OR create new (one of these is required)
+    root_id: str = Form(""),
+    new_root_name: str = Form(""),
+    # Node (optional): pick existing OR create new OR skip (edge attaches to root directly)
+    node_mode: str = Form("skip"),   # "skip" | "existing" | "new"
+    node_id: str = Form(""),
+    new_node_name: str = Form(""),
+    new_node_region: str = Form(""),
+    # Edge: pick existing OR create new
+    edge_mode: str = Form("new"),    # "existing" | "new"
+    edge_id: str = Form(""),
+    new_edge_name: str = Form(""),
+    new_edge_site_id: str = Form(""),
+    new_edge_address: str = Form(""),
+    # Group
     name: str = Form(...),
     description: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
-    edge = await session.get(EdgeSystem, edge_id)
+    # ── 1. Resolve / create Root ────────────────────────────────────────────
+    root: RootSystem | None = None
+    if root_id:
+        root = await session.get(RootSystem, root_id)
+        if root is None:
+            raise HTTPException(404, f"root {root_id} not found")
+    elif new_root_name.strip():
+        root = RootSystem(name=new_root_name.strip())
+        session.add(root)
+        await session.flush()
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="root.create", target_kind="root_system", target_id=root.id,
+            detail={"name": root.name, "source": "wizard"},
+        )
+
+    # ── 2. Resolve / create Node (optional) ─────────────────────────────────
+    node: NodeSystem | None = None
+    if node_mode == "existing" and node_id:
+        node = await session.get(NodeSystem, node_id)
+        if node is None:
+            raise HTTPException(404, f"node {node_id} not found")
+        if root is None:
+            root = await session.get(RootSystem, node.root_id)
+    elif node_mode == "new" and new_node_name.strip():
+        if root is None:
+            raise HTTPException(400, "node requires a root — pick one or create a new one")
+        node = NodeSystem(
+            root_id=root.id,
+            name=new_node_name.strip(),
+            region=new_node_region.strip() or None,
+        )
+        session.add(node)
+        await session.flush()
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="node.create", target_kind="node_system", target_id=node.id,
+            detail={"root_id": root.id, "name": node.name, "source": "wizard"},
+        )
+
+    # ── 3. Resolve / create Edge ────────────────────────────────────────────
+    edge: EdgeSystem | None = None
+    if edge_mode == "existing" and edge_id:
+        edge = await session.get(EdgeSystem, edge_id)
+        if edge is None:
+            raise HTTPException(404, f"edge {edge_id} not found")
+    elif edge_mode == "new" and new_edge_name.strip() and new_edge_site_id.strip():
+        if node is None and root is None:
+            raise HTTPException(400, "edge requires a parent (node or root)")
+        edge = EdgeSystem(
+            node_id=node.id if node is not None else None,
+            root_id=root.id if node is None else None,
+            name=new_edge_name.strip(),
+            site_id=new_edge_site_id.strip(),
+            address=new_edge_address.strip() or None,
+        )
+        session.add(edge)
+        await session.flush()
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="edge.create", target_kind="edge_system", target_id=edge.id,
+            detail={
+                "node_id": node.id if node is not None else None,
+                "root_id": root.id if node is None else None,
+                "name": edge.name,
+                "site_id": edge.site_id,
+                "source": "wizard",
+            },
+        )
     if edge is None:
-        raise HTTPException(404, "edge not found")
+        raise HTTPException(400, "couldn't resolve an Edge — pick one or fill the new-edge fields")
+
+    # ── 4. Create Group ─────────────────────────────────────────────────────
     name = name.strip()
     if not name:
         raise HTTPException(400, "group name required")
-
-    # Reuse existing group if name matches; otherwise create.
-    existing = (
+    existing_group = (
         await session.execute(
             select(EdgeGroup).where(
                 EdgeGroup.edge_id == edge.id, EdgeGroup.name == name
             )
         )
     ).scalar_one_or_none()
-    if existing is not None:
-        group = existing
+    if existing_group is not None:
+        group = existing_group
     else:
         group = EdgeGroup(edge_id=edge.id, name=name, description=description.strip() or None)
         session.add(group)
