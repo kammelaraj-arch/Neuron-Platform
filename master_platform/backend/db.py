@@ -56,6 +56,32 @@ def _apply_lightweight_migrations(sync_conn) -> None:
     if not _has_column("edge_systems", "root_id"):
         sync_conn.exec_driver_sql("ALTER TABLE edge_systems ADD COLUMN root_id VARCHAR(36)")
 
+    # SQLite can't ALTER a column's NOT NULL flag. Recreate the table if
+    # the live schema still marks node_id NOT NULL — otherwise the
+    # wizard's "Skip Node, attach Edge to Root" path fails with an
+    # integrity error.
+    if _has_table("edge_systems"):
+        info = sync_conn.exec_driver_sql("PRAGMA table_info(edge_systems)").fetchall()
+        node_id_notnull = any(r[1] == "node_id" and r[3] == 1 for r in info)
+        if node_id_notnull:
+            sync_conn.exec_driver_sql("""
+                CREATE TABLE edge_systems_new (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    node_id VARCHAR(36),
+                    root_id VARCHAR(36),
+                    name VARCHAR(120) NOT NULL,
+                    site_id VARCHAR(120) NOT NULL,
+                    address TEXT,
+                    created_at DATETIME
+                )
+            """)
+            sync_conn.exec_driver_sql("""
+                INSERT INTO edge_systems_new (id, node_id, root_id, name, site_id, address, created_at)
+                SELECT id, node_id, root_id, name, site_id, address, created_at FROM edge_systems
+            """)
+            sync_conn.exec_driver_sql("DROP TABLE edge_systems")
+            sync_conn.exec_driver_sql("ALTER TABLE edge_systems_new RENAME TO edge_systems")
+
     # 2026-05: criticality + AI-agent-accessibility on code_functions.
     # Every catalogued function declares its blast radius and whether
     # the AI Agent may auto-invoke it.
