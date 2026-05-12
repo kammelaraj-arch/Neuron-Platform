@@ -30,6 +30,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import delete as sa_delete
+from sqlalchemy import func as sa_func
 
 from ..db import get_session
 from ..library_loader import load_catalog
@@ -183,6 +184,50 @@ def _step_index(step: str) -> int:
     raise HTTPException(404, f"unknown wizard step: {step}")
 
 
+# ─── Resume-group helper ────────────────────────────────────────────────
+async def _group_status(session: AsyncSession, g: EdgeGroup) -> dict:
+    """Compute the resume URL + a status string for a group so the
+    list view can show 'continue at step X' next to each row."""
+    boards_count = await session.scalar(
+        select(sa_func.count()).select_from(BoardInstance).where(BoardInstance.group_id == g.id)
+    ) or 0
+    comps_count = await session.scalar(
+        select(sa_func.count()).select_from(ComponentInstance)
+        .join(BoardInstance, BoardInstance.id == ComponentInstance.board_instance_id)
+        .where(BoardInstance.group_id == g.id)
+    ) or 0
+    pins_count = await session.scalar(
+        select(sa_func.count()).select_from(GpioMapping)
+        .join(BoardInstance, BoardInstance.id == GpioMapping.board_instance_id)
+        .where(BoardInstance.group_id == g.id)
+    ) or 0
+    has_firmware = bool(g.firmware_bundle_path)
+    is_locked = bool(g.lock_pin_hash)
+
+    # next-step routing
+    if not g.compute_stable_id:
+        next_step, status = "compute", "incomplete · pick compute"
+    elif boards_count == 0:
+        next_step, status = "boards", "incomplete · no boards"
+    elif comps_count == 0:
+        next_step, status = "components", "incomplete · no components"
+    elif pins_count == 0:
+        next_step, status = "pinmap", "needs pin map"
+    elif not has_firmware:
+        next_step, status = "review", "ready to build"
+    else:
+        next_step, status = "review", "built"
+    return {
+        "boards_count": boards_count,
+        "comps_count": comps_count,
+        "pins_count": pins_count,
+        "has_firmware": has_firmware,
+        "is_locked": is_locked,
+        "next_step": next_step,
+        "status": status,
+    }
+
+
 # ─── Entry point: pick or create Root/Node/Edge + name Group ────────────────
 @router.get("/ui/devices/wizard", response_class=HTMLResponse)
 async def wizard_entry(
@@ -199,6 +244,25 @@ async def wizard_entry(
     edges = (await session.execute(
         select(EdgeSystem).order_by(EdgeSystem.created_at)
     )).scalars().all()
+
+    # Existing groups (so the operator can resume / inspect partial work)
+    groups = (await session.execute(
+        select(EdgeGroup).order_by(EdgeGroup.updated_at.desc())
+    )).scalars().all()
+    catalog = load_catalog()
+    edge_by_id = {e.id: e for e in edges}
+    group_rows: list[dict] = []
+    for g in groups:
+        st = await _group_status(session, g)
+        edge = edge_by_id.get(g.edge_id)
+        compute = catalog.get(g.compute_stable_id) if g.compute_stable_id else None
+        group_rows.append({
+            "group": g,
+            "edge": edge,
+            "compute_name": (compute.name if compute else (g.compute_stable_id or "—")),
+            **st,
+        })
+
     return templates.TemplateResponse(
         "device_wizard_step1.html",
         {
@@ -206,6 +270,7 @@ async def wizard_entry(
             "roots": roots,
             "nodes": nodes,
             "edges": edges,
+            "group_rows": group_rows,
             "steps": WIZARD_STEPS,
             "step_idx": 0,
         },
