@@ -21,8 +21,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -319,6 +320,110 @@ async def wizard_save_wifi(
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/boards", status_code=303)
+
+
+# ─── Scan proxies (Master → Edge runtime → results) ────────────────────────
+async def _proxy_edge(edge: EdgeSystem, path: str) -> dict:
+    if not edge.address:
+        raise HTTPException(
+            400,
+            "this Edge has no address — set Edge URL in /ui/systems so the Master can reach the edge runtime",
+        )
+    url = edge.address.rstrip("/") + path
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            r = await client.post(url)
+            r.raise_for_status()
+            return r.json()
+        except httpx.HTTPError as exc:
+            raise HTTPException(502, f"edge scan failed at {url}: {exc}")
+
+
+@router.post("/api/wizard/{group_id}/scan-wifi", response_class=JSONResponse)
+async def wizard_scan_wifi(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    edge = await session.get(EdgeSystem, group.edge_id)
+    if edge is None:
+        raise HTTPException(404, "group's edge not found")
+    return await _proxy_edge(edge, "/api/v1/scan/wifi")
+
+
+@router.post("/api/wizard/{group_id}/scan-devices", response_class=JSONResponse)
+async def wizard_scan_devices(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    edge = await session.get(EdgeSystem, group.edge_id)
+    if edge is None:
+        raise HTTPException(404, "group's edge not found")
+    return await _proxy_edge(edge, "/api/v1/scan/devices")
+
+
+@router.post("/ui/devices/wizard/{group_id}/wifi/save-scan-result")
+async def wizard_save_scan_as_wifi(
+    group_id: str,
+    request: Request,
+    name: str = Form(...),
+    ssid: str = Form(...),
+    security: str = Form("wpa2"),
+    password: str = Form(""),
+    assign: str = Form("primary"),  # "primary" | "secondary" | "none"
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """One-click 'Save this scanned network as a WiFi profile' from the
+    wizard. Optionally assigns it as primary or secondary on the group."""
+    from ..models import WIFI_SECURITY_TYPES, WifiNetwork
+    from ..security.secret_crypto import encrypt_secret
+
+    group = await _load_group(session, group_id)
+    name = name.strip()
+    ssid = ssid.strip()
+    if not name or not ssid:
+        raise HTTPException(400, "name and ssid required")
+    sec = (security or "wpa2").lower()
+    # nmcli reports things like "wpa2-personal", "wpa3-personal", "--", etc.
+    if "wpa3" in sec:
+        sec = "wpa3"
+    elif "wpa2" in sec or "wpa" in sec or "psk" in sec:
+        sec = "wpa2"
+    elif sec in ("", "--", "none", "open"):
+        sec = "open"
+    if sec not in WIFI_SECURITY_TYPES:
+        sec = "wpa2"
+    if sec != "open" and not password:
+        raise HTTPException(400, "password required for non-open networks")
+
+    clash = await session.scalar(select(WifiNetwork).where(WifiNetwork.name == name))
+    if clash is not None:
+        raise HTTPException(409, f"WiFi profile '{name}' already exists; edit it directly at /ui/wifi/{clash.id}")
+    wifi = WifiNetwork(
+        name=name, ssid=ssid, security=sec,
+        password_encrypted=encrypt_secret(password) if password else None,
+    )
+    session.add(wifi)
+    await session.flush()
+    if assign == "primary":
+        group.primary_wifi_id = wifi.id
+    elif assign == "secondary":
+        if group.primary_wifi_id == wifi.id:
+            raise HTTPException(400, "secondary must differ from primary")
+        group.secondary_wifi_id = wifi.id
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="wifi.create_from_scan", target_kind="wifi_network", target_id=wifi.id,
+        detail={"ssid": ssid, "assigned_to_group": group.id, "as": assign},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/wifi", status_code=303)
 
 
 # ─── Step 4: add control boards ─────────────────────────────────────────────
