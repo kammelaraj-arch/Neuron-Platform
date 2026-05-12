@@ -190,25 +190,62 @@
         });
       }
 
-      async function probeIp(ip, timeoutMs) {
-        // 'no-cors' mode lets the request fly; we won't read the body,
-        // but a TCP connect success (= host alive on port 80) takes <300ms
-        // while a dead host hits the AbortController timeout.
+      async function probePort(ip, port, timeoutMs) {
+        const scheme = (port === 443 || port === 8443) ? 'https' : 'http';
         const controller = new AbortController();
         const t0 = performance.now();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
-          await fetch(`http://${ip}/`, {mode: 'no-cors', signal: controller.signal, cache: 'no-store'});
+          await fetch(`${scheme}://${ip}:${port}/`, {mode: 'no-cors', signal: controller.signal, cache: 'no-store'});
           clearTimeout(timer);
-          return {ip, alive: true, ms: Math.round(performance.now() - t0)};
+          return {port, scheme, ms: Math.round(performance.now() - t0)};
         } catch (e) {
           clearTimeout(timer);
-          if (e.name === 'AbortError') return null; // timed out → dead
-          // Network error (DNS, refused, etc.) is also a "no live host on :80"
-          // but might still be a real host running other ports — we treat
-          // as "no" because we can't tell without raw sockets.
           return null;
         }
+      }
+
+      // Pass 1 — fast probe of :80 only, used to find alive hosts.
+      async function probeIp(ip, timeoutMs) {
+        const r = await probePort(ip, 80, timeoutMs);
+        return r ? {ip, alive: true, ms: r.ms} : null;
+      }
+
+      // Pass 2 — for each alive IP, probe additional ports + identify
+      // Neuron services via /healthz.
+      const NEURON_PORTS = [8088, 8090];     // master + edge
+      const COMMON_PORTS = [443, 8080, 8443];
+
+      async function deepProbeIp(ip, timeoutMs) {
+        const ports = [...new Set([80, ...COMMON_PORTS, ...NEURON_PORTS])];
+        const r = await Promise.all(ports.map(p => probePort(ip, p, timeoutMs)));
+        const open = r.filter(Boolean).map(x => x.port);
+        // Try to identify Neuron service by attempting cors-mode /healthz —
+        // works because our own master/edge expose CORS-friendly /healthz.
+        let serviceHint = null;
+        for (const port of NEURON_PORTS) {
+          if (open.includes(port)) {
+            try {
+              const resp = await fetch(`http://${ip}:${port}/healthz`, {cache: 'no-store'});
+              if (resp.ok) {
+                const body = await resp.json();
+                if (body && body.service === 'neuron-deployer') serviceHint = 'Neuron deployer';
+                else if (body && body.library_items !== undefined) serviceHint = 'Neuron Master';
+                else if (body && body.uptime_seconds !== undefined) serviceHint = 'Neuron Edge';
+                else serviceHint = 'Neuron service';
+                break;
+              }
+            } catch (_) { /* CORS or down — fine */ }
+          }
+        }
+        // Device-type heuristics based on which ports are open
+        let kindGuess = null;
+        if (serviceHint) kindGuess = serviceHint;
+        else if (open.includes(80) && open.includes(443)) kindGuess = 'web / NAS / router';
+        else if (open.includes(80) && !open.includes(443)) kindGuess = 'HTTP device (camera / Pi / ESP32-CAM)';
+        else if (open.includes(443)) kindGuess = 'HTTPS-only device';
+        else if (open.length) kindGuess = 'device';
+        return {ip, ports: open, kind: kindGuess};
       }
 
       async function runBrowserLanScan(ev) {
@@ -233,8 +270,7 @@
         const subnet = `${parts[0]}.${parts[1]}.${parts[2]}`;
         status.textContent = `Found your IP: ${myIp}. Probing ${subnet}.1 → ${subnet}.254 (this takes ~10s)…`;
 
-        // Fire all probes in parallel; each times out at 1.2s. The whole
-        // sweep finishes in ~1.2s + browser concurrency overhead.
+        // ── Pass 1: fast :80 sweep of all 254 IPs in parallel ────────────
         const ipList = [];
         for (let i = 1; i <= 254; i++) ipList.push(`${subnet}.${i}`);
         const results = await Promise.all(ipList.map(ip => probeIp(ip, 1200)));
@@ -242,25 +278,50 @@
 
         if (!alive.length) {
           status.textContent = `Scan complete — no devices answered on port 80 in ${subnet}.0/24. ` +
-            'Network may be silent, or browser blocked the probes. Try the BLE scan or edge-side scan.';
+            'Many devices answer on other ports (8080 / 443 / 8088 / 22). Deep-probing might still find them; ' +
+            'browser might also be blocking. Try the BLE scan or edge-side scan as a fallback.';
           status.className = 'text-[11px] text-amber-300';
           return;
         }
-        status.textContent = `✓ Found ${alive.length} device(s) responding on ${subnet}.0/24 (HTTP probe via browser fetch).`;
+        status.textContent = `Pass 1: found ${alive.length} host(s) on :80 in ${subnet}.0/24. ` +
+          'Pass 2: deep-probing each host for additional ports + identifying Neuron services…';
+        status.className = 'text-[11px] text-violet-300';
+
+        // ── Pass 2: deep probe each alive IP ─────────────────────────────
+        const enriched = await Promise.all(alive.map(h => deepProbeIp(h.ip, 1000)));
+
+        status.textContent = `✓ Found ${enriched.length} device(s) on ${subnet}.0/24 from your browser. ` +
+          'Identified Neuron services where /healthz responded.';
         status.className = 'text-[11px] text-emerald-300';
         out.classList.remove('hidden');
         out.innerHTML = `
           <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
             <table class="min-w-full text-xs">
               <thead class="bg-slate-900/80 text-left uppercase tracking-wider text-slate-400">
-                <tr><th class="px-3 py-2">IP</th><th class="px-3 py-2">Response time</th><th class="px-3 py-2">Note</th></tr>
+                <tr>
+                  <th class="px-3 py-2">IP</th>
+                  <th class="px-3 py-2">Open ports</th>
+                  <th class="px-3 py-2">Likely</th>
+                  <th class="px-3 py-2">Open</th>
+                </tr>
               </thead>
               <tbody class="divide-y divide-slate-800/70">
-                ${alive.map(h => `<tr>
-                  <td class="px-3 py-2 font-mono text-emerald-300">${h.ip}</td>
-                  <td class="px-3 py-2 font-mono text-cyan-300">${h.ms} ms</td>
-                  <td class="px-3 py-2 text-slate-400 text-[10px]">opens TCP :80 from your browser; this is your laptop's view of the LAN</td>
-                </tr>`).join('')}
+                ${enriched.map(h => {
+                  const isNeuron = h.kind && h.kind.startsWith('Neuron');
+                  const tone = isNeuron ? 'text-emerald-300' : 'text-cyan-300';
+                  return `<tr>
+                    <td class="px-3 py-2 font-mono ${tone}">${h.ip}</td>
+                    <td class="px-3 py-2 font-mono text-slate-300">
+                      ${h.ports.map(p => `<span class="inline-block rounded bg-slate-800 px-1.5 py-0.5 mr-1">:${p}</span>`).join('')}
+                    </td>
+                    <td class="px-3 py-2 text-slate-200">${h.kind || '?'}</td>
+                    <td class="px-3 py-2 text-right">
+                      ${h.ports.includes(80) ? `<a href="http://${h.ip}/" target="_blank" class="text-violet-300 hover:underline">:80 ↗</a>` : '—'}
+                      ${h.ports.includes(8088) ? ` <a href="http://${h.ip}:8088/" target="_blank" class="text-violet-300 hover:underline">:8088 ↗</a>` : ''}
+                      ${h.ports.includes(8090) ? ` <a href="http://${h.ip}:8090/" target="_blank" class="text-violet-300 hover:underline">:8090 ↗</a>` : ''}
+                    </td>
+                  </tr>`;
+                }).join('')}
               </tbody>
             </table>
           </div>`;
