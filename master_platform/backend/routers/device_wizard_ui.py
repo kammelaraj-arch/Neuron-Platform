@@ -1161,20 +1161,26 @@ async def _allocate_pins_for_group(
                 GpioMapping.locked_by_operator.is_(False),
             )
         )
+        await session.flush()
+
+        # Track compute_pins we've already added this run so we don't
+        # violate the UNIQUE(board_instance_id, compute_pin) constraint
+        # when the allocator emits the same pin twice (e.g. shared I2C bus
+        # across multiple components).
+        added_pins: set[str] = set(locked.keys())
 
         for assn in result.get("assignments", []):
             for pin in assn.get("pins", []):
                 # Allocator returns {"physical": "GP4", "function": "PWM"}.
-                # We previously read non-existent keys, so no rows ever got
-                # created (auto-allocate appeared broken).
                 compute_pin = pin.get("physical") or pin.get("compute_pin") or pin.get("pin")
-                if not compute_pin or compute_pin in locked:
+                if not compute_pin:
+                    continue
+                if compute_pin in added_pins:
+                    # Already allocated (locked from a previous run, or
+                    # repeated across components on this run).
                     continue
                 function = pin.get("function") or pin.get("signal")
                 bpin = pin.get("board_pin") or _suggest_board_pin(b.board_stable_id, function or "")
-                # Skip if this compute_pin is already mapped to this board (UNIQUE constraint).
-                if any(em.compute_pin == compute_pin and em.board_instance_id == b.id for em in existing):
-                    continue
                 m = GpioMapping(
                     board_instance_id=b.id,
                     compute_pin=compute_pin,
@@ -1184,6 +1190,7 @@ async def _allocate_pins_for_group(
                     locked_by_operator=False,
                 )
                 session.add(m)
+                added_pins.add(compute_pin)
         for c in result.get("conflicts", []):
             all_conflicts.append(f"{b.label}: {c}")
 
