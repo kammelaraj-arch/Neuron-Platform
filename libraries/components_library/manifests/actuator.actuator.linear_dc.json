@@ -1,0 +1,78 @@
+{
+  "stable_id": "actuator.actuator.linear_dc",
+  "name": "Linear DC Actuator (50-500mm stroke)",
+  "vendor": "Firgelli / Progressive Automations / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "dc_motor",
+  "description": "12/24V DC linear actuator with internal lead-screw. Strokes from 50mm to 1m, 50-1500N force. Used for retractable doors, automated windows, tilting solar panels, height-adjustable desks. Position feedback via internal pot or external limit switches.",
+  "tags": [
+    "linear",
+    "actuator",
+    "dc",
+    "lead_screw"
+  ],
+  "capabilities": [
+    "position_set",
+    "linear_motion"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "GPIO",
+      "direction": "in",
+      "pins_required": 2,
+      "voltage": 5.0,
+      "notes": "Just power + ground; direction via H-bridge polarity"
+    },
+    {
+      "type": "ADC",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 5.0,
+      "notes": "Optional position-feedback pot"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 1500,
+    "current_ma_peak": 5000,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Linear DC Actuator (50-500mm stroke) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Linear_actuator.jpg/640px-Linear_actuator.jpg",
+    "brand_variants": [
+      "Firgelli L16-100-150-12-P (with feedback)",
+      "Progressive Automations PA-14",
+      "Generic 12V linear actuator"
+    ],
+    "price_usd_range": [
+      30,
+      250
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

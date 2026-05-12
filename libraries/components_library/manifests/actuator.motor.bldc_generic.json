@@ -1,0 +1,73 @@
+{
+  "stable_id": "actuator.motor.bldc_generic",
+  "name": "Brushless DC Motor (BLDC) — Generic",
+  "vendor": "Generic / various",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "dc_motor",
+  "description": "Brushless DC motor — no brushes, longer life, higher efficiency. Needs a 3-phase ESC (electronic speed controller). Sizes from 22mm drone outrunners to industrial in-runners. Used in drones, e-bikes, CNC spindles, HVAC blowers, washing machines.",
+  "tags": [
+    "motor",
+    "bldc",
+    "brushless",
+    "efficient",
+    "3_phase"
+  ],
+  "capabilities": [
+    "rotation_continuous",
+    "speed_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 5.0,
+      "notes": "Drive via ESC; ESC takes a 1-2ms servo-style PWM"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 100,
+    "current_ma_typical": 5000,
+    "current_ma_peak": 60000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Brushless DC Motor (BLDC) — Generic reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Brushless_DC_motor.jpg/640px-Brushless_DC_motor.jpg",
+    "brand_variants": [
+      "T-Motor F40 (drone)",
+      "ODrive BLDC",
+      "Bafang HMC500 (e-bike)",
+      "Generic outrunner"
+    ],
+    "price_usd_range": [
+      10,
+      200
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

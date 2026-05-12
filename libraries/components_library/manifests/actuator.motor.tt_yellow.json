@@ -1,0 +1,71 @@
+{
+  "stable_id": "actuator.motor.tt_yellow",
+  "name": "TT Geared DC Motor (\"Yellow Motor\")",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "dc_motor",
+  "description": "The classic 3-6V plastic-gear DC motor sold as a yellow rectangle with two wires. ~200 RPM at 6V, ~150mA no-load. Comes with kit-car wheels. Used in education / line-followers / micro-bots.",
+  "tags": [
+    "motor",
+    "dc",
+    "geared",
+    "robot",
+    "education"
+  ],
+  "capabilities": [
+    "rotation_continuous",
+    "speed_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 0,
+      "voltage": 0
+    }
+  ],
+  "power": {
+    "voltage_v": 6.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 150,
+    "current_ma_peak": 800,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TT Geared DC Motor (\"Yellow Motor\") reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/TT_Gear_Motor.jpg/480px-TT_Gear_Motor.jpg",
+    "brand_variants": [
+      "ELEGOO TT motor pack",
+      "Adafruit 3777 (DFRobot)",
+      "OSEPP TT motor"
+    ],
+    "price_usd_range": [
+      1,
+      5
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

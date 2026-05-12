@@ -1,0 +1,70 @@
+{
+  "stable_id": "actuator.motor.dc_generic_12v",
+  "name": "Generic 12V DC Hobby Motor",
+  "vendor": "Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "dc_motor",
+  "description": "Plain brushed DC motor, 12V nominal, ~150-300mA no-load, up to 2A under load. PWM speed control + H-bridge for direction. Used everywhere small rotation matters — fans, conveyor rollers, agitators, drum tumblers.",
+  "tags": [
+    "motor",
+    "dc",
+    "12v",
+    "brushed"
+  ],
+  "capabilities": [
+    "rotation_continuous",
+    "speed_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 0,
+      "voltage": 0,
+      "notes": "Drive via L298N / TB6612FNG / BTS7960 — see board.motor.* entries"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 300,
+    "current_ma_peak": 2000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Generic 12V DC Hobby Motor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/DC_motor_2.jpg/640px-DC_motor_2.jpg",
+    "brand_variants": [
+      "RS-540 / RS-380 / RS-775 series",
+      "Mabuchi RS-540SH"
+    ],
+    "price_usd_range": [
+      2,
+      15
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

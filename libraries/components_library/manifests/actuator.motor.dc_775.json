@@ -1,0 +1,70 @@
+{
+  "stable_id": "actuator.motor.dc_775",
+  "name": "RS-775 High-Power DC Motor (12-24V)",
+  "vendor": "Mabuchi / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "dc_motor",
+  "description": "Brushed 12-24V high-RPM motor — ~12,000 RPM no-load, several hundred watts. Used in cordless drill upgrades, CNC spindles, big robot drivetrains, electric skateboards. Needs a beefy driver (BTS7960 43A or VNH5019).",
+  "tags": [
+    "motor",
+    "dc",
+    "high_power",
+    "775"
+  ],
+  "capabilities": [
+    "rotation_continuous",
+    "speed_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 0,
+      "voltage": 0
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 5000,
+    "current_ma_peak": 30000,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "RS-775 High-Power DC Motor (12-24V) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/RS-775_DC_Motor.jpg/640px-RS-775_DC_Motor.jpg",
+    "brand_variants": [
+      "Mabuchi RS-775",
+      "BringSmart 775",
+      "DROK 775 motor"
+    ],
+    "price_usd_range": [
+      8,
+      30
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

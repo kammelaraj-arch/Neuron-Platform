@@ -176,40 +176,56 @@
                 <input type="hidden" name="board_instance_id" value="{{ b.id }}">
                 <input type="hidden" name="component_stable_id" value="{{ c.stable_id }}">
 
-                <!-- Image (with svg-silhouette fallback if external image 404s or blocks) -->
+                <!-- Image area: always-visible category silhouette + name; external photo overlays when it loads -->
                 <div class="relative mb-2 aspect-[4/3] overflow-hidden rounded-md bg-slate-950 grid place-items-center">
-                  {% if img %}
-                    <img src="{{ img }}" alt="{{ c.name }}" loading="lazy"
-                         class="h-full w-full object-cover transition group-hover:scale-105"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />
-                  {% endif %}
-                  <!-- Fallback: SVG silhouette by category -->
-                  <div class="absolute inset-0 {% if img %}hidden{% endif %} grid place-items-center text-slate-700">
-                    <svg viewBox="0 0 64 48" class="h-14 w-14 stroke-emerald-500/30 group-hover:stroke-emerald-400 fill-slate-900">
-                      {% if c.category == 'sensors' %}
+                  <!-- Always-visible silhouette + name (the reliable layer) -->
+                  <svg viewBox="0 0 64 48" class="h-14 w-14 stroke-emerald-500/30 group-hover:stroke-emerald-400 fill-slate-900">
+                    {% if c.category == 'sensors' %}
+                      <circle cx="32" cy="24" r="14" stroke-width="1.5"/>
+                      <circle cx="32" cy="24" r="6" fill="currentColor" class="text-emerald-500/40"/>
+                    {% elif c.category == 'actuators' %}
+                      {% if 'motor' in c.subcategory or 'dc' in c.subcategory %}
                         <circle cx="32" cy="24" r="14" stroke-width="1.5"/>
-                        <circle cx="32" cy="24" r="6" fill="currentColor" class="text-emerald-500/40"/>
-                      {% elif c.category == 'actuators' %}
+                        <rect x="29" y="10" width="6" height="2" fill="currentColor" class="text-emerald-500/60"/>
+                        <rect x="29" y="36" width="6" height="2" fill="currentColor" class="text-emerald-500/60"/>
+                        <line x1="32" y1="14" x2="32" y2="34" stroke-width="1" stroke-dasharray="2 1"/>
+                      {% elif 'servo' in c.subcategory %}
+                        <rect x="20" y="14" width="24" height="20" rx="2" stroke-width="1.5"/>
+                        <circle cx="32" cy="24" r="4" stroke-width="1"/>
+                      {% else %}
                         <rect x="14" y="14" width="36" height="20" rx="3" stroke-width="1.5"/>
                         <circle cx="24" cy="24" r="3" fill="currentColor" class="text-emerald-500/40"/>
                         <circle cx="40" cy="24" r="3" fill="currentColor" class="text-emerald-500/40"/>
-                      {% elif c.category == 'cameras' %}
-                        <rect x="10" y="14" width="34" height="22" rx="3" stroke-width="1.5"/>
-                        <circle cx="27" cy="25" r="6" stroke-width="1.5"/>
-                        <rect x="46" y="18" width="8" height="6" stroke-width="1.5"/>
-                      {% elif c.category == 'displays' %}
-                        <rect x="8" y="10" width="48" height="28" rx="2" stroke-width="1.5"/>
-                        <line x1="14" y1="18" x2="50" y2="18" stroke-width="1"/>
-                        <line x1="14" y1="24" x2="42" y2="24" stroke-width="1"/>
-                        <line x1="14" y1="30" x2="46" y2="30" stroke-width="1"/>
-                      {% else %}
-                        <rect x="14" y="14" width="36" height="20" rx="3" stroke-width="1.5"/>
                       {% endif %}
-                    </svg>
+                    {% elif c.category == 'cameras' %}
+                      <rect x="10" y="14" width="34" height="22" rx="3" stroke-width="1.5"/>
+                      <circle cx="27" cy="25" r="6" stroke-width="1.5"/>
+                      <rect x="46" y="18" width="8" height="6" stroke-width="1.5"/>
+                    {% elif c.category == 'displays' %}
+                      <rect x="8" y="10" width="48" height="28" rx="2" stroke-width="1.5"/>
+                      <line x1="14" y1="18" x2="50" y2="18" stroke-width="1"/>
+                      <line x1="14" y1="24" x2="42" y2="24" stroke-width="1"/>
+                      <line x1="14" y1="30" x2="46" y2="30" stroke-width="1"/>
+                    {% else %}
+                      <rect x="14" y="14" width="36" height="20" rx="3" stroke-width="1.5"/>
+                    {% endif %}
+                  </svg>
+                  <!-- Name label always visible -->
+                  <div class="pointer-events-none absolute bottom-1 left-1 right-1 z-10
+                              rounded px-1 py-0.5 text-center text-[9px] text-slate-200
+                              bg-slate-950/80 backdrop-blur-sm truncate">
+                    {{ c.name }}
                   </div>
+                  {% if img %}
+                    <!-- External photo overlays when it loads; on error it removes itself, silhouette stays visible -->
+                    <img src="{{ img }}" alt="" loading="lazy"
+                         class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300"
+                         onload="this.style.opacity='1'"
+                         onerror="this.remove()" />
+                  {% endif %}
 
                   <!-- Safety badge overlay -->
-                  <span class="absolute top-1 left-1 rounded px-1.5 py-0.5 text-[9px] {{ safety_color.get(safety, 'bg-slate-700') }}">
+                  <span class="absolute top-1 left-1 z-20 rounded px-1.5 py-0.5 text-[9px] {{ safety_color.get(safety, 'bg-slate-700') }}">
                     {{ safety }}
                   </span>
                 </div>

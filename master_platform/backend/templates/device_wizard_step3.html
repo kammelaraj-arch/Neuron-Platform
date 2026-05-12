@@ -61,19 +61,32 @@
 
       <div id="board-grid" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {% for b in available_boards %}
+          {% set img = b.manifest.get('metadata', {}).get('image_url') %}
           <form method="post" action="/ui/devices/wizard/{{ group.id }}/boards/add"
-                class="board-card group rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-emerald-500/60 transition"
+                class="board-card group rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-emerald-500/60 hover:shadow-[0_0_22px_-10px_rgba(16,185,129,0.5)] transition"
                 data-search="{{ b.stable_id }} {{ b.name }} {{ (b.manifest.get('tags', []) | join(' ')) }}">
             <input type="hidden" name="board_stable_id" value="{{ b.stable_id }}">
-            <svg viewBox="0 0 100 28" class="mb-2 w-full">
-              <rect x="3" y="3" width="94" height="22" rx="3"
-                    fill="#0f172a" stroke="#334155" stroke-width="0.8"
-                    class="group-hover:stroke-emerald-500"/>
-              {% for i in range(12) %}
-                <circle cx="{{ 8 + i*7.5 }}" cy="3" r="0.8" fill="#475569"
-                        class="group-hover:fill-emerald-500"/>
+            <!-- Image area: always-visible board silhouette, photo overlays when loaded -->
+            <div class="relative mb-2 aspect-[4/3] overflow-hidden rounded-md bg-slate-950 grid place-items-center">
+              <svg viewBox="0 0 100 60" class="w-full">
+                <rect x="6" y="14" width="88" height="32" rx="3"
+                      fill="#0f172a" stroke="#334155" stroke-width="0.8"
+                      class="group-hover:stroke-emerald-500"/>
+                {% for i in range(12) %}
+                  <circle cx="{{ 10 + i*7 }}" cy="14" r="0.8" fill="#475569"
+                          class="group-hover:fill-emerald-500"/>
               {% endfor %}
-            </svg>
+              </svg>
+              <div class="pointer-events-none absolute bottom-1 left-1 right-1 z-10
+                          rounded px-1 py-0.5 text-center text-[9px] text-slate-200
+                          bg-slate-950/80 backdrop-blur-sm truncate">{{ b.name }}</div>
+              {% if img %}
+                <img src="{{ img }}" alt="" loading="lazy"
+                     class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300"
+                     onload="this.style.opacity='1'"
+                     onerror="this.remove()" />
+              {% endif %}
+            </div>
             <div class="text-xs font-semibold text-slate-200">{{ b.name }}</div>
             <div class="mt-0.5 font-mono text-[10px] text-cyan-300">{{ b.stable_id }}</div>
             <input name="label" type="text" placeholder="label (optional)"

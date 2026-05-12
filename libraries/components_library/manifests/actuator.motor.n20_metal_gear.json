@@ -1,0 +1,79 @@
+{
+  "stable_id": "actuator.motor.n20_metal_gear",
+  "name": "N20 Micro Metal-Gear DC Motor",
+  "vendor": "Pololu / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "dc_motor",
+  "description": "Tiny but tough 6/12V brushed DC motor with all-metal gearbox. RPMs from 30 to 1000 depending on gear ratio. Optional magnetic quadrature encoder version for closed-loop control. Used in compact robots, automated dispensers, small CNC tool changers.",
+  "tags": [
+    "motor",
+    "dc",
+    "micro",
+    "metal_gear",
+    "encoder"
+  ],
+  "capabilities": [
+    "rotation_continuous",
+    "speed_set",
+    "position_close_loop"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 0,
+      "voltage": 0
+    },
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 2,
+      "voltage": 3.3,
+      "notes": "Quadrature encoder A/B channels (encoder variants only)"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 200,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "N20 Micro Metal-Gear DC Motor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://a.pololu-files.com/picture/0J5752.1200.jpg",
+    "brand_variants": [
+      "Pololu N20 series (10:1, 30:1, 50:1, 100:1, 150:1, 250:1, 298:1, 1000:1)",
+      "Generic N20 metal gear motor",
+      "Pololu encoder version"
+    ],
+    "price_usd_range": [
+      5,
+      30
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

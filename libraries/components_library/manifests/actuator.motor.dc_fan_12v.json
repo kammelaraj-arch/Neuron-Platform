@@ -1,0 +1,79 @@
+{
+  "stable_id": "actuator.motor.dc_fan_12v",
+  "name": "12V DC Cooling Fan (40-120mm)",
+  "vendor": "Noctua / Arctic / Generic",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "dc_motor",
+  "description": "Brushless DC fan, 12V, PWM-controllable (4-pin) or voltage-controlled (2-pin). Sizes 40/60/80/120mm. Use for enclosure cooling, vent boost, electronics cabinet airflow.",
+  "tags": [
+    "fan",
+    "cooling",
+    "12v",
+    "pwm"
+  ],
+  "capabilities": [
+    "air_flow",
+    "speed_set"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PWM",
+      "direction": "in",
+      "pins_required": 1,
+      "voltage": 5.0,
+      "notes": "25kHz PWM on 4-pin variants"
+    },
+    {
+      "type": "GPIO",
+      "direction": "out",
+      "pins_required": 1,
+      "voltage": 5.0,
+      "notes": "Tachometer pulse output"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 15,
+    "current_ma_typical": 150,
+    "current_ma_peak": 400,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "12V DC Cooling Fan (40-120mm) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.pico2w",
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Computer_fan_120mm.jpg/640px-Computer_fan_120mm.jpg",
+    "brand_variants": [
+      "Noctua NF-A12x25 PWM (premium)",
+      "Arctic P12 PWM",
+      "Sunon EE92251S3",
+      "Generic case fan"
+    ],
+    "price_usd_range": [
+      3,
+      35
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}
