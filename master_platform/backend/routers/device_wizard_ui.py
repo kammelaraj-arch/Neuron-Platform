@@ -367,6 +367,60 @@ async def wizard_scan_devices(
     return await _proxy_edge(edge, "/api/v1/scan/devices")
 
 
+# ─── Client-side scan ingestion ─────────────────────────────────────────────
+# Browsers cannot scan WiFi (no JS API). The operator runs a one-line
+# helper command in their own laptop terminal that POSTs scan results
+# here. The endpoint caches results per-group in memory + DB so the
+# wizard UI can display them next to the edge-side results.
+_CLIENT_SCAN_CACHE: dict[str, dict] = {}  # group_id -> {"wifi": [...], "devices": [...], "ts": float}
+
+
+@router.post("/api/wizard/{group_id}/client-scan", response_class=JSONResponse)
+async def client_scan_ingest(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Receive scan results from a client-side helper script.
+
+    Body: {"wifi": [{ssid, signal, security, ...}], "devices": [{ip, mac, hostname}]}
+    """
+    import time
+    group = await _load_group(session, group_id)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(400, "expected a JSON object")
+    payload = {
+        "wifi": body.get("wifi") or [],
+        "devices": body.get("devices") or [],
+        "host_hint": body.get("host_hint") or "",
+        "ts": time.time(),
+    }
+    if not isinstance(payload["wifi"], list) or not isinstance(payload["devices"], list):
+        raise HTTPException(400, "'wifi' and 'devices' must be arrays")
+    _CLIENT_SCAN_CACHE[group.id] = payload
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="wizard.client_scan", target_kind="edge_group", target_id=group.id,
+        detail={"wifi_count": len(payload["wifi"]), "device_count": len(payload["devices"])},
+    )
+    await session.commit()
+    return {"ok": True, "wifi_count": len(payload["wifi"]), "device_count": len(payload["devices"])}
+
+
+@router.get("/api/wizard/{group_id}/client-scan", response_class=JSONResponse)
+async def client_scan_read(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Latest client-side scan results, if any."""
+    await _load_group(session, group_id)
+    return _CLIENT_SCAN_CACHE.get(group_id, {"wifi": [], "devices": [], "ts": None, "host_hint": ""})
+
+
 @router.post("/ui/devices/wizard/{group_id}/wifi/save-scan-result")
 async def wizard_save_scan_as_wifi(
     group_id: str,
