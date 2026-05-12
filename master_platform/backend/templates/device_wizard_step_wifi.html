@@ -26,16 +26,53 @@
       </div>
     {% endif %}
 
-    <!-- Tab switcher: edge-side vs client-side scan -->
-    <div class="flex gap-2 text-xs">
+    <!-- Tab switcher: browser-only / edge-side / cli-helper -->
+    <div class="flex flex-wrap gap-2 text-xs">
+      <button type="button" id="tab-browser" onclick="showTab('browser')"
+              class="rounded-md border border-violet-500/60 bg-violet-500/10 px-3 py-1.5 text-violet-300">
+        🌐 Auto-scan in browser
+      </button>
       <button type="button" id="tab-edge" onclick="showTab('edge')"
-              class="rounded-md border border-cyan-500/60 bg-cyan-500/10 px-3 py-1.5 text-cyan-300">
-        📡 Scan from edge (remote)
+              class="rounded-md border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800">
+        📡 Scan via edge (remote)
       </button>
       <button type="button" id="tab-client" onclick="showTab('client')"
               class="rounded-md border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800">
-        💻 Scan from this device (client-side)
+        💻 CLI helper (advanced)
       </button>
+    </div>
+
+    <!-- ─── BROWSER-ONLY AUTO-SCAN (default tab) ─────────────────────────── -->
+    <div id="pane-browser" class="rounded-2xl border border-violet-500/30 bg-violet-500/[0.04] p-5 space-y-4">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h3 class="font-semibold text-violet-300">🌐 Browser-only auto-scan</h3>
+          <p class="mt-1 text-[11px] text-slate-400">
+            Runs <strong>entirely in your browser</strong>, no terminal, no install. Uses WebRTC to
+            detect your laptop's local IP, then HTTP-probes every address on the same subnet to
+            find live devices (Pis, IP cameras, NVRs, routers, anything answering on port 80).
+            Optionally also scans BLE devices nearby via Web Bluetooth.
+          </p>
+          <p class="mt-1 text-[11px] text-amber-300/70">
+            ⚠ WiFi SSID enumeration is not available to web browsers (security restriction across all
+            major browsers — no JS API exists). For SSID list use the Edge or CLI tabs.
+          </p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button type="button" onclick="runBrowserLanScan(event)"
+                  class="rounded-md bg-violet-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-violet-400">
+            🔍 Auto-scan LAN
+          </button>
+          <button type="button" onclick="runBleScan(event)"
+                  class="rounded-md border border-violet-500/60 px-3 py-1.5 text-xs text-violet-300 hover:bg-violet-500/10">
+            📶 Scan BLE devices
+          </button>
+        </div>
+      </div>
+
+      <div id="browser-status" class="text-[11px] text-slate-500 italic">Click "Auto-scan LAN" to begin.</div>
+      <div id="browser-results" class="hidden"></div>
+      <div id="ble-results" class="hidden"></div>
     </div>
 
     <!-- ─── LIVE SCAN FROM EDGE ──────────────────────────────────────────── -->
@@ -110,12 +147,154 @@
 
     <script>
       function showTab(which) {
-        document.getElementById('pane-edge').classList.toggle('hidden', which !== 'edge');
-        document.getElementById('pane-client').classList.toggle('hidden', which !== 'client');
-        document.getElementById('tab-edge').classList.toggle('bg-cyan-500/10', which === 'edge');
-        document.getElementById('tab-edge').classList.toggle('text-cyan-300', which === 'edge');
-        document.getElementById('tab-client').classList.toggle('bg-emerald-500/10', which === 'client');
-        document.getElementById('tab-client').classList.toggle('text-emerald-300', which === 'client');
+        ['browser', 'edge', 'client'].forEach(name => {
+          const pane = document.getElementById('pane-' + name);
+          if (pane) pane.classList.toggle('hidden', name !== which);
+          const tab = document.getElementById('tab-' + name);
+          if (tab) {
+            tab.classList.remove('bg-violet-500/10','text-violet-300','bg-cyan-500/10','text-cyan-300','bg-emerald-500/10','text-emerald-300');
+            tab.classList.add('border-slate-700','text-slate-300','hover:bg-slate-800');
+            if (name === which) {
+              tab.classList.remove('border-slate-700','text-slate-300','hover:bg-slate-800');
+              const tone = name === 'browser' ? 'violet' : name === 'edge' ? 'cyan' : 'emerald';
+              tab.classList.add(`bg-${tone}-500/10`, `text-${tone}-300`, `border-${tone}-500/60`);
+            }
+          }
+        });
+      }
+      // Default to the browser tab on load
+      document.addEventListener('DOMContentLoaded', () => showTab('browser'));
+
+      // ─── Browser-only LAN scan (no terminal needed) ────────────────────
+      async function getLocalIpsViaWebRTC() {
+        return new Promise((resolve) => {
+          const ips = new Set();
+          let pc;
+          try {
+            pc = new RTCPeerConnection({iceServers: []});
+          } catch (e) { resolve([]); return; }
+          pc.createDataChannel('');
+          pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {});
+          pc.onicecandidate = (event) => {
+            if (!event.candidate) { try { pc.close(); } catch(_){} resolve([...ips]); return; }
+            const m = event.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+            if (m) {
+              const ip = m[1];
+              // Skip loopback / link-local / mDNS-obfuscated entries
+              if (!ip.startsWith('0.') && !ip.startsWith('127.') && !ip.startsWith('169.254.')) {
+                ips.add(ip);
+              }
+            }
+          };
+          setTimeout(() => { try { pc.close(); } catch(_){} resolve([...ips]); }, 2500);
+        });
+      }
+
+      async function probeIp(ip, timeoutMs) {
+        // 'no-cors' mode lets the request fly; we won't read the body,
+        // but a TCP connect success (= host alive on port 80) takes <300ms
+        // while a dead host hits the AbortController timeout.
+        const controller = new AbortController();
+        const t0 = performance.now();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          await fetch(`http://${ip}/`, {mode: 'no-cors', signal: controller.signal, cache: 'no-store'});
+          clearTimeout(timer);
+          return {ip, alive: true, ms: Math.round(performance.now() - t0)};
+        } catch (e) {
+          clearTimeout(timer);
+          if (e.name === 'AbortError') return null; // timed out → dead
+          // Network error (DNS, refused, etc.) is also a "no live host on :80"
+          // but might still be a real host running other ports — we treat
+          // as "no" because we can't tell without raw sockets.
+          return null;
+        }
+      }
+
+      async function runBrowserLanScan(ev) {
+        ev && ev.preventDefault();
+        const status = document.getElementById('browser-status');
+        const out = document.getElementById('browser-results');
+        out.classList.add('hidden'); out.innerHTML = '';
+        status.textContent = '⏳ Detecting your local IP via WebRTC…';
+        status.className = 'text-[11px] text-violet-300';
+
+        const ips = await getLocalIpsViaWebRTC();
+        if (!ips.length) {
+          status.textContent = ('❌ Browser would not reveal local IP. Many modern browsers ' +
+            'mask it with mDNS .local hostnames unless you visit chrome://flags and disable ' +
+            '"Anonymize local IPs exposed by WebRTC". Use the Edge or CLI tab instead.');
+          status.className = 'text-[11px] text-red-300';
+          return;
+        }
+        // Pick the first non-loopback IP for subnet derivation
+        const myIp = ips[0];
+        const parts = myIp.split('.');
+        const subnet = `${parts[0]}.${parts[1]}.${parts[2]}`;
+        status.textContent = `Found your IP: ${myIp}. Probing ${subnet}.1 → ${subnet}.254 (this takes ~10s)…`;
+
+        // Fire all probes in parallel; each times out at 1.2s. The whole
+        // sweep finishes in ~1.2s + browser concurrency overhead.
+        const ipList = [];
+        for (let i = 1; i <= 254; i++) ipList.push(`${subnet}.${i}`);
+        const results = await Promise.all(ipList.map(ip => probeIp(ip, 1200)));
+        const alive = results.filter(r => r && r.alive);
+
+        if (!alive.length) {
+          status.textContent = `Scan complete — no devices answered on port 80 in ${subnet}.0/24. ` +
+            'Network may be silent, or browser blocked the probes. Try the BLE scan or edge-side scan.';
+          status.className = 'text-[11px] text-amber-300';
+          return;
+        }
+        status.textContent = `✓ Found ${alive.length} device(s) responding on ${subnet}.0/24 (HTTP probe via browser fetch).`;
+        status.className = 'text-[11px] text-emerald-300';
+        out.classList.remove('hidden');
+        out.innerHTML = `
+          <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+            <table class="min-w-full text-xs">
+              <thead class="bg-slate-900/80 text-left uppercase tracking-wider text-slate-400">
+                <tr><th class="px-3 py-2">IP</th><th class="px-3 py-2">Response time</th><th class="px-3 py-2">Note</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/70">
+                ${alive.map(h => `<tr>
+                  <td class="px-3 py-2 font-mono text-emerald-300">${h.ip}</td>
+                  <td class="px-3 py-2 font-mono text-cyan-300">${h.ms} ms</td>
+                  <td class="px-3 py-2 text-slate-400 text-[10px]">opens TCP :80 from your browser; this is your laptop's view of the LAN</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      }
+
+      async function runBleScan(ev) {
+        ev && ev.preventDefault();
+        const status = document.getElementById('browser-status');
+        const out = document.getElementById('ble-results');
+        if (!navigator.bluetooth) {
+          status.textContent = '❌ Web Bluetooth is not available in this browser (try Chrome / Edge on HTTPS).';
+          status.className = 'text-[11px] text-red-300';
+          return;
+        }
+        status.textContent = '⏳ Asking for Bluetooth permission… (a system dialog will pop up)';
+        status.className = 'text-[11px] text-violet-300';
+        try {
+          const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: []
+          });
+          out.classList.remove('hidden');
+          out.innerHTML = `
+            <div class="rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs">
+              <div class="text-violet-300 font-semibold">Picked BLE device:</div>
+              <div class="mt-1 font-mono text-emerald-300">${device.name || '(unnamed)'}</div>
+              <div class="font-mono text-[10px] text-slate-400">${device.id}</div>
+            </div>`;
+          status.textContent = `✓ User picked BLE device: ${device.name || device.id}`;
+          status.className = 'text-[11px] text-emerald-300';
+        } catch (e) {
+          status.textContent = `BLE scan cancelled or no devices found (${e.message || e})`;
+          status.className = 'text-[11px] text-amber-300';
+        }
       }
       async function loadClientScan(ev) {
         ev && ev.preventDefault();
