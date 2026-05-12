@@ -267,3 +267,98 @@ def pinout_for(board_stable_id: str | None) -> list | None:
     if not board_stable_id:
         return None
     return BOARD_PINOUTS.get(board_stable_id)
+
+
+# ─── Pin-kind compatibility ────────────────────────────────────────────────
+# Which board-pin kinds (right) are safe to wire to which compute-pin
+# kinds (left). Prevents the operator from accidentally tying 5V to a
+# signal input or routing motor output back to a GPIO.
+PIN_COMPAT: dict[str, set[str]] = {
+    "power_5v":  {"power_5v"},
+    "power_3v3": {"power_3v3"},
+    "ground":    {"ground"},
+    "gpio":      {
+        "input", "output", "bidir",
+        "pwm_in", "enable", "reset",
+        "address_select", "interrupt",
+        "i2c_sda", "i2c_scl",
+        "spi_mosi", "spi_miso", "spi_sck", "spi_cs",
+        "uart_tx", "uart_rx",
+        "special",
+    },
+    "adc":       {"analog_in", "vref"},
+    "special":   {"reset", "enable", "vref", "special"},
+    "reserved":  set(),
+    "not_connected": set(),
+}
+
+
+def board_pin_kind(board_stable_id: str | None, board_pin: str | None) -> str | None:
+    """Look up the kind of a named board pin. Returns None when the
+    pinout isn't catalogued (in which case validation is skipped — we
+    don't block on missing metadata)."""
+    if not board_stable_id or not board_pin:
+        return None
+    po = BOARD_PINOUTS.get(board_stable_id)
+    if not po:
+        return None
+    bp = board_pin.strip().lower()
+    for name, kind, _desc, _hint in po:
+        if name.lower() == bp:
+            return kind
+    return None
+
+
+def connection_type(compute_kind: str | None, board_kind: str | None) -> str:
+    """Human-friendly label for a connection — what BUS or function it
+    represents. Used in the wizard table + tooltip on each wire."""
+    if compute_kind == "power_5v" or board_kind == "power_5v":
+        return "5V power"
+    if compute_kind == "power_3v3" or board_kind == "power_3v3":
+        return "3V3 power"
+    if compute_kind == "ground" or board_kind == "ground":
+        return "GND"
+    if compute_kind == "adc" and board_kind == "analog_in":
+        return "Analog"
+    if board_kind in ("i2c_sda", "i2c_scl"):
+        return "I²C"
+    if board_kind in ("spi_mosi", "spi_miso", "spi_sck", "spi_cs"):
+        return "SPI"
+    if board_kind in ("uart_tx", "uart_rx"):
+        return "UART"
+    if board_kind == "pwm_in":
+        return "PWM"
+    if board_kind == "analog_in":
+        return "Analog"
+    if board_kind == "interrupt":
+        return "GPIO (interrupt)"
+    if board_kind == "enable":
+        return "Enable line"
+    if board_kind == "reset":
+        return "Reset line"
+    if board_kind == "vref":
+        return "Reference voltage"
+    if board_kind in ("input", "output", "bidir", "address_select", "special"):
+        return "GPIO"
+    if board_kind == "motor_out":
+        return "Motor output (do not wire to GPIO)"
+    return "Logic"
+
+
+def is_compatible(compute_kind: str | None, board_kind: str | None) -> tuple[bool, str]:
+    """Return (ok, reason). ok=True means the connection is allowed (or
+    we don't have enough metadata to block it). reason is a human-
+    readable explanation when ok=False."""
+    if compute_kind is None or board_kind is None:
+        # Don't have the metadata to make a judgement → allow with a
+        # warning rather than block real-world wiring the catalog
+        # doesn't know about yet.
+        return True, ""
+    if board_kind == "motor_out":
+        return False, ("Refusing to wire a compute pin to a motor output — that's where the "
+                       "actuator (motor/coil) connects, not the controller.")
+    allowed = PIN_COMPAT.get(compute_kind, set())
+    if board_kind in allowed:
+        return True, ""
+    return False, (f"Compute pin kind '{compute_kind}' cannot wire to a board pin of kind "
+                   f"'{board_kind}'. Pick a compatible kind or override after confirming the schematic.")

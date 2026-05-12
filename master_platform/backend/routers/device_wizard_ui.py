@@ -33,7 +33,14 @@ from sqlalchemy import delete as sa_delete
 from ..db import get_session
 from ..library_loader import load_catalog
 from ..compute_pinouts import PIN_KIND_COLORS, header_for
-from ..board_pinouts import PINOUT_KIND_COLORS, pinout_for
+from ..board_pinouts import (
+    PIN_COMPAT,
+    PINOUT_KIND_COLORS,
+    board_pin_kind,
+    connection_type,
+    is_compatible,
+    pinout_for,
+)
 from ..models import (
     FAILSAFE_ACTIONS,
     RISK_LEVELS,
@@ -943,6 +950,23 @@ async def wizard_step_pinmap(
         if po:
             board_pinouts[_b.id] = po
 
+    # Connection-type label per existing GpioMapping, for the table view.
+    conn_types: dict[str, str] = {}
+    for _b, _maps in boards_pins:
+        for _m in _maps:
+            ck = None
+            if header:
+                for _n, _l, _k, _a in header["pins"]:
+                    if _l == _m.compute_pin:
+                        ck = _k
+                        break
+            bk = board_pin_kind(_b.board_stable_id, _m.board_pin)
+            conn_types[_m.id] = connection_type(ck, bk)
+
+    # Serialise PIN_COMPAT for JS so the canvas can validate clicks
+    # client-side before posting.
+    compat_for_js = {k: sorted(v) for k, v in PIN_COMPAT.items()}
+
     return templates.TemplateResponse(
         "device_wizard_step5.html",
         {
@@ -954,12 +978,118 @@ async def wizard_step_pinmap(
             "header": header,
             "used_pins": used_pins,
             "board_pinouts": board_pinouts,
+            "conn_types": conn_types,
+            "compat_for_js": compat_for_js,
             "PIN_KIND_COLORS": PIN_KIND_COLORS,
             "PINOUT_KIND_COLORS": PINOUT_KIND_COLORS,
             "steps": WIZARD_STEPS,
             "step_idx": 5,
         },
     )
+
+
+@router.post("/ui/devices/wizard/{group_id}/pinmap/create")
+async def wizard_create_pin(
+    group_id: str,
+    request: Request,
+    board_instance_id: str = Form(...),
+    compute_pin: str = Form(...),
+    board_pin: str = Form(...),
+    signal_name: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Manually create a single GPIO mapping (click-to-connect on the
+    digital-twin canvas or 'Add manual connection' form)."""
+    group = await _load_group(session, group_id)
+    board = await session.get(BoardInstance, board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "board not in this group")
+    compute_pin = compute_pin.strip()
+    board_pin = board_pin.strip()
+    if not compute_pin or not board_pin:
+        raise HTTPException(400, "compute_pin and board_pin required")
+
+    # Pin-kind compatibility check — refuses to wire 5V to a signal pin,
+    # GPIO to a motor output, etc. Looks up the compute pin kind from
+    # COMPUTE_HEADERS and the board pin kind from BOARD_PINOUTS.
+    from ..compute_pinouts import header_for as _hdr
+    hdr = _hdr(group.compute_stable_id)
+    compute_kind = None
+    if hdr:
+        for n, label, k, _alt in hdr["pins"]:
+            if label == compute_pin:
+                compute_kind = k
+                break
+    bkind = board_pin_kind(board.board_stable_id, board_pin)
+    ok, reason = is_compatible(compute_kind, bkind)
+    if not ok:
+        raise HTTPException(400, reason)
+
+    # UPSERT — if a mapping for (board, compute_pin) already exists, update it
+    # so the operator can reassign a Pi pin from one board pin to another
+    # without first deleting the old row.
+    existing = (
+        await session.execute(
+            select(GpioMapping).where(
+                GpioMapping.board_instance_id == board.id,
+                GpioMapping.compute_pin == compute_pin,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        existing.board_pin = board_pin
+        if signal_name.strip():
+            existing.signal_name = signal_name.strip()
+        existing.locked_by_operator = True
+        target_id = existing.id
+        action = "pin.reassign"
+    else:
+        m = GpioMapping(
+            board_instance_id=board.id,
+            compute_pin=compute_pin,
+            board_pin=board_pin,
+            signal_name=signal_name.strip() or None,
+            locked_by_operator=True,
+        )
+        session.add(m)
+        await session.flush()
+        target_id = m.id
+        action = "pin.create"
+
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action=action, target_kind="gpio_mapping", target_id=target_id,
+        detail={"board_id": board.id, "compute_pin": compute_pin, "board_pin": board_pin},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/pinmap", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/pinmap/{mapping_id}/delete")
+async def wizard_delete_pin(
+    group_id: str,
+    mapping_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    m = await session.get(GpioMapping, mapping_id)
+    if m is None:
+        raise HTTPException(404, "mapping not found")
+    b = await session.get(BoardInstance, m.board_instance_id)
+    if b is None or b.group_id != group.id:
+        raise HTTPException(404, "mapping not in this group")
+    info = {"compute_pin": m.compute_pin, "board_pin": m.board_pin, "board_id": b.id}
+    await session.delete(m)
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="pin.delete", target_kind="gpio_mapping", target_id=mapping_id,
+        detail=info,
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/pinmap", status_code=303)
 
 
 @router.post("/ui/devices/wizard/{group_id}/pinmap/lock")

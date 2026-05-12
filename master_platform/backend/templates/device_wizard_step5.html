@@ -8,14 +8,49 @@
       <div>
         <h2 class="text-lg font-semibold">5. GPIO pin map · digital-twin canvas</h2>
         <p class="mt-1 text-sm text-slate-400">
-          Boards on either side of the {{ header.name if header else 'compute' }} 40-pin header. Animated emerald lines show the auto-allocator's mapping; locked overrides show in amber. Edit any row in the tables below.
+          Boards on either side of the {{ header.name if header else 'compute' }} 40-pin header. Animated emerald lines = allocator-derived; solid amber = operator-locked.
+          <strong class="text-emerald-300">Click a Pi pin then a board pin to connect them manually.</strong>
         </p>
       </div>
-      <a href="/ui/devices/wizard/{{ group.id }}/pinmap?auto=true"
-         class="rounded-md border border-emerald-500/40 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10">
-        ⟳ Re-run auto-allocate
-      </a>
+      <div class="flex gap-2">
+        <a href="/ui/devices/wizard/{{ group.id }}/pinmap?auto=true"
+           class="rounded-md border border-emerald-500/40 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/10">
+          ⟳ Auto-allocate
+        </a>
+        <button type="button" onclick="document.getElementById('manual-add').classList.toggle('hidden')"
+           class="rounded-md border border-amber-500/40 px-3 py-1.5 text-xs text-amber-300 hover:bg-amber-500/10">
+          + Manual connection
+        </button>
+      </div>
     </div>
+
+    <!-- ── Click-to-connect status bar + manual-add form ───────────────── -->
+    <div id="connect-status"
+         class="hidden rounded-md border border-cyan-500/40 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-300">
+      Click any pin on the Pi header to start a connection.
+    </div>
+
+    <details id="manual-add" class="hidden rounded-2xl border border-amber-500/30 bg-amber-500/[0.04] p-4" open>
+      <summary class="cursor-pointer text-xs uppercase tracking-wider text-amber-300">Manual connection (type values)</summary>
+      <form method="post" action="/ui/devices/wizard/{{ group.id }}/pinmap/create"
+            class="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] text-sm">
+        <select name="board_instance_id" required
+                class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5">
+          {% for b, _ in boards_pins %}
+            <option value="{{ b.id }}">{{ b.label }} ({{ b.board_stable_id }})</option>
+          {% endfor %}
+        </select>
+        <input name="compute_pin" required placeholder="compute pin e.g. GPIO 4"
+               class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 font-mono text-emerald-300" />
+        <input name="board_pin" required placeholder="board pin e.g. STEP"
+               class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 font-mono text-cyan-300" />
+        <input name="signal_name" placeholder="signal name (optional)"
+               class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 font-mono text-slate-300" />
+        <button class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-amber-400">
+          Connect
+        </button>
+      </form>
+    </details>
 
     {% if conflicts %}
       <div class="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm text-amber-300">
@@ -88,10 +123,14 @@
                       {% set color = PINOUT_KIND_COLORS.get(pkind, '#475569') %}
                       <div class="flex items-center justify-end gap-2 text-[11px]">
                         <span class="text-slate-300 truncate" title="{{ pdesc }}">{{ pname }}</span>
-                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0"
+                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 cursor-pointer"
                              style="background:{{ color }};"
                              data-pin-side="left"
-                             data-pin-id="board-{{ b.id }}-{{ pname }}"></div>
+                             data-pin-id="board-{{ b.id }}-{{ pname }}"
+                             data-pin-kind="{{ pkind }}"
+                             data-board-id="{{ b.id }}"
+                             data-board-pin="{{ pname }}"
+                             title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
                       </div>
                     {% endfor %}
                   {% else %}
@@ -136,14 +175,18 @@
                     <span class="text-slate-300">{{ left[1] }}</span>
                   </div>
                   <div class="flex items-center gap-1">
-                    <div class="compute-pin relative" data-pin-id="compute-{{ left[1] }}">
+                    <div class="compute-pin relative cursor-pointer" data-pin-id="compute-{{ left[1] }}"
+                         data-pin-kind="{{ left[2] }}" data-pin-label="{{ left[1] }}"
+                         title="Pin {{ row*2+1 }} · {{ left[1] }} · {{ left[2] }}">
                       <div class="h-4 w-4 rounded-full ring-2 ring-slate-700 grid place-items-center"
                            style="background:{{ lcolor }};">
                         <span class="text-[7px] font-bold text-white">{{ row*2+1 }}</span>
                       </div>
                       {% if lused %}<span class="pointer-events-none absolute -inset-1 rounded-full ring-2 ring-emerald-400 animate-pulse"></span>{% endif %}
                     </div>
-                    <div class="compute-pin relative" data-pin-id="compute-{{ right[1] }}">
+                    <div class="compute-pin relative cursor-pointer" data-pin-id="compute-{{ right[1] }}"
+                         data-pin-kind="{{ right[2] }}" data-pin-label="{{ right[1] }}"
+                         title="Pin {{ row*2+2 }} · {{ right[1] }} · {{ right[2] }}">
                       <div class="h-4 w-4 rounded-full ring-2 ring-slate-700 grid place-items-center"
                            style="background:{{ rcolor }};">
                         <span class="text-[7px] font-bold text-white">{{ row*2+2 }}</span>
@@ -207,10 +250,14 @@
                     {% for pname, pkind, pdesc, _ in po %}
                       {% set color = PINOUT_KIND_COLORS.get(pkind, '#475569') %}
                       <div class="flex items-center justify-start gap-2 text-[11px]">
-                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0"
+                        <div class="board-pin h-4 w-4 rounded-full ring-2 ring-slate-700 flex-shrink-0 cursor-pointer"
                              style="background:{{ color }};"
                              data-pin-side="right"
-                             data-pin-id="board-{{ b.id }}-{{ pname }}"></div>
+                             data-pin-id="board-{{ b.id }}-{{ pname }}"
+                             data-pin-kind="{{ pkind }}"
+                             data-board-id="{{ b.id }}"
+                             data-board-pin="{{ pname }}"
+                             title="{{ pname }} · {{ pkind }} · {{ pdesc }}"></div>
                         <span class="text-slate-300 truncate" title="{{ pdesc }}">{{ pname }}</span>
                       </div>
                     {% endfor %}
@@ -231,16 +278,93 @@
         </div>
       </div>
 
-      <!-- Connection data + drawer script -->
-      <script type="application/json" id="twin-connections">
-        {{ connections | tojson }}
-      </script>
+      <!-- Hidden form for click-to-connect -->
+      <form id="connect-form" method="post" action="/ui/devices/wizard/{{ group.id }}/pinmap/create" class="hidden">
+        <input type="hidden" name="board_instance_id" id="connect-board-id">
+        <input type="hidden" name="compute_pin" id="connect-compute-pin">
+        <input type="hidden" name="board_pin" id="connect-board-pin">
+      </form>
+
+      <!-- Connection data + compat data + drawer + click-to-connect script -->
+      <script type="application/json" id="twin-connections">{{ connections | tojson }}</script>
+      <script type="application/json" id="twin-compat">{{ compat_for_js | tojson }}</script>
       <script>
         (function () {
           const wrap = document.getElementById('twin-canvas-wrap');
           const svg = document.getElementById('twin-wires');
           if (!wrap || !svg) return;
           const conns = JSON.parse(document.getElementById('twin-connections').textContent || '[]');
+          const compat = JSON.parse(document.getElementById('twin-compat').textContent || '{}');
+          const statusBar = document.getElementById('connect-status');
+          let selected = null;
+          let selectedRing = null;
+
+          function showStatus(msg, tone) {
+            statusBar.classList.remove('hidden');
+            statusBar.textContent = msg;
+            statusBar.className =
+              'rounded-md px-3 py-2 text-xs ' +
+              (tone === 'err'
+                ? 'border border-red-500/40 bg-red-500/10 text-red-300'
+                : tone === 'ok'
+                ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                : 'border border-cyan-500/40 bg-cyan-500/5 text-cyan-300');
+          }
+          function clearSelection() {
+            if (selectedRing) { selectedRing.remove(); selectedRing = null; }
+            selected = null;
+          }
+
+          // Click on a compute pin → mark as starting endpoint
+          wrap.querySelectorAll('.compute-pin').forEach(el => {
+            el.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              clearSelection();
+              selected = {
+                kind: el.dataset.pinKind,
+                label: el.dataset.pinLabel,
+                el,
+              };
+              selectedRing = document.createElement('span');
+              selectedRing.className = 'pointer-events-none absolute -inset-2 rounded-full ring-2 ring-amber-400 animate-pulse z-30';
+              el.appendChild(selectedRing);
+              showStatus(`Compute pin selected: ${selected.label} (${selected.kind}). Now click a compatible board pin.`, 'info');
+            });
+          });
+
+          // Click on a board pin → try to create / reassign connection
+          wrap.querySelectorAll('.board-pin').forEach(el => {
+            el.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              if (!selected) {
+                showStatus('First click a Pi pin (compute side), then a board pin.', 'info');
+                return;
+              }
+              const bKind = el.dataset.pinKind;
+              const bId = el.dataset.boardId;
+              const bPin = el.dataset.boardPin;
+              const allowed = compat[selected.kind] || [];
+              if (bKind && !allowed.includes(bKind)) {
+                let reason;
+                if (bKind === 'motor_out') {
+                  reason = `${bPin} is a motor output — that's where the actuator (motor/coil) goes, not the controller.`;
+                } else {
+                  reason = `${selected.label} (${selected.kind}) is not compatible with board pin ${bPin} (${bKind}). Pick a compatible pin.`;
+                }
+                showStatus('⚠ ' + reason, 'err');
+                return;
+              }
+              // Submit the create form
+              document.getElementById('connect-board-id').value = bId;
+              document.getElementById('connect-compute-pin').value = selected.label;
+              document.getElementById('connect-board-pin').value = bPin;
+              showStatus(`Connecting ${selected.label} → ${bPin}…`, 'ok');
+              document.getElementById('connect-form').submit();
+            });
+          });
+
+          // Click empty canvas to deselect
+          wrap.addEventListener('click', () => { clearSelection(); statusBar.classList.add('hidden'); });
 
           function center(el) {
             const wr = wrap.getBoundingClientRect();
@@ -359,12 +483,14 @@
         {% endif %}
 
         {% if pins %}
-          <div class="mt-5 grid gap-2 sm:grid-cols-[1fr_auto_1fr] items-center text-xs">
+          <div class="mt-5 grid gap-2 sm:grid-cols-[1fr_auto_2fr] items-center text-xs">
             {% for m in pins %}
+              {% set ctype = conn_types.get(m.id, 'Logic') %}
               <form method="post" action="/ui/devices/wizard/{{ group.id }}/pinmap/lock" class="contents">
                 <input type="hidden" name="mapping_id" value="{{ m.id }}">
 
                 <div class="flex items-center gap-2 sm:justify-end">
+                  <span class="hidden sm:inline rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">{{ ctype }}</span>
                   <input name="compute_pin" value="{{ m.compute_pin }}"
                          class="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-emerald-300 text-right" />
                   <span class="hidden sm:inline text-slate-500">compute</span>
@@ -386,7 +512,7 @@
                 <div class="flex items-center gap-2">
                   <span class="hidden sm:inline text-slate-500">board</span>
                   <input name="board_pin" value="{{ m.board_pin }}"
-                         class="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-cyan-300" />
+                         class="w-24 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-cyan-300" />
                   <input name="signal_name" value="{{ m.signal_name or '' }}"
                          placeholder="signal"
                          class="flex-1 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 font-mono text-slate-300" />
@@ -397,6 +523,12 @@
                   </label>
                   <button class="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800">save</button>
                 </div>
+              </form>
+              <!-- Per-row delete -->
+              <form method="post" action="/ui/devices/wizard/{{ group.id }}/pinmap/{{ m.id }}/delete"
+                    class="sm:col-span-3 justify-self-end -mt-1 mb-2"
+                    onsubmit="return confirm('Delete pin connection {{ m.compute_pin }} → {{ m.board_pin }}?');">
+                <button class="text-[10px] text-red-400 hover:text-red-300">✕ delete this wire</button>
               </form>
             {% endfor %}
           </div>
