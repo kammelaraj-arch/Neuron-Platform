@@ -176,55 +176,93 @@
                 <input type="hidden" name="board_instance_id" value="{{ b.id }}">
                 <input type="hidden" name="component_stable_id" value="{{ c.stable_id }}">
 
-                <!-- Image area: always-visible category silhouette + name; external photo overlays when it loads -->
-                <div class="relative mb-2 aspect-[4/3] overflow-hidden rounded-md bg-slate-950 grid place-items-center">
-                  <!-- Always-visible silhouette + name (the reliable layer) -->
-                  <svg viewBox="0 0 64 48" class="h-14 w-14 stroke-emerald-500/30 group-hover:stroke-emerald-400 fill-slate-900">
+                <!-- Image area: name-forward placeholder that always looks good. External photo overlays when (and if) it loads cleanly. -->
+                <div class="relative mb-2 aspect-[4/3] overflow-hidden rounded-md bg-gradient-to-br from-slate-900 to-slate-950 ring-1 ring-slate-800 group-hover:ring-emerald-500/40 transition">
+                  <!-- Always-visible: big category icon centered + name + subcategory ribbon -->
+                  <svg viewBox="0 0 100 75" preserveAspectRatio="xMidYMid meet"
+                       class="absolute inset-0 h-full w-full opacity-60 group-hover:opacity-100 transition"
+                       fill="none" stroke="currentColor" stroke-width="1.2"
+                       stroke-linecap="round" stroke-linejoin="round">
                     {% if c.category == 'sensors' %}
-                      <circle cx="32" cy="24" r="14" stroke-width="1.5"/>
-                      <circle cx="32" cy="24" r="6" fill="currentColor" class="text-emerald-500/40"/>
+                      <circle cx="50" cy="35" r="18" class="stroke-emerald-400/70"/>
+                      <circle cx="50" cy="35" r="10" class="stroke-emerald-400/40" stroke-dasharray="2 2"/>
+                      <circle cx="50" cy="35" r="3" fill="currentColor" class="text-emerald-400/80 stroke-none"/>
+                      <line x1="50" y1="10" x2="50" y2="18" class="stroke-emerald-400/60"/>
+                      <line x1="50" y1="52" x2="50" y2="60" class="stroke-emerald-400/60"/>
                     {% elif c.category == 'actuators' %}
-                      {% if 'motor' in c.subcategory or 'dc' in c.subcategory %}
-                        <circle cx="32" cy="24" r="14" stroke-width="1.5"/>
-                        <rect x="29" y="10" width="6" height="2" fill="currentColor" class="text-emerald-500/60"/>
-                        <rect x="29" y="36" width="6" height="2" fill="currentColor" class="text-emerald-500/60"/>
-                        <line x1="32" y1="14" x2="32" y2="34" stroke-width="1" stroke-dasharray="2 1"/>
-                      {% elif 'servo' in c.subcategory %}
-                        <rect x="20" y="14" width="24" height="20" rx="2" stroke-width="1.5"/>
-                        <circle cx="32" cy="24" r="4" stroke-width="1"/>
+                      {% if 'motor' in (c.subcategory or '') or 'dc' in (c.subcategory or '') %}
+                        <!-- DC motor: round body + shaft + two wires -->
+                        <circle cx="48" cy="35" r="18" class="stroke-emerald-400/70"/>
+                        <circle cx="48" cy="35" r="13" class="stroke-emerald-400/30"/>
+                        <line x1="48" y1="22" x2="48" y2="48" class="stroke-emerald-400/50" stroke-dasharray="2 1"/>
+                        <line x1="66" y1="35" x2="80" y2="35" class="stroke-emerald-400/80" stroke-width="2"/>
+                        <line x1="22" y1="28" x2="14" y2="20" class="stroke-red-400/70"/>
+                        <line x1="22" y1="42" x2="14" y2="50" class="stroke-slate-400/70"/>
+                      {% elif 'servo' in (c.subcategory or '') %}
+                        <!-- Servo body + horn -->
+                        <rect x="28" y="18" width="40" height="34" rx="3" class="stroke-emerald-400/70"/>
+                        <rect x="35" y="22" width="26" height="8" class="stroke-emerald-400/40"/>
+                        <circle cx="48" cy="40" r="6" class="stroke-emerald-400/80"/>
+                        <line x1="48" y1="34" x2="48" y2="14" class="stroke-emerald-400/80" stroke-width="2"/>
+                        <circle cx="48" cy="14" r="2" fill="currentColor" class="text-emerald-400 stroke-none"/>
+                      {% elif 'relay' in (c.subcategory or '') %}
+                        <rect x="24" y="20" width="52" height="30" rx="3" class="stroke-emerald-400/70"/>
+                        <line x1="32" y1="35" x2="44" y2="28" class="stroke-amber-400" stroke-width="2"/>
+                        <circle cx="32" cy="35" r="1.5" fill="currentColor"/>
+                        <circle cx="44" cy="28" r="1.5" fill="currentColor"/>
+                        <line x1="50" y1="35" x2="62" y2="35" class="stroke-emerald-400/50"/>
+                        <rect x="60" y="32" width="10" height="6" class="stroke-emerald-400/60"/>
+                      {% elif 'pump' in (c.subcategory or '') %}
+                        <circle cx="48" cy="35" r="18" class="stroke-emerald-400/70"/>
+                        <path d="M48,17 Q60,35 48,53 Q36,35 48,17 Z" class="stroke-cyan-400/60"/>
+                      {% elif 'led' in (c.subcategory or '') %}
+                        {% for i in range(5) %}
+                          <circle cx="{{ 22 + i*14 }}" cy="35" r="3" fill="currentColor" class="text-emerald-400/80 stroke-none"/>
+                        {% endfor %}
                       {% else %}
-                        <rect x="14" y="14" width="36" height="20" rx="3" stroke-width="1.5"/>
-                        <circle cx="24" cy="24" r="3" fill="currentColor" class="text-emerald-500/40"/>
-                        <circle cx="40" cy="24" r="3" fill="currentColor" class="text-emerald-500/40"/>
+                        <rect x="24" y="22" width="52" height="26" rx="3" class="stroke-emerald-400/70"/>
+                        <circle cx="36" cy="35" r="3" class="stroke-emerald-400/60"/>
+                        <circle cx="64" cy="35" r="3" class="stroke-emerald-400/60"/>
                       {% endif %}
                     {% elif c.category == 'cameras' %}
-                      <rect x="10" y="14" width="34" height="22" rx="3" stroke-width="1.5"/>
-                      <circle cx="27" cy="25" r="6" stroke-width="1.5"/>
-                      <rect x="46" y="18" width="8" height="6" stroke-width="1.5"/>
+                      <rect x="18" y="16" width="56" height="42" rx="4" class="stroke-emerald-400/70"/>
+                      <circle cx="46" cy="37" r="12" class="stroke-emerald-400/80" stroke-width="1.5"/>
+                      <circle cx="46" cy="37" r="6" class="stroke-emerald-400/50"/>
+                      <rect x="60" y="22" width="14" height="6" class="stroke-emerald-400/40"/>
+                      <circle cx="69" cy="25" r="1.5" fill="currentColor" class="text-red-400 stroke-none"/>
                     {% elif c.category == 'displays' %}
-                      <rect x="8" y="10" width="48" height="28" rx="2" stroke-width="1.5"/>
-                      <line x1="14" y1="18" x2="50" y2="18" stroke-width="1"/>
-                      <line x1="14" y1="24" x2="42" y2="24" stroke-width="1"/>
-                      <line x1="14" y1="30" x2="46" y2="30" stroke-width="1"/>
+                      <rect x="14" y="14" width="72" height="46" rx="3" class="stroke-emerald-400/70"/>
+                      <line x1="22" y1="24" x2="78" y2="24" class="stroke-emerald-400/40"/>
+                      <line x1="22" y1="32" x2="70" y2="32" class="stroke-emerald-400/40"/>
+                      <line x1="22" y1="40" x2="74" y2="40" class="stroke-emerald-400/40"/>
+                      <line x1="22" y1="48" x2="60" y2="48" class="stroke-emerald-400/40"/>
                     {% else %}
-                      <rect x="14" y="14" width="36" height="20" rx="3" stroke-width="1.5"/>
+                      <rect x="22" y="20" width="56" height="30" rx="3" class="stroke-emerald-400/70"/>
                     {% endif %}
                   </svg>
-                  <!-- Name label always visible -->
-                  <div class="pointer-events-none absolute bottom-1 left-1 right-1 z-10
-                              rounded px-1 py-0.5 text-center text-[9px] text-slate-200
-                              bg-slate-950/80 backdrop-blur-sm truncate">
-                    {{ c.name }}
+
+                  <!-- Subcategory chip top-right -->
+                  {% if c.subcategory %}
+                    <span class="absolute top-1 right-1 z-20 rounded-full bg-slate-900/80 px-2 py-0.5 text-[9px] font-mono text-slate-300">
+                      {{ c.subcategory }}
+                    </span>
+                  {% endif %}
+
+                  <!-- Big component-name banner -->
+                  <div class="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent px-2 py-1.5">
+                    <div class="text-[11px] font-semibold text-slate-100 leading-tight line-clamp-2">{{ c.name }}</div>
+                    <div class="font-mono text-[9px] text-cyan-300/80 truncate">{{ c.stable_id }}</div>
                   </div>
+
                   {% if img %}
-                    <!-- External photo overlays when it loads; on error it removes itself, silhouette stays visible -->
+                    <!-- External photo overlays when it loads; on error removes itself, placeholder stays visible -->
                     <img src="{{ img }}" alt="" loading="lazy"
                          class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300"
                          onload="this.style.opacity='1'"
                          onerror="this.remove()" />
                   {% endif %}
 
-                  <!-- Safety badge overlay -->
+                  <!-- Safety badge -->
                   <span class="absolute top-1 left-1 z-20 rounded px-1.5 py-0.5 text-[9px] {{ safety_color.get(safety, 'bg-slate-700') }}">
                     {{ safety }}
                   </span>

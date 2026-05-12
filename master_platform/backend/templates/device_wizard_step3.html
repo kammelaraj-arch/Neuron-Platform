@@ -66,20 +66,34 @@
                 class="board-card group rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-emerald-500/60 hover:shadow-[0_0_22px_-10px_rgba(16,185,129,0.5)] transition"
                 data-search="{{ b.stable_id }} {{ b.name }} {{ (b.manifest.get('tags', []) | join(' ')) }}">
             <input type="hidden" name="board_stable_id" value="{{ b.stable_id }}">
-            <!-- Image area: always-visible board silhouette, photo overlays when loaded -->
-            <div class="relative mb-2 aspect-[4/3] overflow-hidden rounded-md bg-slate-950 grid place-items-center">
-              <svg viewBox="0 0 100 60" class="w-full">
-                <rect x="6" y="14" width="88" height="32" rx="3"
-                      fill="#0f172a" stroke="#334155" stroke-width="0.8"
-                      class="group-hover:stroke-emerald-500"/>
-                {% for i in range(12) %}
-                  <circle cx="{{ 10 + i*7 }}" cy="14" r="0.8" fill="#475569"
-                          class="group-hover:fill-emerald-500"/>
-              {% endfor %}
+            <!-- Image area: name-forward placeholder + external photo overlay -->
+            <div class="relative mb-2 aspect-[4/3] overflow-hidden rounded-md bg-gradient-to-br from-slate-900 to-slate-950 ring-1 ring-slate-800 group-hover:ring-emerald-500/40 transition">
+              <!-- Big PCB silhouette fills the card -->
+              <svg viewBox="0 0 100 75" preserveAspectRatio="xMidYMid meet"
+                   class="absolute inset-0 h-full w-full opacity-70 group-hover:opacity-100 transition"
+                   fill="none" stroke="currentColor" stroke-width="1"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="10" y="20" width="80" height="36" rx="3" class="stroke-emerald-400/70" fill="#0f172a"/>
+                <!-- IC chip in middle -->
+                <rect x="38" y="32" width="24" height="14" rx="1" class="stroke-emerald-400/40" fill="#020617"/>
+                <text x="50" y="42" font-size="5" text-anchor="middle" font-family="ui-monospace"
+                      class="fill-emerald-400/60 stroke-none">IC</text>
+                <!-- pin rings top + bottom -->
+                {% for i in range(14) %}
+                  <circle cx="{{ 14 + i*5.5 }}" cy="20" r="0.9" class="fill-emerald-400/80 stroke-none"/>
+                  <circle cx="{{ 14 + i*5.5 }}" cy="56" r="0.9" class="fill-emerald-400/80 stroke-none"/>
+                {% endfor %}
+                <!-- screw terminals on sides -->
+                <rect x="3" y="30" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
+                <rect x="3" y="42" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
+                <rect x="91" y="30" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
+                <rect x="91" y="42" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
               </svg>
-              <div class="pointer-events-none absolute bottom-1 left-1 right-1 z-10
-                          rounded px-1 py-0.5 text-center text-[9px] text-slate-200
-                          bg-slate-950/80 backdrop-blur-sm truncate">{{ b.name }}</div>
+              <!-- Big board-name banner -->
+              <div class="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent px-2 py-1.5">
+                <div class="text-[11px] font-semibold text-slate-100 leading-tight line-clamp-2">{{ b.name }}</div>
+                <div class="font-mono text-[9px] text-cyan-300/80 truncate">{{ b.stable_id }}</div>
+              </div>
               {% if img %}
                 <img src="{{ img }}" alt="" loading="lazy"
                      class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300"
