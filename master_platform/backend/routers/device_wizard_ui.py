@@ -1265,7 +1265,24 @@ async def wizard_step_pinmap(
         ).scalars().all()
         components_by_board_pin[_b.id] = {c.board_pin: c for c in rows if c.board_pin}
 
-    # Connection-type label per existing GpioMapping, for the table view.
+    # Connection-type label per existing GpioMapping, for the table view
+    # and for the digital-twin canvas colouring. When neither the compute
+    # nor the board side gives us a kind (e.g. the board pinout isn't
+    # catalogued, or _suggest_board_pin fell back to the raw allocator
+    # function name), use signal_name as a last-resort hint so wires are
+    # still coloured by bus type rather than all-emerald "Logic".
+    def _signal_to_type(sig: str | None) -> str | None:
+        s = (sig or "").upper()
+        if not s: return None
+        if s in ("I2C_SDA", "I2C_SCL", "I²C", "I2C"): return "I²C"
+        if s in ("SPI_MOSI", "SPI_MISO", "SPI_SCK", "SPI_CS", "SPI"): return "SPI"
+        if s in ("UART_TX", "UART_RX", "UART"): return "UART"
+        if s == "PWM": return "PWM"
+        if s in ("ADC", "DAC", "ANALOG", "ANALOG_IN"): return "Analog"
+        if s == "1-WIRE": return "GPIO"
+        if s in ("GPIO_IN", "GPIO_OUT", "GPIO"): return "GPIO"
+        return None
+
     conn_types: dict[str, str] = {}
     for _b, _maps in boards_pins:
         for _m in _maps:
@@ -1276,7 +1293,15 @@ async def wizard_step_pinmap(
                         ck = _k
                         break
             bk = board_pin_kind(_b.board_stable_id, _m.board_pin)
-            conn_types[_m.id] = connection_type(ck, bk)
+            ct = connection_type(ck, bk)
+            if ct == "Logic":
+                # Both sides came back unknown — derive from signal_name
+                # the allocator stored on the GpioMapping so the canvas
+                # doesn't paint every wire the same emerald.
+                hinted = _signal_to_type(_m.signal_name)
+                if hinted:
+                    ct = hinted
+            conn_types[_m.id] = ct
 
     # Serialise PIN_COMPAT for JS so the canvas can validate clicks
     # client-side before posting.
