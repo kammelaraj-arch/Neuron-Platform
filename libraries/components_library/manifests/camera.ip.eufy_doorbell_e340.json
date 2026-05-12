@@ -1,0 +1,70 @@
+{
+  "stable_id": "camera.ip.eufy_doorbell_e340",
+  "name": "Eufy E340 Doorbell (Dual Camera)",
+  "vendor": "Eufy (Anker)",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Wired or battery doorbell with two cameras (top + bottom — captures packages on the doormat). Local recording option (no subscription required). Better Pi integration via the eufy-security-ws bridge.",
+  "tags": [
+    "doorbell",
+    "camera",
+    "eufy",
+    "local_storage"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "motion_detect",
+    "audio_two_way",
+    "onboard_ai"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 18.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 150,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Eufy E340 Doorbell (Dual Camera) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.eufy.com/cdn/E340.jpg",
+    "brand_variants": [
+      "Eufy Doorbell E340",
+      "Eufy Doorbell 2K",
+      "Eufy Doorbell C210"
+    ],
+    "price_usd_range": [
+      100,
+      250
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

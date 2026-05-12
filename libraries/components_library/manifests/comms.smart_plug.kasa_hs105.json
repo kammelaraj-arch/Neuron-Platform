@@ -1,0 +1,69 @@
+{
+  "stable_id": "comms.smart_plug.kasa_hs105",
+  "name": "TP-Link Kasa HS105 Mini Smart Plug",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_plug",
+  "description": "Older Kasa-line single-outlet WiFi plug, fully supported by python-kasa for local control without the TP-Link cloud. Great for self-hosted Home Assistant / Neuron integrations.",
+  "tags": [
+    "smart_plug",
+    "kasa",
+    "wifi",
+    "python_kasa"
+  ],
+  "capabilities": [
+    "switch_load",
+    "schedule"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 120.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 50,
+    "current_ma_peak": 15000,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Kasa HS105 Mini Smart Plug reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/1466.png",
+    "datasheet_url": "https://www.tp-link.com/us/home-networking/smart-plug/hs105/",
+    "brand_variants": [
+      "Kasa HS103 (no schedule)",
+      "Kasa HS105 (mini)",
+      "Kasa HS110 (energy monitor)",
+      "Kasa KP125 (Matter)"
+    ],
+    "price_usd_range": [
+      10,
+      20
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

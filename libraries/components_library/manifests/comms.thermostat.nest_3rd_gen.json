@@ -1,0 +1,68 @@
+{
+  "stable_id": "comms.thermostat.nest_3rd_gen",
+  "name": "Google Nest Learning Thermostat (3rd Gen)",
+  "vendor": "Google (Nest)",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "thermostat",
+  "description": "Self-learning thermostat with auto schedules + occupancy detection. WiFi + 802.15.4 (Thread). Local integration via Matter (newer) or the Nest API (cloud).",
+  "tags": [
+    "thermostat",
+    "nest",
+    "google",
+    "learning"
+  ],
+  "capabilities": [
+    "temperature_read",
+    "setpoint_set",
+    "schedule",
+    "matter_endpoint"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 100,
+    "current_ma_peak": 200,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Google Nest Learning Thermostat (3rd Gen) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://lh3.googleusercontent.com/nest-3rd-gen.png",
+    "brand_variants": [
+      "Nest Learning Thermostat (3rd gen)",
+      "Nest Thermostat (4th gen / 2020)"
+    ],
+    "price_usd_range": [
+      130,
+      250
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

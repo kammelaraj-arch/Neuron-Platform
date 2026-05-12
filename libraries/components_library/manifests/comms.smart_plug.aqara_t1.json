@@ -1,0 +1,70 @@
+{
+  "stable_id": "comms.smart_plug.aqara_t1",
+  "name": "Aqara Smart Plug T1 (Zigbee, Energy Monitor)",
+  "vendor": "Aqara (Lumi)",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_plug",
+  "description": "Zigbee 3.0 smart plug with kWh metering, overload protection. Mainsplate variant for EU/CN. Use in Home-Assistant-driven setups via Zigbee2MQTT — no cloud.",
+  "tags": [
+    "smart_plug",
+    "aqara",
+    "zigbee",
+    "energy_monitor"
+  ],
+  "capabilities": [
+    "switch_load",
+    "energy_meter",
+    "current_read",
+    "voltage_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "BLE",
+      "direction": "out",
+      "notes": "Zigbee — needs coordinator"
+    }
+  ],
+  "power": {
+    "voltage_v": 230.0,
+    "voltage_tolerance_pct": 15,
+    "current_ma_typical": 50,
+    "current_ma_peak": 16000,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Aqara Smart Plug T1 (Zigbee, Energy Monitor) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.aqara.com/cdn/smart-plug-t1.jpg",
+    "datasheet_url": "https://www.zigbee2mqtt.io/devices/SP-EUC01.html",
+    "brand_variants": [
+      "Aqara Plug T1 (EU)",
+      "Aqara Plug US (matter version)"
+    ],
+    "price_usd_range": [
+      18,
+      35
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

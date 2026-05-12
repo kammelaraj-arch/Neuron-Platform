@@ -1,0 +1,69 @@
+{
+  "stable_id": "comms.smart_plug.tapo_p100",
+  "name": "TP-Link Tapo P100 Smart Plug (basic)",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_plug",
+  "description": "WiFi smart plug, on/off + schedule + away mode. No energy monitoring. Controlled via Tapo app (cloud) or local Klap protocol after a recent firmware update. Common entry-level smart plug — works with python-kasa for offline integration.",
+  "tags": [
+    "smart_plug",
+    "tapo",
+    "wifi",
+    "schedule",
+    "klap"
+  ],
+  "capabilities": [
+    "switch_load",
+    "schedule"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 230.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 50,
+    "current_ma_peak": 16000,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo P100 Smart Plug (basic) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/2750.png",
+    "datasheet_url": "https://www.tp-link.com/us/home-networking/smart-plug/tapo-p100/",
+    "brand_variants": [
+      "Tapo P100 (US 16A)",
+      "Tapo P100 (EU 16A)",
+      "Tapo P100 (UK 13A)"
+    ],
+    "price_usd_range": [
+      7,
+      15
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

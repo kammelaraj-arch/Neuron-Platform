@@ -1,0 +1,72 @@
+{
+  "stable_id": "comms.thermostat.ecobee_smart",
+  "name": "Ecobee Smart Thermostat Premium",
+  "vendor": "Ecobee",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "thermostat",
+  "description": "Touchscreen thermostat with built-in Alexa, Spotify, air quality monitor, remote temperature sensors. Local API via HomeKit / Matter. Use in HVAC-aware automations.",
+  "tags": [
+    "thermostat",
+    "ecobee",
+    "homekit",
+    "matter",
+    "air_quality"
+  ],
+  "capabilities": [
+    "temperature_read",
+    "humidity_read",
+    "setpoint_set",
+    "schedule",
+    "air_quality_read",
+    "matter_endpoint"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 24.0,
+    "voltage_tolerance_pct": 20,
+    "current_ma_typical": 100,
+    "current_ma_peak": 300,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Ecobee Smart Thermostat Premium reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.ecobee.com/cdn/smart-premium.jpg",
+    "brand_variants": [
+      "Ecobee Smart Thermostat Premium",
+      "Ecobee3 Lite",
+      "Ecobee Smart Sensor (companion)"
+    ],
+    "price_usd_range": [
+      170,
+      280
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

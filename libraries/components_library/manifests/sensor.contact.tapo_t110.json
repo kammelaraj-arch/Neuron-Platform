@@ -1,0 +1,67 @@
+{
+  "stable_id": "sensor.contact.tapo_t110",
+  "name": "TP-Link Tapo T110 Door / Window Contact Sensor",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "sensors",
+  "subcategory": "contact",
+  "description": "Magnetic open/close sensor — battery, talks to Tapo Hub. Use for cabinet / fridge / window / mail-slot monitoring, security alarms, automated lighting triggers.",
+  "tags": [
+    "contact",
+    "magnetic",
+    "tapo",
+    "battery"
+  ],
+  "capabilities": [
+    "contact_detect",
+    "battery_level_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "BLE",
+      "direction": "out",
+      "notes": "Talks to Tapo Hub"
+    }
+  ],
+  "power": {
+    "voltage_v": 3.0,
+    "voltage_tolerance_pct": 15,
+    "current_ma_typical": 0.02,
+    "current_ma_peak": 15,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo T110 Door / Window Contact Sensor reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/3199.png",
+    "brand_variants": [
+      "Tapo T110 (small)",
+      "Tapo T100 (motion alt)"
+    ],
+    "price_usd_range": [
+      10,
+      20
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

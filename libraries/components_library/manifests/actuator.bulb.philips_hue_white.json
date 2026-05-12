@@ -1,0 +1,73 @@
+{
+  "stable_id": "actuator.bulb.philips_hue_white",
+  "name": "Philips Hue White A19 / E27 (Zigbee)",
+  "vendor": "Philips / Signify",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "lighting",
+  "description": "Reference Zigbee smart bulb — dimmable white, 800lm, 9W. Talks to a Hue Bridge (Zigbee 3.0). Bridge exposes a local REST API + entertainment streaming. Use for room lighting automation, alarm signalling, status colours.",
+  "tags": [
+    "bulb",
+    "lighting",
+    "zigbee",
+    "hue",
+    "philips"
+  ],
+  "capabilities": [
+    "display_color",
+    "alarm_visual",
+    "dim"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "BLE",
+      "direction": "out",
+      "notes": "Zigbee — needs Hue Bridge or generic coordinator"
+    }
+  ],
+  "power": {
+    "voltage_v": 230.0,
+    "voltage_tolerance_pct": 15,
+    "current_ma_typical": 40,
+    "current_ma_peak": 60,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Philips Hue White A19 / E27 (Zigbee) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.philips-hue.com/cdn/white-a19-bulb.jpg",
+    "datasheet_url": "https://www.philips-hue.com/en-us/p/hue-white-a19-1-pack/046677548551",
+    "brand_variants": [
+      "Hue White A19 / E27",
+      "Hue White Ambiance (CCT)",
+      "Hue Color (RGB+W)",
+      "Hue Filament",
+      "Hue Lightstrip Plus"
+    ],
+    "price_usd_range": [
+      10,
+      50
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

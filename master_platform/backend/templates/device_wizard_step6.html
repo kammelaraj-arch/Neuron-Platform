@@ -93,18 +93,42 @@
     {% endfor %}
 
     <!-- Build action -->
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
-      <h3 class="font-semibold">Build firmware bundle</h3>
+    <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5">
+      <h3 class="font-semibold text-emerald-300 flex items-center gap-2">
+        🛠️ Build firmware bundle
+        {% if group.firmware_bundle_path %}
+          <span class="rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5">built</span>
+        {% else %}
+          <span class="rounded-full bg-slate-700/60 text-slate-300 text-[10px] px-2 py-0.5">not built</span>
+        {% endif %}
+      </h3>
       <p class="mt-1 text-xs text-slate-400">
-        Builds DNA + Brain + signed OTA bundle for this group. <strong>Coming
-        next commit</strong> — the multi-board bundle builder is being wired
-        from the existing single-board path. For now, the group is fully
-        configured and editable; the build button activates once that lands.
+        Generates a deterministic <code>.zip</code> with <code>dna.json</code>,
+        <code>brain.json</code> (channels: command-and-control + emergency +
+        OTA; bidirectional heartbeats; per-instance interlocks + failsafes),
+        <code>wifi.json</code> (passwords decrypted only at build time) and
+        <code>manifest.json</code>. The local brain enforces failsafes
+        autonomously when the parent link is lost.
       </p>
-      <div class="mt-3 flex gap-3">
-        <button disabled class="rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed">
-          🛠️ Build (FR-0005 step 6 follow-up)
-        </button>
+
+      {% if group.device_dna %}
+        <p class="mt-2 text-[11px] text-slate-500">
+          DNA: <code class="text-cyan-300">{{ group.device_dna }}</code>
+        </p>
+      {% endif %}
+
+      <div class="mt-3 flex flex-wrap gap-3 items-center">
+        <form method="post" action="/ui/devices/wizard/{{ group.id }}/build">
+          <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+            {% if group.firmware_bundle_path %}🔁 Rebuild bundle{% else %}🛠️ Build bundle{% endif %}
+          </button>
+        </form>
+        {% if group.firmware_bundle_path %}
+          <a href="/ui/devices/wizard/{{ group.id }}/bundle.zip"
+             class="rounded-md border border-emerald-500/50 px-4 py-2 text-sm text-emerald-300 hover:bg-emerald-500/10">
+            ⬇️ Download bundle.zip
+          </a>
+        {% endif %}
         <a href="/ui/devices/wizard/{{ group.id }}/pinmap"
            class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">← Back to pin map</a>
       </div>

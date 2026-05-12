@@ -1,0 +1,69 @@
+{
+  "stable_id": "comms.smart_plug.tapo_p125m_matter",
+  "name": "TP-Link Tapo P125M Matter Smart Plug",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_plug",
+  "description": "Matter-over-WiFi smart plug — works natively with Apple HomeKit, Google Home, SmartThings, Alexa via Matter. Use when standardised local control matters more than the Tapo cloud ecosystem.",
+  "tags": [
+    "smart_plug",
+    "tapo",
+    "matter",
+    "wifi",
+    "homekit"
+  ],
+  "capabilities": [
+    "switch_load",
+    "schedule",
+    "matter_endpoint"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 230.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 50,
+    "current_ma_peak": 16000,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo P125M Matter Smart Plug reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/3491.png",
+    "datasheet_url": "https://www.tp-link.com/us/home-networking/smart-plug/tapo-p125m/",
+    "brand_variants": [
+      "Tapo P125M (US 15A)",
+      "Tapo P125M (EU/UK 13A)"
+    ],
+    "price_usd_range": [
+      12,
+      22
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

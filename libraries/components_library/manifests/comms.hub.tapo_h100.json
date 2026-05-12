@@ -1,0 +1,71 @@
+{
+  "stable_id": "comms.hub.tapo_h100",
+  "name": "TP-Link Tapo H100 Smart Hub",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "hub",
+  "description": "Required bridge for the Tapo T-series battery sensors. Plug into WiFi, sensors mesh to it via sub-GHz. Exposes a local HTTP/REST API for the Master to poll. Built-in chime/siren on H100 variant.",
+  "tags": [
+    "hub",
+    "tapo",
+    "wifi",
+    "sub_ghz",
+    "bridge"
+  ],
+  "capabilities": [
+    "hub_bridge",
+    "alarm_audio"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    },
+    {
+      "type": "Ethernet",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 200,
+    "current_ma_peak": 800,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo H100 Smart Hub reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/3173.png",
+    "brand_variants": [
+      "Tapo H100 (with siren)",
+      "Tapo H200 (with display)"
+    ],
+    "price_usd_range": [
+      25,
+      55
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

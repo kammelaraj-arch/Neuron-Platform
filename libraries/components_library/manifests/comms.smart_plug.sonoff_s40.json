@@ -1,0 +1,70 @@
+{
+  "stable_id": "comms.smart_plug.sonoff_s40",
+  "name": "Sonoff S40 / S31 WiFi Smart Plug",
+  "vendor": "Sonoff (ITEAD)",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_plug",
+  "description": "ESPHome- / Tasmota-flashable WiFi smart plug. S31 has energy monitoring; S40 is the newer Matter variant. Hacker favourite — full local control, no cloud, integrates with Home Assistant natively after a one-time flash.",
+  "tags": [
+    "smart_plug",
+    "sonoff",
+    "esphome",
+    "tasmota",
+    "matter"
+  ],
+  "capabilities": [
+    "switch_load",
+    "schedule",
+    "energy_meter"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 120.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 50,
+    "current_ma_peak": 15000,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Sonoff S40 / S31 WiFi Smart Plug reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://itead.cc/wp-content/uploads/2023/03/S40-Lite-1.jpg",
+    "datasheet_url": "https://sonoff.tech/product/smart-plug/s40-lite/",
+    "brand_variants": [
+      "Sonoff S31 (energy monitor)",
+      "Sonoff S40 Lite",
+      "Sonoff S40 (Matter)"
+    ],
+    "price_usd_range": [
+      10,
+      20
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

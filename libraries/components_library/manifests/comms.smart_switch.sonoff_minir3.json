@@ -1,0 +1,69 @@
+{
+  "stable_id": "comms.smart_switch.sonoff_minir3",
+  "name": "Sonoff MINI R3 In-Wall Smart Switch",
+  "vendor": "Sonoff (ITEAD)",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_switch",
+  "description": "Tiny WiFi switch that hides behind existing wall switches. ESPHome / Tasmota / eWeLink. Use to retro-fit dumb lighting + appliance circuits into automation without replacing the wall plate.",
+  "tags": [
+    "smart_switch",
+    "sonoff",
+    "in_wall",
+    "esphome",
+    "wifi"
+  ],
+  "capabilities": [
+    "switch_load",
+    "schedule"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 230.0,
+    "voltage_tolerance_pct": 15,
+    "current_ma_typical": 50,
+    "current_ma_peak": 10000,
+    "power_source": "mains"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Sonoff MINI R3 In-Wall Smart Switch reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://itead.cc/wp-content/uploads/2023/06/MINIR3.jpg",
+    "datasheet_url": "https://sonoff.tech/product/diy-smart-switches/mini-r3/",
+    "brand_variants": [
+      "Sonoff MINI R3",
+      "Sonoff BASICR3",
+      "Sonoff POW R3 (energy monitor)"
+    ],
+    "price_usd_range": [
+      8,
+      18
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

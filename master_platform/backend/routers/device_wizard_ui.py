@@ -24,7 +24,7 @@ from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,7 +32,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func as sa_func
 
+from ..config import settings
 from ..db import get_session
+from ..group_bundle import build_group_bundle
 from ..library_loader import load_catalog
 from ..compute_pinouts import PIN_KIND_COLORS, header_for
 from ..board_pinouts import (
@@ -1463,4 +1465,69 @@ async def wizard_step_review(
             "steps": WIZARD_STEPS,
             "step_idx": 6,
         },
+    )
+
+
+@router.post("/ui/devices/wizard/{group_id}/build")
+async def wizard_build_bundle(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Assemble DNA + Brain + WiFi into a deterministic firmware bundle
+    for this group. Locked groups require a session-level unlock first."""
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+
+    if not group.compute_stable_id:
+        raise HTTPException(400, "Pick a compute module first.")
+    boards_count = (
+        await session.execute(
+            select(sa_func.count()).select_from(BoardInstance)
+            .where(BoardInstance.group_id == group.id)
+        )
+    ).scalar_one()
+    if boards_count == 0:
+        raise HTTPException(400, "Add at least one board before building.")
+
+    bundle_path, dna, brain = await build_group_bundle(
+        session, group, Path(settings.build_artifacts_dir)
+    )
+    group.dna_json = dna
+    group.brain_json = brain
+    group.firmware_bundle_path = str(bundle_path)
+    group.device_dna = dna["device_dna"]
+
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.build_bundle", target_kind="edge_group", target_id=group.id,
+        detail={
+            "device_dna": dna["device_dna"],
+            "bundle_path": str(bundle_path),
+            "boards": len(dna.get("boards") or []),
+            "components": len(dna.get("components") or []),
+            "interlocks": len((brain.get("safety") or {}).get("interlocks") or []),
+        },
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
+@router.get("/ui/devices/wizard/{group_id}/bundle.zip")
+async def wizard_download_bundle(
+    group_id: str,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    if not group.firmware_bundle_path:
+        raise HTTPException(404, "No firmware bundle built yet.")
+    p = Path(group.firmware_bundle_path)
+    if not p.exists():
+        raise HTTPException(410, "Bundle file missing on disk; rebuild required.")
+    return FileResponse(
+        path=str(p),
+        media_type="application/zip",
+        filename=f"{group.device_dna or group.id}.zip",
     )

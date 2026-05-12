@@ -1,0 +1,68 @@
+{
+  "stable_id": "comms.smart_switch.tapo_s220",
+  "name": "TP-Link Tapo S220 Smart Light Switch",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "comms",
+  "subcategory": "smart_switch",
+  "description": "WiFi-connected 2-gang light switch. Schedules, scenes, remote on/off, smart bulb coordination via Tapo Hub. Use to automate existing room lighting without a hub.",
+  "tags": [
+    "smart_switch",
+    "tapo",
+    "wifi",
+    "lighting"
+  ],
+  "capabilities": [
+    "switch_load",
+    "schedule",
+    "scene"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 120.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 50,
+    "current_ma_peak": 8000,
+    "power_source": "mains"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo S220 Smart Light Switch reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/3204.png",
+    "datasheet_url": "https://www.tp-link.com/us/home-networking/smart-switch/tapo-s220/",
+    "brand_variants": [
+      "Tapo S210 (1-gang)",
+      "Tapo S220 (2-gang)"
+    ],
+    "price_usd_range": [
+      12,
+      25
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "stable_id": "camera.ip.tapo_c400_battery",
+  "name": "TP-Link Tapo C400 Battery-Powered Outdoor Camera",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "1080p outdoor cam, magnetic mount, 180-day battery on standby + solar panel option. RTSP requires Tapo Hub H200 base station. Use for utility shed / remote-gate / orchard monitoring.",
+  "tags": [
+    "camera",
+    "ip",
+    "tapo",
+    "battery",
+    "outdoor"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "motion_detect",
+    "battery_level_read"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 10,
+    "current_ma_typical": 0,
+    "current_ma_peak": 1500,
+    "power_source": "battery"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo C400 Battery-Powered Outdoor Camera reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/3471.png",
+    "brand_variants": [
+      "Tapo C400",
+      "Tapo C420 (2K)",
+      "Tapo C425 (4MP)"
+    ],
+    "price_usd_range": [
+      70,
+      130
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

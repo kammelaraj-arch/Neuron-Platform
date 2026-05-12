@@ -1,0 +1,72 @@
+{
+  "stable_id": "camera.ip.tapo_c320ws",
+  "name": "TP-Link Tapo C320WS Outdoor Camera (2K ColorVu)",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "Outdoor bullet cam, 2K 4MP, ColorVu (always-on colour night vision), spotlight, IP66 weatherproof. RTSP + ONVIF. Workhorse for perimeter security on commercial sites.",
+  "tags": [
+    "camera",
+    "ip",
+    "tapo",
+    "outdoor",
+    "2k",
+    "colorvu"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "video_record",
+    "motion_detect",
+    "onboard_ai"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 12.0,
+    "voltage_tolerance_pct": 25,
+    "current_ma_typical": 500,
+    "current_ma_peak": 1200,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo C320WS Outdoor Camera (2K ColorVu) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/3340.png",
+    "brand_variants": [
+      "Tapo C320WS",
+      "Tapo C325WB (with siren)",
+      "Tapo C500 (PTZ outdoor)"
+    ],
+    "price_usd_range": [
+      50,
+      90
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

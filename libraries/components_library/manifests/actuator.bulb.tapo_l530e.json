@@ -1,0 +1,70 @@
+{
+  "stable_id": "actuator.bulb.tapo_l530e",
+  "name": "TP-Link Tapo L530E Multicolour WiFi Smart Bulb",
+  "vendor": "TP-Link",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "actuators",
+  "subcategory": "lighting",
+  "description": "WiFi RGB+W smart bulb, 800lm, ~9W. No hub required. Music sync, scene presets. Cheaper alternative to Hue when you only need a couple of bulbs and don't want a bridge.",
+  "tags": [
+    "bulb",
+    "lighting",
+    "tapo",
+    "wifi",
+    "rgb"
+  ],
+  "capabilities": [
+    "display_color",
+    "alarm_visual",
+    "dim"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 230.0,
+    "voltage_tolerance_pct": 15,
+    "current_ma_typical": 40,
+    "current_ma_peak": 70,
+    "power_source": "mains"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "TP-Link Tapo L530E Multicolour WiFi Smart Bulb reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.tp-link.com/us/images/products/large/3175.png",
+    "brand_variants": [
+      "Tapo L530E (E27)",
+      "Tapo L535E (B22)",
+      "Tapo L900 (Lightstrip)",
+      "Tapo L920 (Lightstrip Plus)"
+    ],
+    "price_usd_range": [
+      10,
+      25
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

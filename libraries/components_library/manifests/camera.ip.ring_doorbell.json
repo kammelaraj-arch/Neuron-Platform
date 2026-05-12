@@ -1,0 +1,70 @@
+{
+  "stable_id": "camera.ip.ring_doorbell",
+  "name": "Ring Video Doorbell (Wired / Battery)",
+  "vendor": "Ring (Amazon)",
+  "version": "1.0.0",
+  "library": "components_library",
+  "category": "cameras",
+  "subcategory": "ip",
+  "description": "WiFi doorbell with two-way audio + motion alerts. Cloud-only for Ring subscriptions; for local integration use the unofficial ring-doorbell Python lib or a Pi+RTSP transcoder. Pair with Echo Show for chime.",
+  "tags": [
+    "doorbell",
+    "camera",
+    "ring",
+    "wifi",
+    "battery"
+  ],
+  "capabilities": [
+    "live_stream",
+    "snapshot",
+    "motion_detect",
+    "audio_two_way"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "WiFi",
+      "direction": "bidir"
+    }
+  ],
+  "power": {
+    "voltage_v": 16.0,
+    "voltage_tolerance_pct": 50,
+    "current_ma_typical": 100,
+    "current_ma_peak": 1500,
+    "power_source": "external"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Ring Video Doorbell (Wired / Battery) reachable",
+      "blocking": false,
+      "steps": [
+        "read once",
+        "expect no driver error"
+      ],
+      "expected": "no error"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://m.media-amazon.com/images/I/61OnHbWBoiL._AC_SL1500_.jpg",
+    "brand_variants": [
+      "Ring Video Doorbell 4 (battery)",
+      "Ring Video Doorbell Pro 2 (wired)",
+      "Ring Doorbell Wired (entry)"
+    ],
+    "price_usd_range": [
+      60,
+      230
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}
