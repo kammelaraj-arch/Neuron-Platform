@@ -57,6 +57,7 @@ from .models import (
     GpioMapping,
     NodeSystem,
     RootSystem,
+    VendorAccount,
     WifiNetwork,
 )
 from .security.secret_crypto import decrypt_secret
@@ -318,6 +319,55 @@ def _wifi_payload(primary: WifiNetwork | None, secondary: WifiNetwork | None) ->
     }
 
 
+async def _vendor_accounts_payload(
+    session: AsyncSession,
+    boards: list,
+) -> dict:
+    """Collect every distinct VendorAccount referenced by a
+    ComponentInstance in this group and emit a decrypted snapshot for
+    the on-device agent. Plaintext only appears in this function — at
+    rest in the DB the password / api_key / refresh_token are Fernet-
+    encrypted, and the resulting .zip should be transported only over
+    the mTLS deploy channel.
+
+    Output shape (per account):
+        {
+          id, provider, label, username, region, base_url,
+          password, api_key, refresh_token,
+          components: ["instance_id", …]   # which on-device instances use it
+        }
+    """
+    by_id: dict[str, dict] = {}
+    for _b, comps, _p, _d in boards:
+        for c in comps:
+            if not c.vendor_account_id:
+                continue
+            entry = by_id.get(c.vendor_account_id)
+            if entry is None:
+                row = await session.get(VendorAccount, c.vendor_account_id)
+                if row is None or row.status != "active":
+                    continue
+                entry = {
+                    "id": row.id,
+                    "provider": row.provider,
+                    "label": row.label,
+                    "username": row.username,
+                    "region": row.region,
+                    "base_url": row.base_url,
+                    "password": decrypt_secret(row.password_encrypted) if row.password_encrypted else None,
+                    "api_key":  decrypt_secret(row.api_key_encrypted)  if row.api_key_encrypted  else None,
+                    "refresh_token": decrypt_secret(row.refresh_token_encrypted) if row.refresh_token_encrypted else None,
+                    "components": [],
+                }
+                by_id[row.id] = entry
+            entry["components"].append(c.instance_id)
+    return {
+        "schema_version": "1.0.0",
+        "accounts": list(by_id.values()),
+    }
+
+
+
 # ─── Parent URL derivation (Master vs Node vs Edge hierarchy) ───────────────
 async def _derive_parent_url(session: AsyncSession, group: EdgeGroup) -> str | None:
     """Resolve the URL the device dials home to. The Group's parent is
@@ -389,6 +439,7 @@ async def build_group_bundle(
     device_dna = dna["device_dna"]
     brain = _build_brain(group, boards, parent_url, device_dna)
     wifi = _wifi_payload(primary, secondary)
+    vendor_accounts = await _vendor_accounts_payload(session, boards)
 
     # Bundle artifacts deterministically (fixed mtime + sorted names).
     artifacts_dir.mkdir(parents=True, exist_ok=True)
@@ -399,6 +450,7 @@ async def build_group_bundle(
         ("dna.json",   _det_dumps(dna)),
         ("brain.json", _det_dumps(brain)),
         ("wifi.json",  _det_dumps(wifi)),
+        ("vendor_accounts.json", _det_dumps(vendor_accounts)),
     ]
 
     manifest = {

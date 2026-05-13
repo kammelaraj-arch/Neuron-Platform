@@ -561,6 +561,14 @@ class ComponentInstance(Base):
     # the master except inside the firmware bundle at build time.
     api_endpoint: Mapped[str | None] = mapped_column(String(400))
     api_key_encrypted: Mapped[str | None] = mapped_column(Text)
+    # Cloud-account binding. Smart-home gear (Tapo plug, Hue bulb, Nest
+    # thermostat, …) reaches its vendor over WiFi + the account's
+    # cloud / local-LAN token. One VendorAccount drives many components,
+    # so we point at it by id; the actual creds live encrypted on the
+    # VendorAccount row + are decrypted at firmware-bundle-build time.
+    vendor_account_id: Mapped[str | None] = mapped_column(
+        ForeignKey("vendor_accounts.id"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
     board: Mapped[BoardInstance] = relationship(back_populates="components")

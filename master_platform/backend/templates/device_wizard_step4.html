@@ -145,6 +145,46 @@
                   <span class="text-slate-400">failsafe: <span class="text-cyan-300 font-mono">{{ effective_failsafe }}</span></span>
                 </div>
 
+                <!-- Vendor cloud-account binding (Tapo / Hue / Nest / …) -->
+                {% set bound_acc = none %}
+                {% if c.vendor_account_id %}
+                  {% for va in vendor_accounts %}{% if va.id == c.vendor_account_id %}{% set bound_acc = va %}{% endif %}{% endfor %}
+                {% endif %}
+                <details class="mt-2">
+                  <summary class="cursor-pointer text-[11px] text-slate-300 hover:text-white">
+                    ☁ Vendor account
+                    {% if bound_acc %}
+                      <span class="ml-1 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] px-1.5 py-0.5">{{ bound_acc.provider }}: {{ bound_acc.label }}</span>
+                    {% elif c.api_endpoint %}
+                      <span class="ml-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.5">local · {{ c.api_endpoint }}</span>
+                    {% else %}
+                      <span class="ml-1 text-slate-500">(none)</span>
+                    {% endif %}
+                  </summary>
+                  <form method="post" action="/ui/devices/wizard/{{ group.id }}/components/{{ c.id }}/vendor-account"
+                        class="mt-2 space-y-2 text-[11px]">
+                    <div>
+                      <label class="block uppercase tracking-wider text-slate-500">Account</label>
+                      <select name="vendor_account_id" class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono">
+                        <option value="">— none / local only —</option>
+                        {% for va in vendor_accounts %}
+                          <option value="{{ va.id }}" {% if c.vendor_account_id == va.id %}selected{% endif %}>{{ va.provider }} · {{ va.label }}</option>
+                        {% endfor %}
+                      </select>
+                      <p class="mt-0.5 text-[10px] text-slate-500">
+                        Manage accounts at <a href="/ui/vendor-accounts" target="_blank" class="underline text-cyan-300">/ui/vendor-accounts</a>.
+                      </p>
+                    </div>
+                    <div>
+                      <label class="block uppercase tracking-wider text-slate-500">Local API endpoint (optional)</label>
+                      <input name="api_endpoint" value="{{ c.api_endpoint or '' }}"
+                             placeholder="http://192.168.1.50  or  https://tapo-plug.local"
+                             class="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono">
+                    </div>
+                    <button class="rounded-md bg-cyan-500 px-3 py-1 font-medium text-slate-950 hover:bg-cyan-400">Save binding</button>
+                  </form>
+                </details>
+
                 <!-- Edit Risk panel -->
                 <details class="mt-2">
                   <summary class="cursor-pointer text-[11px] text-slate-300 hover:text-white">⚠ Edit risk &amp; failsafe</summary>

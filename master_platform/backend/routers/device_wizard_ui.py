@@ -1157,6 +1157,12 @@ async def wizard_step_components(
         c for c in catalog.list_library("control_board_library")
         if (c.manifest.get("subcategory") or "").lower() in _DRIVER_SUBCATS
     ]
+    # Vendor accounts available for smart-home component binding.
+    from ..models import VendorAccount
+    vendor_accounts = (await session.execute(
+        select(VendorAccount).where(VendorAccount.status == "active")
+        .order_by(VendorAccount.provider, VendorAccount.label)
+    )).scalars().all()
     return templates.TemplateResponse(
         "device_wizard_step4.html",
         {
@@ -1165,6 +1171,7 @@ async def wizard_step_components(
             "boards_with_components": boards_with_components,
             "available_components": available_components,
             "available_drivers": available_drivers,
+            "vendor_accounts": vendor_accounts,
             "catalog": catalog,
             "RISK_LEVELS": RISK_LEVELS,
             "RISK_TYPES": RISK_TYPES,
@@ -1357,6 +1364,47 @@ async def wizard_set_component_pin(
         session, actor=actor.id, actor_kind="ui_session",
         action="component.pin_assign", target_kind="component_instance", target_id=comp.id,
         detail={"board_pin": comp.board_pin, "function_label": comp.function_label, "asset_id": comp.asset_id},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/components/{comp_id}/vendor-account")
+async def wizard_set_component_vendor_account(
+    group_id: str,
+    comp_id: str,
+    request: Request,
+    vendor_account_id: str = Form(""),
+    api_endpoint: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Bind a smart-home ComponentInstance to a VendorAccount (Tapo /
+    Hue / Nest / Ring / …) saved at /ui/vendor-accounts. Optionally
+    pin a local API endpoint (LAN-mode device IP) alongside. Blank
+    vendor_account_id clears the binding."""
+    from ..models import VendorAccount
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    comp = await session.get(ComponentInstance, comp_id)
+    if comp is None:
+        raise HTTPException(404, "component not found")
+    board = await session.get(BoardInstance, comp.board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "component not in this group")
+
+    vid = vendor_account_id.strip() or None
+    if vid:
+        acc = await session.get(VendorAccount, vid)
+        if acc is None:
+            raise HTTPException(404, f"vendor account {vid} not found")
+    comp.vendor_account_id = vid
+    comp.api_endpoint = api_endpoint.strip() or None
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="component.set_vendor_account",
+        target_kind="component_instance", target_id=comp.id,
+        detail={"vendor_account_id": vid, "api_endpoint": comp.api_endpoint},
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
