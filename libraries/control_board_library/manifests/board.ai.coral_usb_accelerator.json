@@ -34,12 +34,12 @@
     "voltage_tolerance_pct": 5,
     "current_ma_typical": 500,
     "current_ma_peak": 900,
-    "power_source": "from_compute"
+    "power_source": "bus"
   },
   "safety_class": "advisory",
   "drivers": [
-    "libedgetpu",
-    "pycoral"
+    {"runtime": "linux_pkg", "module": "libedgetpu"},
+    {"runtime": "cpython", "module": "pycoral"}
   ],
   "self_tests": [
     {

@@ -24,7 +24,7 @@
   "dependencies": [],
   "interfaces": [
     {
-      "type": "PCIe",
+      "type": "Internal",
       "direction": "bidir",
       "voltage": 3.3,
       "notes": "PCIe Gen3 ×1 via Pi 5 FPC ribbon cable"
@@ -35,12 +35,12 @@
     "voltage_tolerance_pct": 5,
     "current_ma_typical": 2000,
     "current_ma_peak": 4000,
-    "power_source": "from_compute"
+    "power_source": "bus"
   },
   "safety_class": "advisory",
   "drivers": [
-    "hailo-rt",
-    "hailo-tappas"
+    {"runtime": "linux_pkg", "module": "hailo-rt"},
+    {"runtime": "linux_pkg", "module": "hailo-tappas"}
   ],
   "self_tests": [
     {
