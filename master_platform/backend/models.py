@@ -299,6 +299,36 @@ class WifiNetwork(Base):
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
 
+class VendorAccount(Base):
+    """Cloud-account credentials for third-party vendors (TP-Link Tapo,
+    Philips Hue, Google Nest, Ring, Ecobee, Aqara, …). One account
+    typically drives many devices (e.g. a Tapo account controls a dozen
+    plugs / cams / bulbs), so this lives at the Master level and each
+    smart-home ComponentInstance binds to one row by `vendor_account_id`.
+
+    Sensitive fields (password, refresh-token, API key) are Fernet-
+    encrypted at rest via security.secret_crypto. Plaintext only
+    appears in memory at firmware-bundle-build time or when a backend
+    integration explicitly opts in via decrypt_secret().
+    """
+    __tablename__ = "vendor_accounts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    provider: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    username: Mapped[str | None] = mapped_column(String(200))   # email / OAuth subject
+    password_encrypted: Mapped[str | None] = mapped_column(Text)
+    api_key_encrypted: Mapped[str | None] = mapped_column(Text)
+    refresh_token_encrypted: Mapped[str | None] = mapped_column(Text)
+    region: Mapped[str | None] = mapped_column(String(40))         # e.g. "eu-west"
+    base_url: Mapped[str | None] = mapped_column(String(400))
+    extra_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    rotated_at: Mapped[datetime | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 class FeatureRequest(Base):
     __tablename__ = "feature_requests"
 
@@ -457,6 +487,13 @@ class BoardInstance(Base):
 # heater wired into a temperature-controlled water bath).
 DEVICE_ROLES = ("master", "node", "edge", "gateway")
 PROTOCOL_KEYS = ("mqtt", "opcua", "modbus", "can")
+# Vendor cloud-account providers managed at the Master level. Each
+# ComponentInstance that's a smart-home gadget (Tapo plug, Hue bulb,
+# Nest thermostat, etc.) binds to one VendorAccount by id.
+VENDOR_PROVIDERS = (
+    "tapo", "kasa", "hue", "nest", "ecobee", "ring", "eufy",
+    "aqara", "sonoff", "shelly", "smartthings", "homekit", "other",
+)
 RULE_ACTIONS = (
     "stop_motor", "set_pwm_zero", "open_relay", "close_relay",
     "publish_alarm", "safe_shutdown", "ignore",

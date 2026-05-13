@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Vendor cloud accounts{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Vendor cloud accounts</h1>
+      <p class="text-slate-400 text-sm">
+        Cloud credentials for third-party smart-home vendors (Tapo, Hue, Nest, Ring, …).
+        One row per cloud account drives many devices on that account. Secrets are
+        <strong>Fernet-encrypted at rest</strong>; plaintext only appears in memory at
+        firmware-bundle build time. New plaintext is shown <strong>once</strong> on entry —
+        copy + paste from your vendor's console rather than re-typing.
+      </p>
+    </div>
+    <a href="#new-account"
+       class="rounded-lg bg-emerald-500 px-4 py-2 font-medium text-slate-950 hover:bg-emerald-400 transition">
+      + New vendor account
+    </a>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+        <tr>
+          <th class="px-4 py-3">Provider</th>
+          <th class="px-4 py-3">Label</th>
+          <th class="px-4 py-3">Username</th>
+          <th class="px-4 py-3">Region</th>
+          <th class="px-4 py-3">Secrets</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Rotated</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/70">
+        {% for a in accounts %}
+          <tr class="hover:bg-slate-900/40">
+            <td class="px-4 py-3">
+              <span class="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[11px] uppercase tracking-wider text-cyan-300">{{ a.provider }}</span>
+            </td>
+            <td class="px-4 py-3 font-medium text-slate-200">{{ a.label }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-300">{{ a.username or '—' }}</td>
+            <td class="px-4 py-3 text-slate-400">{{ a.region or '—' }}</td>
+            <td class="px-4 py-3 text-[11px] text-slate-400">
+              {% if a.password_encrypted %}<span class="rounded bg-slate-800 px-1.5 mr-1">pwd</span>{% endif %}
+              {% if a.api_key_encrypted %}<span class="rounded bg-slate-800 px-1.5 mr-1">api</span>{% endif %}
+              {% if a.refresh_token_encrypted %}<span class="rounded bg-slate-800 px-1.5">token</span>{% endif %}
+              {% if not (a.password_encrypted or a.api_key_encrypted or a.refresh_token_encrypted) %}<span class="text-slate-600 italic">none</span>{% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if a.status == 'active' %}
+                <span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">active</span>
+              {% else %}
+                <span class="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] text-red-300">{{ a.status }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-[11px] text-slate-500 font-mono">
+              {{ a.rotated_at.strftime('%Y-%m-%d %H:%M') if a.rotated_at else '—' }}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <details class="inline-block text-left">
+                <summary class="cursor-pointer text-xs text-cyan-300 hover:text-cyan-200">Rotate ▾</summary>
+                <form method="post" action="/ui/vendor-accounts/{{ a.id }}/rotate"
+                      class="mt-2 grid gap-1 min-w-[18rem] rounded-md border border-slate-700 bg-slate-950 p-2">
+                  <input name="password" type="password" placeholder="new password (blank = keep)"
+                         class="rounded border border-slate-800 bg-slate-900 px-2 py-1 text-[11px]" />
+                  <input name="api_key" type="password" placeholder="new API key"
+                         class="rounded border border-slate-800 bg-slate-900 px-2 py-1 text-[11px] font-mono" />
+                  <input name="refresh_token" type="password" placeholder="new refresh token"
+                         class="rounded border border-slate-800 bg-slate-900 px-2 py-1 text-[11px] font-mono" />
+                  <button class="rounded bg-cyan-500 text-slate-950 text-[11px] py-1 font-medium hover:bg-cyan-400">Rotate</button>
+                </form>
+              </details>
+              <form method="post" action="/ui/vendor-accounts/{{ a.id }}/revoke" class="inline"
+                    onsubmit="return confirm('Revoke {{ a.provider }}: {{ a.label }}?');">
+                <button class="rounded-md border border-amber-700 px-2 py-1 text-[11px] text-amber-300 hover:bg-amber-500/10">Revoke</button>
+              </form>
+              <form method="post" action="/ui/vendor-accounts/{{ a.id }}/delete" class="inline"
+                    onsubmit="return confirm('Permanently delete {{ a.provider }}: {{ a.label }}? This is not reversible.');">
+                <button class="rounded-md border border-red-700 px-2 py-1 text-[11px] text-red-300 hover:bg-red-500/10">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="px-4 py-6 text-sm text-slate-500 italic text-center">
+            No vendor accounts yet. Add your first one below — Tapo / Hue / Nest / Ring etc.
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── NEW ACCOUNT FORM ─────────────────────────────────────────────────── -->
+  <section id="new-account" class="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-6">
+    <h2 class="text-lg font-semibold text-emerald-300">+ New vendor account</h2>
+    <p class="mt-1 text-xs text-slate-400">
+      Fields you leave blank are simply not stored. For TP-Link Tapo: enter the e-mail you use in the Tapo app + your account password.
+      For OAuth providers (Nest, Ring, Ecobee): paste the refresh-token from the vendor's developer console.
+    </p>
+
+    <form method="post" action="/ui/vendor-accounts/new" class="mt-4 grid gap-3 sm:grid-cols-2">
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Provider *</label>
+        <select name="provider" required
+                class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
+          {% for p in providers %}
+            <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Label *</label>
+        <input name="label" required maxlength="120"
+               placeholder="e.g. Wembley site Tapo account"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Username / email</label>
+        <input name="username" maxlength="200"
+               placeholder="ops@example.com"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Region (optional)</label>
+        <input name="region" maxlength="40"
+               placeholder="eu-west / us-east / ap-southeast"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">
+          Password (Fernet-encrypted at rest)
+        </label>
+        <input name="password" type="password" autocomplete="new-password" maxlength="400"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">API key (optional)</label>
+        <input name="api_key" type="password" autocomplete="new-password" maxlength="1000"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Refresh token (OAuth, optional)</label>
+        <input name="refresh_token" type="password" autocomplete="new-password" maxlength="2000"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Base URL (optional — vendor API root)</label>
+        <input name="base_url" maxlength="400"
+               placeholder="https://eu-wap.tplinkcloud.com / https://api.smartthings.com"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+      </div>
+
+      <div class="sm:col-span-2 flex items-center gap-3">
+        <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+          Save vendor account
+        </button>
+        <span class="text-[11px] text-slate-500">
+          Audited as <code>vendor_account.create</code> (no secret material — just flags).
+        </span>
+      </div>
+    </form>
+  </section>
+{% endblock %}

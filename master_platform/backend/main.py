@@ -38,6 +38,7 @@ from .routers import (
     systems,
     twin_push,
     ui,
+    vendor_accounts_ui,
     wifi_ui,
 )
 from .security.keys import issue_payload
@@ -246,6 +247,7 @@ app.include_router(sysops_ui.router)
 app.include_router(features_ui.router)
 app.include_router(functions_ui.router)
 app.include_router(wifi_ui.router)
+app.include_router(vendor_accounts_ui.router)
 
 # JSON API routers
 app.include_router(library.router)
