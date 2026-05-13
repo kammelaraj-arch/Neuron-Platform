@@ -367,6 +367,28 @@ class EdgeGroup(Base):
     lock_pin_hash: Mapped[str | None] = mapped_column(Text)
     locked_at: Mapped[datetime | None] = mapped_column()
     locked_by: Mapped[str | None] = mapped_column(String(120))
+    # 2026-05: spec-driven fields from docs/wizard_spec.md.
+    # `role` distinguishes Master (control plane), Edge (sensors / actuators)
+    # and Gateway (protocol bridge). `asset_id` is mandatory at the app
+    # level (nullable in DB only so legacy rows back-fill cleanly).
+    role: Mapped[str] = mapped_column(String(20), default="edge", nullable=False)
+    asset_id: Mapped[str | None] = mapped_column(String(120), index=True)
+    factory: Mapped[str | None] = mapped_column(String(120))
+    line: Mapped[str | None] = mapped_column(String(120))
+    machine: Mapped[str | None] = mapped_column(String(120))
+    # Industrial protocols (MQTT / OPC-UA / Modbus / CAN). Each top-level
+    # key is one protocol; only enabled protocols have a non-null config.
+    protocols_json: Mapped[dict | None] = mapped_column(JSON)
+    # IF-THEN local rules engine. Each entry:
+    # {when: {instance_id, op, value}, then: {action, params}, critical}
+    # `critical=true` means local-only enforcement (parent advisory).
+    rules_json: Mapped[list | None] = mapped_column(JSON)
+    # Telemetry channels + alert thresholds.
+    telemetry_json: Mapped[dict | None] = mapped_column(JSON)
+    # Connectivity extras (NTP, Bluetooth) — separate from WiFi which
+    # already lives in primary_wifi_id / secondary_wifi_id.
+    ntp_servers_json: Mapped[list | None] = mapped_column(JSON)
+    bluetooth_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
@@ -414,6 +436,13 @@ class BoardInstance(Base):
 # safety_class with the operator's per-install judgement (a heater wired
 # next to flammable material is a different risk class from the same
 # heater wired into a temperature-controlled water bath).
+DEVICE_ROLES = ("master", "edge", "gateway")
+PROTOCOL_KEYS = ("mqtt", "opcua", "modbus", "can")
+RULE_ACTIONS = (
+    "stop_motor", "set_pwm_zero", "open_relay", "close_relay",
+    "publish_alarm", "safe_shutdown", "ignore",
+)
+RULE_OPS = (">", "<", ">=", "<=", "==", "!=")
 RISK_LEVELS = ("nominal", "advisory", "critical", "life_safety")
 RISK_TYPES = (
     "fire", "scald", "burn", "shock", "chemical", "biohazard",
@@ -470,6 +499,12 @@ class ComponentInstance(Base):
     disconnect_grace_seconds: Mapped[int] = mapped_column(default=30, nullable=False)
     # Maximum gap between commands before the brain assumes the link is dead.
     watchdog_ms: Mapped[int] = mapped_column(default=1000, nullable=False)
+    # ── Direct-API integration (smart plugs, IP cameras, Hue, etc.) ────────
+    # When the component is reached over WiFi/HTTP rather than GPIO, store
+    # the endpoint + Fernet-encrypted API key. Plaintext never leaves
+    # the master except inside the firmware bundle at build time.
+    api_endpoint: Mapped[str | None] = mapped_column(String(400))
+    api_key_encrypted: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
     board: Mapped[BoardInstance] = relationship(back_populates="components")

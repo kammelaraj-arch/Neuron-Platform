@@ -7,11 +7,161 @@
     <div>
       <h2 class="text-lg font-semibold">6. Review & build</h2>
       <p class="mt-1 text-sm text-slate-400">
-        Confirm the group, then build the firmware bundle. The bundle
-        combines the per-board pin maps into one DNA + Brain document
-        signed for this group.
+        Confirm the group, configure protocols + local rules, then build
+        the firmware bundle. The bundle combines the per-board pin maps
+        into one DNA + Brain document signed for this group.
       </p>
     </div>
+
+    <!-- ── IDENTITY SUMMARY ──────────────────────────────────────────────── -->
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <h3 class="font-semibold flex flex-wrap items-center gap-2">
+        🪪 Identity
+        <span class="rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] px-2 py-0.5 uppercase">{{ group.role or 'edge' }}</span>
+      </h3>
+      <dl class="mt-3 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+        <div><dt class="text-slate-500 inline">Asset ID:</dt> <dd class="inline font-mono text-emerald-300">{{ group.asset_id or '—' }}</dd></div>
+        <div><dt class="text-slate-500 inline">UUID:</dt> <dd class="inline font-mono text-slate-300">{{ group.device_dna or '(filled at first boot)' }}</dd></div>
+        <div><dt class="text-slate-500 inline">Factory:</dt> <dd class="inline text-slate-300">{{ group.factory or '—' }}</dd></div>
+        <div><dt class="text-slate-500 inline">Line:</dt> <dd class="inline text-slate-300">{{ group.line or '—' }}</dd></div>
+        <div><dt class="text-slate-500 inline">Machine:</dt> <dd class="inline text-slate-300">{{ group.machine or '—' }}</dd></div>
+        <div><dt class="text-slate-500 inline">Compute:</dt> <dd class="inline font-mono text-slate-300">{{ group.compute_stable_id or '—' }}</dd></div>
+      </dl>
+    </div>
+
+    <!-- ── INDUSTRIAL PROTOCOLS ──────────────────────────────────────────── -->
+    {% set protos = group.protocols_json or {} %}
+    <details class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5" {% if protos %}open{% endif %}>
+      <summary class="cursor-pointer font-semibold text-violet-300 flex items-center gap-2">
+        📡 Industrial protocols
+        {% if protos %}<span class="text-[10px] text-slate-400">({{ protos.keys()|list|join(', ') }})</span>{% endif %}
+      </summary>
+      <form method="post" action="/ui/devices/wizard/{{ group.id }}/protocols" class="mt-4 grid gap-4 text-sm">
+        <!-- MQTT (default-on for master/edge) -->
+        <fieldset class="rounded-md border border-slate-700 p-3 space-y-2">
+          <legend class="px-2 text-[10px] uppercase tracking-wider text-violet-300">
+            <label class="cursor-pointer">
+              <input type="checkbox" name="mqtt_enabled" {% if protos.get('mqtt') %}checked{% endif %}> MQTT *
+            </label>
+          </legend>
+          <div class="grid gap-2 sm:grid-cols-[2fr_auto_auto]">
+            <input name="mqtt_broker_url" value="{{ protos.get('mqtt', {}).get('broker_url', '') }}" placeholder="tcp://broker.local"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono" />
+            <input name="mqtt_port" type="number" min="1" max="65535" value="{{ protos.get('mqtt', {}).get('port', 8883) }}"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono w-24" />
+            <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="mqtt_tls" {% if protos.get('mqtt', {}).get('tls', True) %}checked{% endif %}> TLS</label>
+          </div>
+          <input name="mqtt_base_topic" value="{{ protos.get('mqtt', {}).get('base_topic', '') }}"
+                 placeholder="factory/{{ group.factory or '<factory>' }}/{{ group.line or '<line>' }}/{{ group.machine or '<machine>' }}"
+                 class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+        </fieldset>
+
+        <!-- OPC-UA -->
+        <fieldset class="rounded-md border border-slate-700 p-3 space-y-2">
+          <legend class="px-2 text-[10px] uppercase tracking-wider text-violet-300">
+            <label class="cursor-pointer">
+              <input type="checkbox" name="opcua_enabled" {% if protos.get('opcua') %}checked{% endif %}> OPC-UA
+            </label>
+          </legend>
+          <input name="opcua_endpoint" value="{{ protos.get('opcua', {}).get('endpoint', '') }}"
+                 placeholder="opc.tcp://server:4840"
+                 class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+          <textarea name="opcua_tag_map" rows="2" placeholder='{"ns=2;i=42": "TempZ1"}'
+                    class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-[10px]">{{ protos.get('opcua', {}).get('tag_map_raw', '') }}</textarea>
+        </fieldset>
+
+        <!-- Modbus -->
+        <fieldset class="rounded-md border border-slate-700 p-3 space-y-2">
+          <legend class="px-2 text-[10px] uppercase tracking-wider text-violet-300">
+            <label class="cursor-pointer">
+              <input type="checkbox" name="modbus_enabled" {% if protos.get('modbus') %}checked{% endif %}> Modbus (TCP / RTU)
+            </label>
+          </legend>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <input name="modbus_host" value="{{ protos.get('modbus', {}).get('host', '') }}" placeholder="TCP host (e.g. 192.168.1.50)"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+            <input name="modbus_port" type="number" value="{{ protos.get('modbus', {}).get('port', 502) }}"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+            <input name="modbus_serial" value="{{ protos.get('modbus', {}).get('serial_port', '') }}" placeholder="RTU serial (e.g. /dev/ttyUSB0)"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+            <input name="modbus_baud" type="number" value="{{ protos.get('modbus', {}).get('baud', 9600) }}"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+          </div>
+          <input name="modbus_slave_ids" value="{{ protos.get('modbus', {}).get('slave_ids_raw', '') }}"
+                 placeholder="Slave IDs (e.g. 1,2,5)"
+                 class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+        </fieldset>
+
+        <!-- CAN -->
+        <fieldset class="rounded-md border border-slate-700 p-3 space-y-2">
+          <legend class="px-2 text-[10px] uppercase tracking-wider text-violet-300">
+            <label class="cursor-pointer">
+              <input type="checkbox" name="can_enabled" {% if protos.get('can') %}checked{% endif %}> CAN bus
+            </label>
+          </legend>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <input name="can_iface" value="{{ protos.get('can', {}).get('iface', 'can0') }}" placeholder="Interface (e.g. can0)"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+            <input name="can_bitrate" type="number" value="{{ protos.get('can', {}).get('bitrate', 500000) }}"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs" />
+          </div>
+        </fieldset>
+
+        <button class="rounded-md bg-violet-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-violet-400 w-fit">
+          💾 Save protocols
+        </button>
+      </form>
+    </details>
+
+    <!-- ── LOCAL RULES (IF → THEN) ───────────────────────────────────────── -->
+    {% set rules = group.rules_json or [] %}
+    <details class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5" {% if rules %}open{% endif %}>
+      <summary class="cursor-pointer font-semibold text-amber-300 flex items-center gap-2">
+        ⚡ Local rules (IF → THEN)
+        <span class="text-[10px] text-slate-400">({{ rules|length }})</span>
+      </summary>
+      <p class="mt-2 text-[11px] text-slate-400">
+        Critical rules run on the device <strong>even when the parent link is dead</strong> — that's
+        why they're locked into the brain at build time. Example: <em>Temp &gt; 80 → Stop motor</em>.
+      </p>
+      {% if rules %}
+        <ul class="mt-3 space-y-1 text-xs">
+          {% for r in rules %}
+            <li class="font-mono flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950 px-3 py-2">
+              <span class="text-slate-500">IF</span>
+              <span class="text-emerald-300">{{ r.when.instance_id }}</span>
+              <span class="text-slate-400">{{ r.when.op }}</span>
+              <span class="text-cyan-300">{{ r.when.value }}</span>
+              <span class="text-slate-500">→</span>
+              <span class="text-amber-300">{{ r.then.action }}</span>
+              {% if r.critical %}<span class="ml-auto rounded-full bg-red-500/20 text-red-300 text-[10px] px-2 py-0.5">critical</span>{% endif %}
+              <form method="post" action="/ui/devices/wizard/{{ group.id }}/rules/{{ loop.index0 }}/delete" class="inline">
+                <button class="text-slate-500 hover:text-red-300">✕</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <form method="post" action="/ui/devices/wizard/{{ group.id }}/rules/add" class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto_auto] text-xs items-center">
+        <select name="rule_instance" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 font-mono">
+          <option value="">— pick component —</option>
+          {% for d in detail %}{% for c in d.components %}
+            <option value="{{ c.instance_id }}">{{ c.label or c.instance_id }} ({{ c.component_stable_id }})</option>
+          {% endfor %}{% endfor %}
+        </select>
+        <select name="rule_op" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5">
+          <option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option><option>==</option><option>!=</option>
+        </select>
+        <input name="rule_value" placeholder="value (e.g. 80)" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 font-mono" />
+        <span class="text-slate-500">→</span>
+        <select name="rule_action" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5">
+          <option>stop_motor</option><option>set_pwm_zero</option><option>open_relay</option><option>close_relay</option>
+          <option>publish_alarm</option><option>safe_shutdown</option><option>ignore</option>
+        </select>
+        <label class="flex items-center gap-1 text-[10px]"><input type="checkbox" name="rule_critical"> critical</label>
+        <button class="rounded-md bg-amber-500 px-3 py-1.5 font-medium text-slate-950 hover:bg-amber-400">+ add</button>
+      </form>
+    </details>
 
     <!-- Group summary -->
     <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 p-5

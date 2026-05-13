@@ -116,6 +116,37 @@ def _apply_lightweight_migrations(sync_conn) -> None:
         if not _has_column("edge_groups", "locked_by"):
             sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN locked_by VARCHAR(120)")
 
+    # 2026-05: spec-driven additions (docs/wizard_spec.md) — role,
+    # asset id, factory/line/machine hierarchy, industrial protocols,
+    # local rules engine, telemetry channels, NTP, Bluetooth.
+    if _has_table("edge_groups"):
+        for col, sql_type in [
+            ("role", "VARCHAR(20) NOT NULL DEFAULT 'edge'"),
+            ("asset_id", "VARCHAR(120)"),
+            ("factory", "VARCHAR(120)"),
+            ("line", "VARCHAR(120)"),
+            ("machine", "VARCHAR(120)"),
+            ("protocols_json", "JSON"),
+            ("rules_json", "JSON"),
+            ("telemetry_json", "JSON"),
+            ("ntp_servers_json", "JSON"),
+            ("bluetooth_enabled", "BOOLEAN NOT NULL DEFAULT 0"),
+        ]:
+            if not _has_column("edge_groups", col):
+                sync_conn.exec_driver_sql(f"ALTER TABLE edge_groups ADD COLUMN {col} {sql_type}")
+
+    # 2026-05: API endpoint + Fernet-encrypted key per ComponentInstance
+    # for direct-API devices (Tapo plugs, IP cameras, Hue bulbs).
+    if _has_table("component_instances"):
+        if not _has_column("component_instances", "api_endpoint"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN api_endpoint VARCHAR(400)"
+            )
+        if not _has_column("component_instances", "api_key_encrypted"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN api_key_encrypted TEXT"
+            )
+
     # 2026-05: SSH / first-boot deployment credentials on edge_groups.
     # Sensitive fields stored Fernet-encrypted via secret_crypto.
     if _has_table("edge_groups"):

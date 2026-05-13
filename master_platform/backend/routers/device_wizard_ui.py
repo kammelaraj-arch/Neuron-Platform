@@ -127,6 +127,157 @@ def _require_unlocked(group: EdgeGroup, request: Request) -> None:
     )
 
 
+@router.post("/ui/devices/wizard/{group_id}/protocols")
+async def wizard_set_protocols(
+    group_id: str,
+    request: Request,
+    mqtt_enabled: bool = Form(False),
+    mqtt_broker_url: str = Form(""),
+    mqtt_port: int = Form(8883),
+    mqtt_tls: bool = Form(False),
+    mqtt_base_topic: str = Form(""),
+    opcua_enabled: bool = Form(False),
+    opcua_endpoint: str = Form(""),
+    opcua_tag_map: str = Form(""),
+    modbus_enabled: bool = Form(False),
+    modbus_host: str = Form(""),
+    modbus_port: int = Form(502),
+    modbus_serial: str = Form(""),
+    modbus_baud: int = Form(9600),
+    modbus_slave_ids: str = Form(""),
+    can_enabled: bool = Form(False),
+    can_iface: str = Form(""),
+    can_bitrate: int = Form(500000),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Persist the industrial-protocol config for this group. Each
+    section is optional; only enabled protocols are stored."""
+    import json as _json
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+
+    protos: dict = {}
+    if mqtt_enabled:
+        protos["mqtt"] = {
+            "broker_url": mqtt_broker_url.strip() or None,
+            "port": int(mqtt_port),
+            "tls": bool(mqtt_tls),
+            "base_topic": mqtt_base_topic.strip() or None,
+        }
+    if opcua_enabled:
+        tag_map = {}
+        if opcua_tag_map.strip():
+            try:
+                tag_map = _json.loads(opcua_tag_map)
+            except _json.JSONDecodeError:
+                # Keep raw text so the operator can fix it without losing data.
+                tag_map = {}
+        protos["opcua"] = {
+            "endpoint": opcua_endpoint.strip() or None,
+            "tag_map": tag_map,
+            "tag_map_raw": opcua_tag_map,
+        }
+    if modbus_enabled:
+        slaves: list[int] = []
+        for chunk in (modbus_slave_ids or "").split(","):
+            chunk = chunk.strip()
+            if chunk.isdigit():
+                slaves.append(int(chunk))
+        protos["modbus"] = {
+            "host": modbus_host.strip() or None,
+            "port": int(modbus_port),
+            "serial_port": modbus_serial.strip() or None,
+            "baud": int(modbus_baud),
+            "slave_ids": slaves,
+            "slave_ids_raw": modbus_slave_ids,
+        }
+    if can_enabled:
+        protos["can"] = {
+            "iface": can_iface.strip() or "can0",
+            "bitrate": int(can_bitrate),
+        }
+
+    group.protocols_json = protos or None
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.set_protocols", target_kind="edge_group", target_id=group.id,
+        detail={"enabled": list(protos.keys())},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/rules/add")
+async def wizard_add_rule(
+    group_id: str,
+    request: Request,
+    rule_instance: str = Form(...),
+    rule_op: str = Form(...),
+    rule_value: str = Form(...),
+    rule_action: str = Form(...),
+    rule_critical: bool = Form(False),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    from ..models import RULE_ACTIONS, RULE_OPS
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    if rule_op not in RULE_OPS:
+        raise HTTPException(400, f"op must be one of {RULE_OPS}")
+    if rule_action not in RULE_ACTIONS:
+        raise HTTPException(400, f"action must be one of {RULE_ACTIONS}")
+    if not rule_instance.strip() or not rule_value.strip():
+        raise HTTPException(400, "instance and value are required")
+
+    # Try to coerce the value to a number for the brain; fall back to str.
+    val: float | str = rule_value.strip()
+    try:
+        val = float(rule_value)
+        if val.is_integer():
+            val = int(val)
+    except ValueError:
+        pass
+
+    rules = list(group.rules_json or [])
+    rules.append({
+        "when": {"instance_id": rule_instance.strip(), "op": rule_op, "value": val},
+        "then": {"action": rule_action, "params": {}},
+        "critical": bool(rule_critical),
+    })
+    group.rules_json = rules
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.add_rule", target_kind="edge_group", target_id=group.id,
+        detail={"rule_count": len(rules), "action": rule_action, "critical": bool(rule_critical)},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/rules/{idx}/delete")
+async def wizard_delete_rule(
+    group_id: str,
+    idx: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    rules = list(group.rules_json or [])
+    if 0 <= idx < len(rules):
+        rules.pop(idx)
+        group.rules_json = rules
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="group.delete_rule", target_kind="edge_group", target_id=group.id,
+            detail={"index": idx, "remaining": len(rules)},
+        )
+        await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
 @router.post("/ui/devices/wizard/{group_id}/ssh")
 async def wizard_set_ssh(
     group_id: str,
@@ -356,9 +507,14 @@ async def wizard_create_group(
     new_edge_name: str = Form(""),
     new_edge_site_id: str = Form(""),
     new_edge_address: str = Form(""),
-    # Group
+    # Group — identity + role + location
     name: str = Form(...),
     description: str = Form(""),
+    role: str = Form("edge"),
+    asset_id: str = Form(""),
+    factory: str = Form(""),
+    line: str = Form(""),
+    machine: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
@@ -445,16 +601,46 @@ async def wizard_create_group(
             )
         )
     ).scalar_one_or_none()
+    # Validate role + asset_id (mandatory per spec).
+    from ..models import DEVICE_ROLES
+    role_clean = (role or "edge").strip().lower()
+    if role_clean not in DEVICE_ROLES:
+        raise HTTPException(400, f"role must be one of {DEVICE_ROLES}")
+    asset_id_clean = (asset_id or "").strip()
+    if not asset_id_clean:
+        raise HTTPException(400, "Asset ID is required.")
+
     if existing_group is not None:
         group = existing_group
+        # Idempotent: update fields when the operator re-saves step 1.
+        group.role = role_clean
+        group.asset_id = asset_id_clean
+        group.factory = factory.strip() or None
+        group.line = line.strip() or None
+        group.machine = machine.strip() or None
+        if description.strip():
+            group.description = description.strip()
     else:
-        group = EdgeGroup(edge_id=edge.id, name=name, description=description.strip() or None)
+        group = EdgeGroup(
+            edge_id=edge.id,
+            name=name,
+            description=description.strip() or None,
+            role=role_clean,
+            asset_id=asset_id_clean,
+            factory=factory.strip() or None,
+            line=line.strip() or None,
+            machine=machine.strip() or None,
+        )
         session.add(group)
         await session.flush()
         await record(
             session, actor=actor.id, actor_kind="ui_session",
             action="group.create", target_kind="edge_group", target_id=group.id,
-            detail={"edge_id": edge.id, "name": name},
+            detail={
+                "edge_id": edge.id, "name": name,
+                "role": role_clean, "asset_id": asset_id_clean,
+                "factory": group.factory, "line": group.line, "machine": group.machine,
+            },
         )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/compute", status_code=303)

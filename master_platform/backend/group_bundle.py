@@ -105,6 +105,13 @@ def _build_dna(group: EdgeGroup, boards: list[tuple[BoardInstance, list[Componen
         "schema_version": "1.0.0",
         "group_id": group.id,
         "group_name": group.name,
+        "role": group.role or "edge",
+        "asset_id": group.asset_id,
+        "location": {
+            "factory": group.factory,
+            "line": group.line,
+            "machine": group.machine,
+        },
         "edge_id": group.edge_id,
         "compute_stable_id": group.compute_stable_id,
         "hardware_revision": group.hardware_revision,
@@ -207,8 +214,25 @@ def _build_brain(
         "brain_version": "1.0.0",
         "config_schema_version": group.config_schema_version,
         "compute_stable_id": group.compute_stable_id,
+        "role": group.role or "edge",
+        "asset_id": group.asset_id,
+        "location": {
+            "factory": group.factory,
+            "line": group.line,
+            "machine": group.machine,
+        },
         "pinmap": pinmap_flat,
         "channels": _build_channels(parent_url, device_dna),
+        # Parent-only communication contract (CLAUDE.md hard rule).
+        # Firmware first-boot script enforces this via nftables.
+        "network_policy": {
+            "inbound_policy": "deny",       # deny-all on input chain
+            "allow_loopback": True,
+            "allow_established_outbound": True,
+            "parent_only": True,
+            "ssh_enabled_at_boot": False,   # parent reverse-tunnels SSH on demand
+            "open_listeners_allowed": False,
+        },
         "heartbeat": {
             "child_to_parent_ms": 1000,
             "parent_to_child_ms": 1000,
@@ -218,9 +242,17 @@ def _build_brain(
         },
         "safety": {
             "interlocks": interlocks,
+            # Operator-defined IF→THEN local rules. Critical=true means
+            # enforced on-device even when the parent link is up (parent
+            # is advisory for these).
+            "rules": list(group.rules_json or []),
             "watchdog_ms": 1000,
             "default_failsafe_on_parent_loss": "off",
         },
+        "protocols": dict(group.protocols_json or {}),
+        "telemetry": dict(group.telemetry_json or {}),
+        "ntp_servers": list(group.ntp_servers_json or ["pool.ntp.org"]),
+        "bluetooth_enabled": bool(group.bluetooth_enabled),
         "state_change_push": {
             "enabled": True,
             "endpoint": (parent_url or "") + "/api/state-change",
@@ -231,6 +263,7 @@ def _build_brain(
             "mode": "continue_safe",
             "max_offline_seconds": 3600,
             "buffer_size": 8192,
+            "local_decision": True,
         },
         "generated_at": _utc_iso(),
     }

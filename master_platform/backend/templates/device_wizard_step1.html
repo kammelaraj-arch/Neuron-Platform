@@ -207,22 +207,74 @@
 
       <!-- ─── GROUP ─────────────────────────────────────────────────────── -->
       <fieldset class="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-4 space-y-3">
-        <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Group *</legend>
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Group · target device *</legend>
+
+        <!-- Role: Master / Edge / Gateway (radio chips, friendlier than a select) -->
         <div>
-          <label class="block text-xs uppercase tracking-wider text-slate-400">Group name</label>
-          <input name="name" required maxlength="120"
-                 placeholder="e.g. Heater bank · Line A"
-                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
-          <p class="mt-1 text-[11px] text-slate-500">
-            A logical sub-section of the Edge — owns one compute module and one+ control boards.
-          </p>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Device role *</label>
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-2 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
+              <input type="radio" name="role" value="master" class="sr-only">
+              <span class="text-base">🧠</span>
+              <span class="font-medium">Master</span>
+              <span class="text-[10px] text-slate-500 text-center">Control plane + dashboard</span>
+            </label>
+            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-2 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
+              <input type="radio" name="role" value="edge" checked class="sr-only">
+              <span class="text-base">⚡</span>
+              <span class="font-medium">Edge</span>
+              <span class="text-[10px] text-slate-500 text-center">Sensors / actuators</span>
+            </label>
+            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-2 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
+              <input type="radio" name="role" value="gateway" class="sr-only">
+              <span class="text-base">🌉</span>
+              <span class="font-medium">Gateway</span>
+              <span class="text-[10px] text-slate-500 text-center">Protocol bridge</span>
+            </label>
+          </div>
         </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Target name *</label>
+            <input name="name" required maxlength="120"
+                   placeholder="e.g. Heater bank · Line A"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Asset ID *</label>
+            <input name="asset_id" required maxlength="120"
+                   placeholder="e.g. ASSET-FAC1-L2-M03"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+            <p class="mt-1 text-[10px] text-slate-500">Inventory / CMMS reference. Stays with the unit for its lifetime.</p>
+          </div>
+        </div>
+
+        <!-- Factory / Line / Machine — physical placement triple -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Physical location</label>
+          <div class="grid gap-2 sm:grid-cols-3 text-sm">
+            <input name="factory" maxlength="120" placeholder="Factory (e.g. Wembley-1)"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2" />
+            <input name="line" maxlength="120" placeholder="Line (e.g. Line A)"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2" />
+            <input name="machine" maxlength="120" placeholder="Machine (e.g. Heat-press-3)"
+                   class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2" />
+          </div>
+          <p class="mt-1 text-[10px] text-slate-500">Used for grouping in dashboards + MQTT topic routing (<code>factory/&lt;f&gt;/&lt;line&gt;/&lt;machine&gt;</code>).</p>
+        </div>
+
         <div>
           <label class="block text-xs uppercase tracking-wider text-slate-400">Description (optional)</label>
           <textarea name="description" rows="2"
                     class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm"
-                    placeholder="What this group controls"></textarea>
+                    placeholder="What this device controls / monitors"></textarea>
         </div>
+
+        <p class="text-[10px] text-slate-500">
+          <strong>UUID</strong> is left blank — the firmware auto-populates it on first boot from the
+          compute module's hardware ID and reports it back to the parent.
+        </p>
       </fieldset>
 
       <div class="flex gap-3">
