@@ -570,6 +570,36 @@ class ComponentInstance(Base):
     )
 
 
+class DriverInstance(Base):
+    """A plug-in driver chip / module slotted into a Board — separate from a Component.
+
+    Per the corrected hierarchy (docs/wizard_spec.md), a Board owns two
+    independent collections: Components (sensors / actuators wired to it)
+    and Drivers (DRV8825, A4988, TMC22xx, relay modules, …). The Driver
+    is the *chip* on the board; the actuator it drives is still a
+    ComponentInstance bound to the same board. Both are 0-or-more.
+    """
+    __tablename__ = "driver_instances"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    board_instance_id: Mapped[str] = mapped_column(
+        ForeignKey("board_instances.id"), nullable=False, index=True
+    )
+    driver_stable_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    instance_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    label: Mapped[str | None] = mapped_column(String(120))
+    asset_id: Mapped[str | None] = mapped_column(String(60))
+    # Slot / socket on the board, e.g. "X-axis", "STEP1", "AXIS-A".
+    board_slot: Mapped[str | None] = mapped_column(String(40))
+    params_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    position: Mapped[int] = mapped_column(default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("board_instance_id", "instance_id", name="uq_driver_per_board"),
+    )
+
+
 class GpioMapping(Base):
     """A single pin connection: compute pin ↔ board pin.
     Auto-allocator fills these on first run; operator overrides per row

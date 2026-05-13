@@ -1132,6 +1132,7 @@ async def wizard_step_components(
             .order_by(BoardInstance.position)
         )
     ).scalars().all()
+    from ..models import DriverInstance
     boards_with_components = []
     for b in boards:
         comps = (
@@ -1140,8 +1141,22 @@ async def wizard_step_components(
                 .order_by(ComponentInstance.position)
             )
         ).scalars().all()
-        boards_with_components.append((b, comps))
+        drivers = (
+            await session.execute(
+                select(DriverInstance).where(DriverInstance.board_instance_id == b.id)
+                .order_by(DriverInstance.position)
+            )
+        ).scalars().all()
+        boards_with_components.append((b, comps, drivers))
     available_components = catalog.list_library("components_library")
+    # Drivers are plug-in chips/modules slotted into a board; they live
+    # in control_board_library with one of these subcategories. Filter
+    # here so the Drivers panel doesn't have to know the rules.
+    _DRIVER_SUBCATS = {"stepper", "motor_driver", "driver"}
+    available_drivers = [
+        c for c in catalog.list_library("control_board_library")
+        if (c.manifest.get("subcategory") or "").lower() in _DRIVER_SUBCATS
+    ]
     return templates.TemplateResponse(
         "device_wizard_step4.html",
         {
@@ -1149,6 +1164,7 @@ async def wizard_step_components(
             "group": group,
             "boards_with_components": boards_with_components,
             "available_components": available_components,
+            "available_drivers": available_drivers,
             "catalog": catalog,
             "RISK_LEVELS": RISK_LEVELS,
             "RISK_TYPES": RISK_TYPES,
@@ -1157,6 +1173,90 @@ async def wizard_step_components(
             "step_idx": 4,
         },
     )
+
+
+@router.post("/ui/devices/wizard/{group_id}/drivers/add")
+async def wizard_add_driver(
+    group_id: str,
+    request: Request,
+    board_instance_id: str = Form(...),
+    driver_stable_id: str = Form(...),
+    instance_id: str = Form(""),
+    label: str = Form(""),
+    asset_id: str = Form(""),
+    board_slot: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    from ..models import DriverInstance
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    board = await session.get(BoardInstance, board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, f"board {board_instance_id} not found in this group")
+    catalog = load_catalog()
+    cdef = catalog.get(driver_stable_id)
+    if cdef is None or cdef.library != "control_board_library":
+        raise HTTPException(404, f"driver {driver_stable_id} not in control_board_library")
+
+    iid = (instance_id or "").strip()
+    if not iid:
+        base = driver_stable_id.rsplit(".", 1)[-1]
+        existing = (await session.execute(
+            select(sa_func.count()).select_from(DriverInstance)
+            .where(DriverInstance.board_instance_id == board.id)
+        )).scalar_one() or 0
+        iid = f"{base}_{existing + 1}"
+
+    pos = ((await session.execute(
+        select(sa_func.max(DriverInstance.position))
+        .where(DriverInstance.board_instance_id == board.id)
+    )).scalar_one() or 0) + 1
+
+    drv = DriverInstance(
+        board_instance_id=board.id,
+        driver_stable_id=driver_stable_id,
+        instance_id=iid,
+        label=label.strip() or None,
+        asset_id=asset_id.strip() or None,
+        board_slot=board_slot.strip() or None,
+        position=pos,
+    )
+    session.add(drv)
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="driver.add", target_kind="driver_instance", target_id=drv.id,
+        detail={"board": board.id, "driver_stable_id": driver_stable_id,
+                "instance_id": iid, "slot": drv.board_slot},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/drivers/{driver_id}/delete")
+async def wizard_delete_driver(
+    group_id: str,
+    driver_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    from ..models import DriverInstance
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    drv = await session.get(DriverInstance, driver_id)
+    if drv is None:
+        raise HTTPException(404, "driver not found")
+    board = await session.get(BoardInstance, drv.board_instance_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "driver not in this group")
+    await session.delete(drv)
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="driver.delete", target_kind="driver_instance", target_id=driver_id,
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)
 
 
 @router.post("/ui/devices/wizard/{group_id}/components/add")

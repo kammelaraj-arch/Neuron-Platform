@@ -51,6 +51,7 @@ from .config import settings
 from .models import (
     BoardInstance,
     ComponentInstance,
+    DriverInstance,
     EdgeGroup,
     EdgeSystem,
     GpioMapping,
@@ -89,7 +90,17 @@ def _short_dna() -> str:
 def _build_dna(group: EdgeGroup, boards: list[tuple[BoardInstance, list[ComponentInstance], list[GpioMapping]]]) -> dict:
     dna_id = group.device_dna or _short_dna()
     components_flat: list[dict] = []
-    for board, comps, _pins in boards:
+    drivers_flat: list[dict] = []
+    for board, comps, _pins, drvs in boards:
+        for d in drvs:
+            drivers_flat.append({
+                "instance_id": d.instance_id,
+                "driver_stable_id": d.driver_stable_id,
+                "board_instance_id": board.id,
+                "board_slot": d.board_slot,
+                "asset_id": d.asset_id,
+                "label": d.label,
+            })
         for c in comps:
             components_flat.append({
                 "instance_id": c.instance_id,
@@ -123,9 +134,10 @@ def _build_dna(group: EdgeGroup, boards: list[tuple[BoardInstance, list[Componen
         "config_schema_version": group.config_schema_version,
         "boards": [
             {"id": b.id, "stable_id": b.board_stable_id, "label": b.label}
-            for b, _c, _p in boards
+            for b, _c, _p, _d in boards
         ],
         "components": components_flat,
+        "drivers": drivers_flat,
         "issued_at": _utc_iso(),
     }
     payload["fingerprint_sha256"] = _sha256(_det_dumps({k: v for k, v in payload.items() if k != "fingerprint_sha256"}))
@@ -197,11 +209,11 @@ def _build_brain(
     parent_url: str | None,
     device_dna: str,
 ) -> dict:
-    all_comps = [c for _b, comps, _p in boards for c in comps]
+    all_comps = [c for _b, comps, _p, _d in boards for c in comps]
     interlocks = _build_interlocks_from_components(all_comps)
 
     pinmap_flat = []
-    for _b, _c, pins in boards:
+    for _b, _c, pins, _d in boards:
         for m in pins:
             pinmap_flat.append({
                 "board_instance_id": m.board_instance_id,
@@ -225,6 +237,17 @@ def _build_brain(
             "machine": group.machine,
         },
         "pinmap": pinmap_flat,
+        "drivers": [
+            {
+                "instance_id": d.instance_id,
+                "driver_stable_id": d.driver_stable_id,
+                "board_instance_id": _b.id,
+                "board_slot": d.board_slot,
+                "asset_id": d.asset_id,
+                "label": d.label,
+            }
+            for _b, _c, _p, drvs in boards for d in drvs
+        ],
         "channels": _build_channels(parent_url, device_dna),
         # Parent-only communication contract (CLAUDE.md hard rule).
         # Firmware first-boot script enforces this via nftables.
@@ -349,7 +372,13 @@ async def build_group_bundle(
                 .order_by(GpioMapping.compute_pin)
             )
         ).scalars().all()
-        boards.append((b, list(comps), list(pins)))
+        drivers = (
+            await session.execute(
+                select(DriverInstance).where(DriverInstance.board_instance_id == b.id)
+                .order_by(DriverInstance.position)
+            )
+        ).scalars().all()
+        boards.append((b, list(comps), list(pins), list(drivers)))
 
     primary = await session.get(WifiNetwork, group.primary_wifi_id) if group.primary_wifi_id else None
     secondary = await session.get(WifiNetwork, group.secondary_wifi_id) if group.secondary_wifi_id else None
