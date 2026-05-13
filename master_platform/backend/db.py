@@ -116,6 +116,47 @@ def _apply_lightweight_migrations(sync_conn) -> None:
         if not _has_column("edge_groups", "locked_by"):
             sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN locked_by VARCHAR(120)")
 
+    # 2026-05: corrected hierarchy (docs/wizard_spec.md) — a Group's
+    # Compute→Boards→Components bundle attaches to Root (master),
+    # Node (gateway) or Edge (edge). Same shape for all three, so
+    # use a polymorphic (parent_kind, parent_id) pair instead of
+    # one FK column per parent type. Lift NOT NULL on the legacy
+    # edge_id column and backfill the new fields from it.
+    if _has_table("edge_groups"):
+        if not _has_column("edge_groups", "parent_kind"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE edge_groups ADD COLUMN parent_kind VARCHAR(20) NOT NULL DEFAULT 'edge'"
+            )
+        if not _has_column("edge_groups", "parent_id"):
+            sync_conn.exec_driver_sql("ALTER TABLE edge_groups ADD COLUMN parent_id VARCHAR(36)")
+        # Lift NOT NULL on edge_id if still present (SQLite table rebuild).
+        info = sync_conn.exec_driver_sql("PRAGMA table_info(edge_groups)").fetchall()
+        edge_notnull = any(r[1] == "edge_id" and r[3] == 1 for r in info)
+        if edge_notnull:
+            cols_decl: list[str] = []
+            col_names: list[str] = []
+            for cid, name, ctype, notnull, dflt, pk in info:
+                col_names.append(name)
+                parts = [name, ctype or "TEXT"]
+                if pk:
+                    parts.append("PRIMARY KEY")
+                if notnull and name != "edge_id":
+                    parts.append("NOT NULL")
+                if dflt is not None:
+                    parts.append(f"DEFAULT {dflt}")
+                cols_decl.append(" ".join(parts))
+            cols_sql = ", ".join(cols_decl)
+            cols_csv = ", ".join(col_names)
+            sync_conn.exec_driver_sql(f"CREATE TABLE edge_groups_new ({cols_sql})")
+            sync_conn.exec_driver_sql(f"INSERT INTO edge_groups_new ({cols_csv}) SELECT {cols_csv} FROM edge_groups")
+            sync_conn.exec_driver_sql("DROP TABLE edge_groups")
+            sync_conn.exec_driver_sql("ALTER TABLE edge_groups_new RENAME TO edge_groups")
+        # Backfill polymorphic parent from legacy edge_id.
+        sync_conn.exec_driver_sql(
+            "UPDATE edge_groups SET parent_id = edge_id, parent_kind = 'edge' "
+            "WHERE parent_id IS NULL AND edge_id IS NOT NULL"
+        )
+
     # 2026-05: spec-driven additions (docs/wizard_spec.md) — role,
     # asset id, factory/line/machine hierarchy, industrial protocols,
     # local rules engine, telemetry channels, NTP, Bluetooth.

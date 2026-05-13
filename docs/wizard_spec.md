@@ -25,6 +25,26 @@ code, this file wins until amended here.
 4. **Bidirectional heartbeats** are mandatory. Loss of parent heartbeat
    for `disconnect_grace_seconds` triggers per-instance failsafes.
 
+## Corrected hierarchy (2026-05)
+
+The Compute → Boards → Components → PinMap bundle is **identical for every
+role**. The only thing that changes is *which level of the tree it pins
+to*. Modeled as a polymorphic parent on `EdgeGroup`:
+`parent_kind ∈ {root, node, edge}` + `parent_id` is the UUID of that row.
+
+```
+Root
+  ├─ [bundle]          ← role = master   (parent_kind=root)
+  └─ Node(s)
+       ├─ [bundle]     ← role = gateway  (parent_kind=node)
+       └─ Edge(s)
+            └─ [bundle] ← role = edge    (parent_kind=edge)
+```
+
+`[bundle]` is always `Compute → Boards(1+) → Components(1+) → PinMap`.
+The wizard from step 2 onwards has nothing role-specific; only the
+attach-point differs.
+
 ## Streamlined wizard funnel
 
 The product-owner spec lists 18 steps. Several collapse onto one screen

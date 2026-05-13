@@ -330,7 +330,19 @@ class EdgeGroup(Base):
     __tablename__ = "edge_groups"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    edge_id: Mapped[str] = mapped_column(ForeignKey("edge_systems.id"), nullable=False, index=True)
+    # A Group is the Compute → Boards → Components → PinMap bundle.
+    # The setup is identical for every device role; the only thing
+    # that differs is which level of the hierarchy this bundle hangs
+    # off. We model that with a single polymorphic parent pointer
+    # (parent_kind discriminates which table parent_id targets).
+    #   parent_kind="root"  → master  device (parent_id → root_systems.id)
+    #   parent_kind="node"  → gateway device (parent_id → node_systems.id)
+    #   parent_kind="edge"  → edge    device (parent_id → edge_systems.id)
+    parent_kind: Mapped[str] = mapped_column(String(20), nullable=False, default="edge")
+    parent_id:   Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    # Legacy 1-FK form. Kept nullable for back-compat with rows / queries
+    # that pre-date the polymorphic parent. New code reads parent_*.
+    edge_id: Mapped[str | None] = mapped_column(ForeignKey("edge_systems.id"), index=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     compute_stable_id: Mapped[str | None] = mapped_column(String(120))  # e.g. compute.pico2w
@@ -392,7 +404,7 @@ class EdgeGroup(Base):
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
-    edge: Mapped[EdgeSystem] = relationship()
+    edge: Mapped["EdgeSystem | None"] = relationship(foreign_keys=[edge_id])
     boards: Mapped[list["BoardInstance"]] = relationship(
         back_populates="group", cascade="all, delete-orphan",
         order_by="BoardInstance.position",
@@ -404,7 +416,9 @@ class EdgeGroup(Base):
         foreign_keys=[secondary_wifi_id]
     )
 
-    __table_args__ = (UniqueConstraint("edge_id", "name", name="uq_group_per_edge"),)
+    # Uniqueness is enforced per-parent at the app level (see
+    # device_wizard_ui.wizard_create_group) — SQLite doesn't support
+    # multi-column partial uniques cleanly.
 
 
 class BoardInstance(Base):

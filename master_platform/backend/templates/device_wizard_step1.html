@@ -289,15 +289,24 @@
     <aside class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/60 to-slate-900/20 p-6 relative overflow-hidden">
       <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_60%)]"></div>
       <h3 class="font-semibold text-slate-200">Hierarchy</h3>
-      <pre class="mt-4 font-mono text-xs leading-6 text-slate-400">
+      <p class="mt-1 text-[11px] text-slate-500">
+        The bundle below (compute → boards → components → pin map) is the
+        <strong>same for every role</strong>. The role you pick decides
+        which level of the tree it physically hangs off.
+      </p>
+      <pre class="mt-3 font-mono text-xs leading-6 text-slate-400">
 <span class="text-cyan-300">Root</span>          ← required
+  ├─ <span class="text-emerald-300">[bundle]</span>    ← role = 🧠 Master
   └─ <span class="text-cyan-300">Node</span>    ← optional
-       └─ <span class="text-cyan-300">Edge</span>      ← required, attaches to Node OR Root
-            └─ <span class="text-emerald-300">Group</span>     ← you create this
-                 └─ Compute
-                 └─ Board(s)
-                      └─ Component(s)
-                           └─ GPIO pin map</pre>
+       ├─ <span class="text-emerald-300">[bundle]</span> ← role = 🌉 Gateway
+       └─ <span class="text-cyan-300">Edge</span>
+            └─ <span class="text-emerald-300">[bundle]</span> ← role = ⚡ Edge
+
+<span class="text-emerald-300">[bundle]</span> =
+  Compute
+   └─ Board(s)        (one or more)
+        └─ Component(s)  (one or more)
+             └─ GPIO pin map</pre>
       <p class="mt-4 text-xs text-slate-500">
         Already-existing systems below — pick one or replace with a new entry inline.
       </p>

@@ -558,50 +558,7 @@ async def wizard_create_group(
             detail={"root_id": root.id, "name": node.name, "source": "wizard"},
         )
 
-    # ── 3. Resolve / create Edge ────────────────────────────────────────────
-    edge: EdgeSystem | None = None
-    if edge_mode == "existing" and edge_id:
-        edge = await session.get(EdgeSystem, edge_id)
-        if edge is None:
-            raise HTTPException(404, f"edge {edge_id} not found")
-    elif edge_mode == "new" and new_edge_name.strip() and new_edge_site_id.strip():
-        if node is None and root is None:
-            raise HTTPException(400, "edge requires a parent (node or root)")
-        edge = EdgeSystem(
-            node_id=node.id if node is not None else None,
-            root_id=root.id if node is None else None,
-            name=new_edge_name.strip(),
-            site_id=new_edge_site_id.strip(),
-            address=new_edge_address.strip() or None,
-        )
-        session.add(edge)
-        await session.flush()
-        await record(
-            session, actor=actor.id, actor_kind="ui_session",
-            action="edge.create", target_kind="edge_system", target_id=edge.id,
-            detail={
-                "node_id": node.id if node is not None else None,
-                "root_id": root.id if node is None else None,
-                "name": edge.name,
-                "site_id": edge.site_id,
-                "source": "wizard",
-            },
-        )
-    if edge is None:
-        raise HTTPException(400, "couldn't resolve an Edge — pick one or fill the new-edge fields")
-
-    # ── 4. Create Group ─────────────────────────────────────────────────────
-    name = name.strip()
-    if not name:
-        raise HTTPException(400, "group name required")
-    existing_group = (
-        await session.execute(
-            select(EdgeGroup).where(
-                EdgeGroup.edge_id == edge.id, EdgeGroup.name == name
-            )
-        )
-    ).scalar_one_or_none()
-    # Validate role + asset_id (mandatory per spec).
+    # ── 3. Validate role + asset_id (drives the parent-attachment level) ───
     from ..models import DEVICE_ROLES
     role_clean = (role or "edge").strip().lower()
     if role_clean not in DEVICE_ROLES:
@@ -609,6 +566,75 @@ async def wizard_create_group(
     asset_id_clean = (asset_id or "").strip()
     if not asset_id_clean:
         raise HTTPException(400, "Asset ID is required.")
+
+    # Per the corrected hierarchy (docs/wizard_spec.md):
+    #   master  → bundle attaches directly to the Root
+    #   gateway → bundle attaches to a Node
+    #   edge    → bundle attaches to an Edge unit
+    # The wizard captures Root + Node + Edge form fields regardless;
+    # role decides which of them becomes the *parent* of this Group.
+    edge: EdgeSystem | None = None
+    if role_clean == "edge":
+        if edge_mode == "existing" and edge_id:
+            edge = await session.get(EdgeSystem, edge_id)
+            if edge is None:
+                raise HTTPException(404, f"edge {edge_id} not found")
+        elif edge_mode == "new" and new_edge_name.strip() and new_edge_site_id.strip():
+            if node is None and root is None:
+                raise HTTPException(400, "edge requires a parent (node or root)")
+            edge = EdgeSystem(
+                node_id=node.id if node is not None else None,
+                root_id=root.id if node is None else None,
+                name=new_edge_name.strip(),
+                site_id=new_edge_site_id.strip(),
+                address=new_edge_address.strip() or None,
+            )
+            session.add(edge)
+            await session.flush()
+            await record(
+                session, actor=actor.id, actor_kind="ui_session",
+                action="edge.create", target_kind="edge_system", target_id=edge.id,
+                detail={
+                    "node_id": node.id if node is not None else None,
+                    "root_id": root.id if node is None else None,
+                    "name": edge.name,
+                    "site_id": edge.site_id,
+                    "source": "wizard",
+                },
+            )
+        if edge is None:
+            raise HTTPException(400, "Edge role: pick or create an Edge to attach to.")
+    elif role_clean == "gateway":
+        if node is None:
+            raise HTTPException(400, "Gateway role: pick or create a Node to attach to.")
+    elif role_clean == "master":
+        if root is None:
+            raise HTTPException(400, "Master role: pick or create a Root to attach to.")
+
+    # Resolve the single (parent_kind, parent_id) pair — the setup is
+    # identical for all roles, so we don't need three FK columns.
+    if role_clean == "master":
+        parent_kind, parent_id_v = "root", root.id
+    elif role_clean == "gateway":
+        parent_kind, parent_id_v = "node", node.id
+    else:
+        parent_kind, parent_id_v = "edge", edge.id
+
+    # ── 4. Create Group ─────────────────────────────────────────────────────
+    name = name.strip()
+    if not name:
+        raise HTTPException(400, "name is required")
+
+    # Per-parent uniqueness check (replaces the dropped DB unique).
+    existing_group = (
+        await session.execute(
+            select(EdgeGroup).where(
+                EdgeGroup.parent_kind == parent_kind,
+                EdgeGroup.parent_id == parent_id_v,
+                EdgeGroup.name == name,
+            )
+        )
+    ).scalar_one_or_none()
 
     if existing_group is not None:
         group = existing_group
@@ -618,11 +644,17 @@ async def wizard_create_group(
         group.factory = factory.strip() or None
         group.line = line.strip() or None
         group.machine = machine.strip() or None
+        # Re-pin parent in case the role changed.
+        group.parent_kind = parent_kind
+        group.parent_id = parent_id_v
+        group.edge_id = edge.id if role_clean == "edge" else None
         if description.strip():
             group.description = description.strip()
     else:
         group = EdgeGroup(
-            edge_id=edge.id,
+            parent_kind=parent_kind,
+            parent_id=parent_id_v,
+            edge_id=edge.id if role_clean == "edge" else None,
             name=name,
             description=description.strip() or None,
             role=role_clean,
@@ -637,8 +669,8 @@ async def wizard_create_group(
             session, actor=actor.id, actor_kind="ui_session",
             action="group.create", target_kind="edge_group", target_id=group.id,
             detail={
-                "edge_id": edge.id, "name": name,
-                "role": role_clean, "asset_id": asset_id_clean,
+                "parent_kind": parent_kind, "parent_id": parent_id_v,
+                "name": name, "role": role_clean, "asset_id": asset_id_clean,
                 "factory": group.factory, "line": group.line, "machine": group.machine,
             },
         )
@@ -763,7 +795,12 @@ async def wizard_scan_wifi(
 ):
     group = await _load_group(session, group_id)
     _require_unlocked(group, request)
-    edge = await session.get(EdgeSystem, group.edge_id)
+    # Edge-side scan helpers only apply when the bundle is pinned to an
+    # actual Edge unit. Master / gateway bundles don't have an edge to
+    # proxy through.
+    if group.parent_kind != "edge":
+        raise HTTPException(400, f"edge-side scan is only available for edge devices; this group is a {group.parent_kind}-attached {group.role}")
+    edge = await session.get(EdgeSystem, group.parent_id or group.edge_id)
     if edge is None:
         raise HTTPException(404, "group's edge not found")
     return await _proxy_edge(edge, "/api/v1/scan/wifi")
@@ -777,7 +814,12 @@ async def wizard_scan_devices(
     actor: APIKey = Depends(ui_require_login),
 ):
     group = await _load_group(session, group_id)
-    edge = await session.get(EdgeSystem, group.edge_id)
+    # Edge-side scan helpers only apply when the bundle is pinned to an
+    # actual Edge unit. Master / gateway bundles don't have an edge to
+    # proxy through.
+    if group.parent_kind != "edge":
+        raise HTTPException(400, f"edge-side scan is only available for edge devices; this group is a {group.parent_kind}-attached {group.role}")
+    edge = await session.get(EdgeSystem, group.parent_id or group.edge_id)
     if edge is None:
         raise HTTPException(404, "group's edge not found")
     return await _proxy_edge(edge, "/api/v1/scan/devices")

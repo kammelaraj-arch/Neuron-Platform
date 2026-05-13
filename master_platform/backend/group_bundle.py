@@ -112,7 +112,10 @@ def _build_dna(group: EdgeGroup, boards: list[tuple[BoardInstance, list[Componen
             "line": group.line,
             "machine": group.machine,
         },
-        "edge_id": group.edge_id,
+        "parent": {
+            "kind": group.parent_kind or "edge",
+            "id":   group.parent_id   or group.edge_id,
+        },
         "compute_stable_id": group.compute_stable_id,
         "hardware_revision": group.hardware_revision,
         "base_firmware_version": group.base_firmware_version,
@@ -294,19 +297,25 @@ def _wifi_payload(primary: WifiNetwork | None, secondary: WifiNetwork | None) ->
 
 # ─── Parent URL derivation (Master vs Node vs Edge hierarchy) ───────────────
 async def _derive_parent_url(session: AsyncSession, group: EdgeGroup) -> str | None:
-    """The DEVICE's immediate parent is the EDGE. Compute the URL by
-    reading the Edge's address; fall back to the Node, then the Root."""
-    edge = await session.get(EdgeSystem, group.edge_id)
-    if edge is not None and edge.address:
-        return edge.address.rstrip("/")
-    if edge is not None and edge.node_id:
-        node = await session.get(NodeSystem, edge.node_id)
-        if node is not None:
-            # Node has no .address column today; fall back to Root
-            root = await session.get(RootSystem, node.root_id)
-            if root is not None:
-                # Use the platform's own public URL as the Root proxy
-                return None  # caller substitutes Master URL
+    """Resolve the URL the device dials home to. The Group's parent is
+    given by (parent_kind, parent_id); only Edge currently carries an
+    .address column, so Node/Root parents return None (caller substitutes
+    the Master URL)."""
+    pk = group.parent_kind or "edge"
+    pid = group.parent_id or group.edge_id   # legacy fallback
+    if not pid:
+        return None
+    if pk == "edge":
+        edge = await session.get(EdgeSystem, pid)
+        if edge is not None and edge.address:
+            return edge.address.rstrip("/")
+        return None
+    if pk == "node":
+        # Node has no .address column today; caller substitutes Master URL.
+        return None
+    if pk == "root":
+        # Master itself — no upstream parent.
+        return None
     return None
 
 
