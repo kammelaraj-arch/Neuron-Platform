@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Systems{% endblock %}
 {% block content %}
-  <header>
-    <h1 class="text-2xl font-semibold tracking-tight">System Designer</h1>
-    <p class="text-slate-400 text-sm">
-      Hierarchy is flexible: <strong>Root → Node → Edge → Device</strong> (full),
-      <strong>Root → Edge → Device</strong> (Node optional), or
-      <strong>all-in-one</strong> (Root + Edge on one host). Each Edge runs the Edge
-      Runtime at a factory site; Devices register under an Edge.
-    </p>
+  <header class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">System Designer</h1>
+      <p class="text-slate-400 text-sm">
+        Hierarchy is flexible: <strong>Root → Node → Edge → Device</strong> (full),
+        <strong>Root → Edge → Device</strong> (Node optional), or
+        <strong>all-in-one</strong> (Root + Edge on one host). Each Edge runs the Edge
+        Runtime at a factory site; Devices register under an Edge.
+      </p>
+    </div>
+    <a href="/ui/devices/wizard"
+       class="shrink-0 inline-flex items-center gap-2 rounded-md bg-gradient-to-br from-emerald-400 to-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-emerald-300 hover:to-cyan-400 shadow-[0_0_20px_-6px_rgba(16,185,129,0.55)]">
+      🪄 Configuration Wizard
+      <span class="text-[10px] uppercase tracking-wider opacity-70">role → compute → boards → pins → build</span>
+    </a>
   </header>
 
   {% if signed_in %}
