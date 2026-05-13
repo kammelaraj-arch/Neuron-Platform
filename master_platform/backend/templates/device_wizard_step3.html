@@ -52,69 +52,45 @@
       {% endif %}
     </div>
 
-    <!-- Search + add -->
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
-      <h3 class="font-semibold text-sm text-slate-200">Catalog — control boards</h3>
-      <input id="board-filter" type="search" placeholder="filter by name / id / tag…"
+    <!-- Search + add (compact row list — pattern matches step 2 compute picker) -->
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
+      <h3 class="font-semibold text-sm text-slate-200">Catalog — add a control board</h3>
+      <input id="board-filter" type="search" placeholder="🔍 Search by name / id / tag / vendor…"
              oninput="filterBoards(this.value)"
-             class="mt-3 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm placeholder-slate-500" />
+             class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm placeholder-slate-500" />
 
-      <div id="board-grid" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div id="board-list" class="max-h-96 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 divide-y divide-slate-800">
         {% for b in available_boards %}
           {% set img = b.manifest.get('metadata', {}).get('image_url') %}
           <form method="post" action="/ui/devices/wizard/{{ group.id }}/boards/add"
-                class="board-card group rounded-xl border border-slate-800 bg-slate-900/60 p-3 hover:border-emerald-500/60 hover:shadow-[0_0_22px_-10px_rgba(16,185,129,0.5)] transition"
-                data-search="{{ b.stable_id }} {{ b.name }} {{ (b.manifest.get('tags', []) | join(' ')) }}">
+                class="board-row flex items-center gap-3 px-3 py-2.5 hover:bg-slate-900/60"
+                data-search="{{ b.stable_id|lower }} {{ b.name|lower }} {{ (b.manifest.get('tags', []) | join(' '))|lower }} {{ (b.manifest.get('vendor') or '')|lower }}">
             <input type="hidden" name="board_stable_id" value="{{ b.stable_id }}">
-            <!-- Image area: name-forward placeholder + external photo overlay -->
-            <div class="relative mb-2 aspect-[4/3] overflow-hidden rounded-md bg-gradient-to-br from-slate-900 to-slate-950 ring-1 ring-slate-800 group-hover:ring-emerald-500/40 transition">
-              <!-- Big PCB silhouette fills the card -->
-              <svg viewBox="0 0 100 75" preserveAspectRatio="xMidYMid meet"
-                   class="absolute inset-0 h-full w-full opacity-70 group-hover:opacity-100 transition"
-                   fill="none" stroke="currentColor" stroke-width="1"
-                   stroke-linecap="round" stroke-linejoin="round">
-                <rect x="10" y="20" width="80" height="36" rx="3" class="stroke-emerald-400/70" fill="#0f172a"/>
-                <!-- IC chip in middle -->
-                <rect x="38" y="32" width="24" height="14" rx="1" class="stroke-emerald-400/40" fill="#020617"/>
-                <text x="50" y="42" font-size="5" text-anchor="middle" font-family="ui-monospace"
-                      class="fill-emerald-400/60 stroke-none">IC</text>
-                <!-- pin rings top + bottom -->
-                {% for i in range(14) %}
-                  <circle cx="{{ 14 + i*5.5 }}" cy="20" r="0.9" class="fill-emerald-400/80 stroke-none"/>
-                  <circle cx="{{ 14 + i*5.5 }}" cy="56" r="0.9" class="fill-emerald-400/80 stroke-none"/>
-                {% endfor %}
-                <!-- screw terminals on sides -->
-                <rect x="3" y="30" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
-                <rect x="3" y="42" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
-                <rect x="91" y="30" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
-                <rect x="91" y="42" width="6" height="4" class="stroke-amber-400/60" fill="#1e293b"/>
-              </svg>
-              <!-- Big board-name banner -->
-              <div class="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-slate-950 via-slate-950/85 to-transparent px-2 py-1.5">
-                <div class="text-[11px] font-semibold text-slate-100 leading-tight line-clamp-2">{{ b.name }}</div>
-                <div class="font-mono text-[9px] text-cyan-300/80 truncate">{{ b.stable_id }}</div>
+            {% if img %}
+              <img src="{{ img }}" loading="lazy" alt=""
+                   class="h-10 w-14 object-contain rounded bg-slate-900 shrink-0">
+            {% else %}
+              <div class="h-10 w-14 grid place-items-center rounded bg-slate-900 text-[10px] text-slate-500 shrink-0">no img</div>
+            {% endif %}
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-medium text-slate-200 truncate">{{ b.name }}</div>
+              <div class="text-[11px] text-slate-500 truncate">
+                <span class="font-mono">{{ b.stable_id }}</span>
+                {% if b.manifest.get('vendor') %}· {{ b.manifest.vendor }}{% endif %}
+                {% if b.manifest.get('tags') %}· {{ b.manifest.tags|join(' · ') }}{% endif %}
               </div>
-              {% if img %}
-                <img src="{{ img }}" alt="" loading="lazy"
-                     class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300"
-                     onload="this.style.opacity='1'"
-                     onerror="this.remove()" />
-              {% endif %}
             </div>
-            <div class="text-xs font-semibold text-slate-200">{{ b.name }}</div>
-            <div class="mt-0.5 font-mono text-[10px] text-cyan-300">{{ b.stable_id }}</div>
             <input name="label" type="text" placeholder="label (optional)"
-                   class="mt-2 w-full rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px]
-                          placeholder-slate-600" onclick="event.stopPropagation()">
-            <button class="mt-2 w-full rounded-md bg-emerald-500/10 border border-emerald-500/40 text-emerald-300
-                           text-[11px] py-1 hover:bg-emerald-500 hover:text-slate-950 transition">
-              + add to group
+                   class="rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] placeholder-slate-600 w-40">
+            <button class="rounded-md bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-[11px] px-3 py-1.5 hover:bg-emerald-500 hover:text-slate-950 transition shrink-0">
+              + add
             </button>
           </form>
         {% else %}
-          <p class="text-sm text-slate-500 italic col-span-full">control_board_library is empty.</p>
+          <p class="px-3 py-4 text-sm text-slate-500 italic">control_board_library is empty.</p>
         {% endfor %}
       </div>
+      <p id="board-empty" class="hidden text-[11px] text-amber-300/80">No boards match that search.</p>
     </div>
 
     <div class="flex gap-3">
@@ -130,10 +106,15 @@
   <script>
     function filterBoards(q) {
       q = (q || '').trim().toLowerCase();
-      document.querySelectorAll('.board-card').forEach(card => {
-        const s = (card.dataset.search || '').toLowerCase();
-        card.style.display = (!q || s.includes(q)) ? '' : 'none';
+      let visible = 0;
+      document.querySelectorAll('.board-row').forEach(row => {
+        const s = (row.dataset.search || '');
+        const show = !q || s.includes(q);
+        row.classList.toggle('hidden', !show);
+        if (show) visible++;
       });
+      const empty = document.getElementById('board-empty');
+      if (empty) empty.classList.toggle('hidden', visible !== 0);
     }
   </script>
 {% endblock %}

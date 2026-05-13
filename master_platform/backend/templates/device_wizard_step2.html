@@ -67,51 +67,73 @@
       </p>
     </fieldset>
 
-    <!-- ── COMPUTE PICKER (search-and-select) ───────────────────────────── -->
+    <!-- ── COMPUTE PICKER (collapses to a summary once selected) ─────────── -->
     <fieldset class="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5 space-y-3">
       <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Compute module *</legend>
-      <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <div>
-          <input id="compute-search" type="search" autocomplete="off"
-                 placeholder="🔍 Search e.g. Pi 5, Pico 2 W, CM4, rpi4 8GB…"
-                 class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+
+      {% set selected_compute = computes|selectattr("stable_id","equalto", group.compute_stable_id)|list|first %}
+
+      <!-- Compact summary view (shown when something is already selected) -->
+      <div id="compute-summary" class="{% if not selected_compute %}hidden{% endif %} flex items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/[0.06] px-3 py-2.5">
+        {% if selected_compute and selected_compute.manifest.metadata and selected_compute.manifest.metadata.image_url %}
+          <img id="summary-img" src="{{ selected_compute.manifest.metadata.image_url }}" alt=""
+               class="h-10 w-14 object-contain rounded bg-slate-900 shrink-0">
+        {% else %}
+          <div id="summary-img" class="h-10 w-14 grid place-items-center rounded bg-slate-900 text-[10px] text-slate-500 shrink-0">no img</div>
+        {% endif %}
+        <div class="min-w-0 flex-1">
+          <div id="summary-name" class="text-sm font-medium text-emerald-200 truncate">{{ selected_compute.name if selected_compute else '' }}</div>
+          <div id="summary-meta" class="text-[11px] text-slate-400 truncate font-mono">{{ selected_compute.stable_id if selected_compute else '' }}</div>
         </div>
-        <div>
-          <label class="block text-xs uppercase tracking-wider text-slate-400">Hardware rev.</label>
+        <div class="flex items-center gap-2 shrink-0">
+          <label class="text-[10px] uppercase tracking-wider text-slate-400">Hardware rev.</label>
           <input name="hardware_revision" value="{{ group.hardware_revision or 'rev_a' }}" maxlength="40"
-                 class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono w-28" />
+                 class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1 text-xs font-mono w-24" />
+          <button type="button" onclick="expandComputePicker()"
+                  class="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">
+            Change
+          </button>
         </div>
       </div>
 
-      <!-- Selectable list — filterable, with thumbnail + vendor + tags -->
-      <div id="compute-list" class="max-h-96 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 divide-y divide-slate-800">
-        {% for c in computes %}
-          {% set sel = (group.compute_stable_id == c.stable_id) %}
-          <label data-name="{{ c.name|lower }} {{ c.stable_id|lower }} {{ (c.manifest.tags or [])|join(' ')|lower }} {{ (c.manifest.vendor or '')|lower }}"
-                 class="compute-row flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-900/60 has-[:checked]:bg-emerald-500/10">
-            <input type="radio" name="compute_stable_id" value="{{ c.stable_id }}"
-                   {% if sel %}checked{% endif %} required
-                   class="accent-emerald-400 shrink-0">
-            {% if c.manifest.metadata and c.manifest.metadata.image_url %}
-              <img src="{{ c.manifest.metadata.image_url }}" loading="lazy" alt=""
-                   class="h-10 w-14 object-contain rounded bg-slate-900 shrink-0">
-            {% else %}
-              <div class="h-10 w-14 grid place-items-center rounded bg-slate-900 text-[10px] text-slate-500 shrink-0">no img</div>
-            {% endif %}
-            <div class="min-w-0 flex-1">
-              <div class="text-sm font-medium text-slate-200 truncate">{{ c.name }}</div>
-              <div class="text-[11px] text-slate-500 truncate">
-                <span class="font-mono">{{ c.stable_id }}</span>
-                {% if c.manifest.vendor %}· {{ c.manifest.vendor }}{% endif %}
-                {% if c.manifest.tags %}· {{ c.manifest.tags|join(' · ') }}{% endif %}
+      <!-- Picker view (search + scrollable list) — hidden when something is selected -->
+      <div id="compute-picker" class="{% if selected_compute %}hidden{% endif %} space-y-3">
+        <input id="compute-search" type="search" autocomplete="off"
+               placeholder="🔍 Search e.g. Pi 5, Pico 2 W, CM4, rpi4 8GB…"
+               class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+
+        <div id="compute-list" class="max-h-96 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 divide-y divide-slate-800">
+          {% for c in computes %}
+            {% set sel = (group.compute_stable_id == c.stable_id) %}
+            <label data-name="{{ c.name|lower }} {{ c.stable_id|lower }} {{ (c.manifest.tags or [])|join(' ')|lower }} {{ (c.manifest.vendor or '')|lower }}"
+                   data-display-name="{{ c.name }}"
+                   data-display-meta="{{ c.stable_id }}{% if c.manifest.vendor %} · {{ c.manifest.vendor }}{% endif %}"
+                   data-display-img="{{ c.manifest.metadata.image_url if c.manifest.metadata and c.manifest.metadata.image_url else '' }}"
+                   class="compute-row flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-900/60 has-[:checked]:bg-emerald-500/10">
+              <input type="radio" name="compute_stable_id" value="{{ c.stable_id }}"
+                     {% if sel %}checked{% endif %} required
+                     class="accent-emerald-400 shrink-0">
+              {% if c.manifest.metadata and c.manifest.metadata.image_url %}
+                <img src="{{ c.manifest.metadata.image_url }}" loading="lazy" alt=""
+                     class="h-10 w-14 object-contain rounded bg-slate-900 shrink-0">
+              {% else %}
+                <div class="h-10 w-14 grid place-items-center rounded bg-slate-900 text-[10px] text-slate-500 shrink-0">no img</div>
+              {% endif %}
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-medium text-slate-200 truncate">{{ c.name }}</div>
+                <div class="text-[11px] text-slate-500 truncate">
+                  <span class="font-mono">{{ c.stable_id }}</span>
+                  {% if c.manifest.vendor %}· {{ c.manifest.vendor }}{% endif %}
+                  {% if c.manifest.tags %}· {{ c.manifest.tags|join(' · ') }}{% endif %}
+                </div>
               </div>
-            </div>
-          </label>
-        {% else %}
-          <p class="px-3 py-4 text-sm text-slate-500 italic">No micro-compute modules in the catalog yet.</p>
-        {% endfor %}
+            </label>
+          {% else %}
+            <p class="px-3 py-4 text-sm text-slate-500 italic">No micro-compute modules in the catalog yet.</p>
+          {% endfor %}
+        </div>
+        <p id="compute-empty" class="hidden text-[11px] text-amber-300/80">No compute modules match that search.</p>
       </div>
-      <p id="compute-empty" class="hidden text-[11px] text-amber-300/80">No compute modules match that search.</p>
     </fieldset>
 
     <div class="flex gap-3">
@@ -128,6 +150,9 @@
     const search = document.getElementById('compute-search');
     const rows   = Array.from(document.querySelectorAll('.compute-row'));
     const empty  = document.getElementById('compute-empty');
+    const summary = document.getElementById('compute-summary');
+    const picker  = document.getElementById('compute-picker');
+
     function applyFilter() {
       const q = (search.value || '').trim().toLowerCase();
       let visible = 0;
@@ -140,8 +165,54 @@
       empty.classList.toggle('hidden', visible !== 0);
     }
     search.addEventListener('input', applyFilter);
-    // Auto-scroll to the currently selected row on first paint.
-    const selected = document.querySelector('.compute-row input:checked');
-    if (selected) selected.closest('.compute-row').scrollIntoView({block: 'center'});
+
+    function collapseToSummary(row) {
+      // Update the summary card from the picked row's data-* attrs and
+      // swap visibility. The form-control radio inside the row is still
+      // checked, so submit will carry compute_stable_id correctly.
+      const name = row.dataset.displayName || '';
+      const meta = row.dataset.displayMeta || '';
+      const img  = row.dataset.displayImg  || '';
+      document.getElementById('summary-name').textContent = name;
+      document.getElementById('summary-meta').textContent = meta;
+      const imgEl = document.getElementById('summary-img');
+      if (img) {
+        // Replace whichever element is currently in #summary-img with an <img>.
+        if (imgEl.tagName !== 'IMG') {
+          const newImg = document.createElement('img');
+          newImg.id = 'summary-img';
+          newImg.className = 'h-10 w-14 object-contain rounded bg-slate-900 shrink-0';
+          newImg.alt = '';
+          newImg.src = img;
+          imgEl.replaceWith(newImg);
+        } else {
+          imgEl.src = img;
+        }
+      }
+      picker.classList.add('hidden');
+      summary.classList.remove('hidden');
+    }
+
+    window.expandComputePicker = function () {
+      summary.classList.add('hidden');
+      picker.classList.remove('hidden');
+      const selected = picker.querySelector('input[name="compute_stable_id"]:checked');
+      if (selected) selected.closest('.compute-row').scrollIntoView({block: 'center'});
+    };
+
+    // When a row is picked, immediately collapse to the summary view.
+    rows.forEach(r => {
+      const input = r.querySelector('input[type="radio"]');
+      if (!input) return;
+      input.addEventListener('change', () => { if (input.checked) collapseToSummary(r); });
+    });
+
+    // First paint: if something's already checked in the picker but we're
+    // showing the picker (e.g. server-side selected_compute lookup missed),
+    // scroll to it. The summary already shows the right thing.
+    const initial = document.querySelector('input[name="compute_stable_id"]:checked');
+    if (initial && !picker.classList.contains('hidden')) {
+      initial.closest('.compute-row').scrollIntoView({block: 'center'});
+    }
   </script>
 {% endblock %}
