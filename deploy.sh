@@ -87,9 +87,20 @@ NEURON_GIT_SHA="$GIT_SHA" NEURON_BUILD_TIME="$BUILD_TIME" \
     --build-arg "NEURON_BUILD_TIME=$BUILD_TIME"
 ok "Image built ($GIT_SHA / $BUILD_TIME)"
 
-# ─── 3. Up ───────────────────────────────────────────────────────────────────
-step "[3/4] Starting neuron-master"
-docker compose -f "$COMPOSE" up -d --no-deps neuron-master
+# ─── 3. Up — zero-downtime swap when possible ────────────────────────────────
+step "[3/4] Starting neuron-master (graceful recreate)"
+# Image is already built in step 2 — the swap window is just stop + start of
+# the new container against the cached image, typically 2-5s. The host
+# nginx vhost (host-nginx/neuron.conf) has proxy_next_upstream + retry
+# configured so connection-refused during this window is absorbed
+# rather than surfaced as a 502 to the client.
+#
+# If neuron-master isn't currently up (cold deploy), --no-deps still
+# brings it up clean.
+if docker ps --format '{{.Names}}' | grep -qx "${NEURON_MASTER_CONTAINER:-neuron-master}"; then
+  echo "  (graceful recreate — pre-built image, host nginx absorbs the gap)"
+fi
+docker compose -f "$COMPOSE" up -d --no-deps --force-recreate neuron-master
 ok "Container started"
 
 # ─── 4. Health check ─────────────────────────────────────────────────────────
