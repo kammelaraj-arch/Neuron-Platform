@@ -172,6 +172,8 @@ def _apply_lightweight_migrations(sync_conn) -> None:
             ("telemetry_json", "JSON"),
             ("ntp_servers_json", "JSON"),
             ("bluetooth_enabled", "BOOLEAN NOT NULL DEFAULT 0"),
+            ("lifecycle_status", "VARCHAR(20) NOT NULL DEFAULT 'active'"),
+            ("decommissioned_at", "DATETIME"),
             ("local_ip", "VARCHAR(60)"),
             ("external_ip", "VARCHAR(60)"),
             ("hostname", "VARCHAR(200)"),

@@ -400,6 +400,124 @@
       </script>
     </div>
 
+    <!-- ── BUNDLE HISTORY + ROLLBACK ─────────────────────────────────────── -->
+    {% if history %}
+      <details class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+        <summary class="cursor-pointer font-semibold text-slate-200 flex items-center gap-2">
+          🗂 Bundle history
+          <span class="text-[10px] text-slate-400">({{ history|length }})</span>
+        </summary>
+        <p class="mt-2 text-[11px] text-slate-400">
+          Every Build appends a row here. The current row is the bundle the
+          next 🚀 Deploy will push to the device. Click <strong>Rollback</strong>
+          on an older row to swap it back to current — the deploy itself is
+          a separate click, so you can review before pushing.
+        </p>
+        <div class="mt-3 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950">
+          <table class="min-w-full text-xs">
+            <thead class="bg-slate-900/80 text-left uppercase tracking-wider text-slate-400">
+              <tr>
+                <th class="px-3 py-2">v</th>
+                <th class="px-3 py-2">DNA</th>
+                <th class="px-3 py-2">Built</th>
+                <th class="px-3 py-2">Cert fingerprint</th>
+                <th class="px-3 py-2">SHA256</th>
+                <th class="px-3 py-2">Status</th>
+                <th class="px-3 py-2 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70">
+              {% for a in history %}
+                <tr class="hover:bg-slate-900/40">
+                  <td class="px-3 py-1.5 font-mono">{{ a.version_seq }}</td>
+                  <td class="px-3 py-1.5 font-mono text-cyan-300">{{ a.device_dna }}</td>
+                  <td class="px-3 py-1.5 text-slate-400">{{ a.built_at.strftime('%Y-%m-%d %H:%M') if a.built_at else '—' }}</td>
+                  <td class="px-3 py-1.5 font-mono text-[10px] text-slate-500">{{ (a.cert_fingerprint or '—')[:18] }}…</td>
+                  <td class="px-3 py-1.5 font-mono text-[10px] text-slate-500">{{ (a.sha256 or '—')[:12] }}…</td>
+                  <td class="px-3 py-1.5">
+                    {% if a.status == 'current' %}
+                      <span class="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[10px]">current</span>
+                    {% elif a.status == 'revoked' %}
+                      <span class="rounded-full bg-red-500/20 text-red-300 px-2 py-0.5 text-[10px]">revoked</span>
+                    {% elif a.status == 'failed' %}
+                      <span class="rounded-full bg-amber-500/20 text-amber-300 px-2 py-0.5 text-[10px]">failed</span>
+                    {% else %}
+                      <span class="rounded-full bg-slate-700 text-slate-300 px-2 py-0.5 text-[10px]">superseded</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-3 py-1.5 text-right">
+                    {% if a.status == 'superseded' %}
+                      <button type="button" onclick="rollbackTo('{{ a.id }}', {{ a.version_seq }})"
+                              class="rounded-md border border-cyan-700 px-2 py-0.5 text-[11px] text-cyan-300 hover:bg-cyan-500/10">
+                        ⤺ Rollback
+                      </button>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div id="rollback-status" class="mt-2 hidden text-[11px] font-mono"></div>
+        <script>
+          async function rollbackTo(artifactId, version) {
+            const out = document.getElementById('rollback-status');
+            out.classList.remove('hidden');
+            out.innerHTML = `<span class="text-cyan-300">⏳ flipping to v${version}…</span>`;
+            try {
+              const r = await fetch(`/api/wizard/{{ group.id }}/rollback/${artifactId}`,
+                                    {method: 'POST', credentials: 'same-origin'});
+              const d = await r.json();
+              if (!r.ok || !d.ok) {
+                out.innerHTML = `<span class="text-red-300">❌ rollback failed${d.detail ? ': ' + d.detail : ''}</span>`;
+                return;
+              }
+              out.innerHTML = `<span class="text-emerald-300">✓ v${d.to_version} is now current — click 🚀 Deploy above to push it.</span>`;
+              setTimeout(() => location.reload(), 1500);
+            } catch (e) {
+              out.innerHTML = `<span class="text-red-300">❌ ${e}</span>`;
+            }
+          }
+        </script>
+      </details>
+    {% endif %}
+
+    <!-- ── DECOMMISSION ─────────────────────────────────────────────────── -->
+    {% if group.firmware_bundle_path or history %}
+      <details class="rounded-2xl border border-red-700/40 bg-red-500/[0.04] p-5">
+        <summary class="cursor-pointer font-semibold text-red-300 flex items-center gap-2">
+          ☠ Decommission
+          {% if group.lifecycle_status == 'retired' %}
+            <span class="rounded-full bg-red-500/30 text-red-200 px-2 py-0.5 text-[10px]">retired {{ group.decommissioned_at.strftime('%Y-%m-%d') if group.decommissioned_at else '' }}</span>
+          {% endif %}
+        </summary>
+        {% if group.lifecycle_status != 'retired' %}
+          <p class="mt-2 text-[11px] text-slate-400">
+            Marks this group <code>retired</code> and revokes every bundle in history.
+            After decommission: no more builds, no deploys, no rollbacks. Use when the
+            physical unit is being retired or replaced. The device certificates remain
+            in audit + the master CA's revocation list so even a stolen .zip can't
+            re-attach to the platform.
+          </p>
+          <form method="post" action="/ui/devices/wizard/{{ group.id }}/decommission"
+                class="mt-3 flex flex-wrap gap-2 items-center"
+                onsubmit="return confirm('Decommission this group? This is not reversible from the UI.');">
+            <input name="confirm" placeholder='type RETIRE to confirm' required
+                   pattern="RETIRE" maxlength="10"
+                   class="rounded-md border border-red-700/60 bg-slate-950 px-3 py-1.5 text-xs font-mono text-red-200 placeholder-slate-600">
+            <button class="rounded-md bg-red-500 px-4 py-1.5 text-xs font-medium text-slate-950 hover:bg-red-400">
+              ☠ Decommission
+            </button>
+          </form>
+        {% else %}
+          <p class="mt-2 text-[11px] text-red-200/80">
+            This group is retired. Its bundles are revoked. Re-activation
+            requires a DB-side flag flip — intentionally not exposed in the UI.
+          </p>
+        {% endif %}
+      </details>
+    {% endif %}
+
     <!-- ── SSH / DEPLOYMENT CREDENTIALS ──────────────────────────────────── -->
     <div class="rounded-2xl border border-cyan-500/30 bg-cyan-500/[0.04] p-5">
       <h3 class="font-semibold flex items-center gap-2 text-cyan-300">

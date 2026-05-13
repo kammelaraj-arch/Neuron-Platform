@@ -2050,6 +2050,12 @@ async def wizard_step_review(
             )
         ).scalars().all()
         detail.append({"board": b, "components": comps, "pins": pins})
+    # Bundle history — newest first.
+    from ..models import BundleArtifact
+    history = (await session.execute(
+        select(BundleArtifact).where(BundleArtifact.group_id == group.id)
+        .order_by(BundleArtifact.version_seq.desc())
+    )).scalars().all()
     return templates.TemplateResponse(
         "device_wizard_step6.html",
         {
@@ -2057,6 +2063,7 @@ async def wizard_step_review(
             "group": group,
             "detail": detail,
             "catalog": catalog,
+            "history": history,
             "steps": WIZARD_STEPS,
             "step_idx": 6,
         },
@@ -2086,6 +2093,11 @@ async def wizard_build_bundle(
     if boards_count == 0 and (group.role or "edge") in ("edge", "gateway"):
         raise HTTPException(400, "Add at least one board before building (edge / gateway devices wire to physical I/O).")
 
+    # Refuse to (re)build a retired group — the operator has to
+    # explicitly un-retire first, which we don't expose yet on purpose.
+    if (group.lifecycle_status or "active") == "retired":
+        raise HTTPException(400, "Group is retired — rebuild not permitted.")
+
     bundle_path, dna, brain = await build_group_bundle(
         session, group, Path(settings.build_artifacts_dir)
     )
@@ -2093,6 +2105,43 @@ async def wizard_build_bundle(
     group.brain_json = brain
     group.firmware_bundle_path = str(bundle_path)
     group.device_dna = dna["device_dna"]
+
+    # Append to bundle history + supersede previous current row.
+    from ..models import BundleArtifact
+    prev = (await session.execute(
+        select(BundleArtifact).where(BundleArtifact.group_id == group.id,
+                                     BundleArtifact.status == "current")
+    )).scalars().all()
+    for p in prev:
+        p.status = "superseded"
+    next_seq = ((await session.execute(
+        select(sa_func.max(BundleArtifact.version_seq))
+        .where(BundleArtifact.group_id == group.id)
+    )).scalar_one() or 0) + 1
+    # Pull cert fingerprints out of the freshly written brain payload.
+    cc = (brain.get("channels") or {}).get("command_and_control") or {}
+    eg = (brain.get("channels") or {}).get("emergency") or {}
+    # Bundle file sha256 for tamper detection — read from disk after build.
+    try:
+        with open(bundle_path, "rb") as fh:
+            import hashlib as _h
+            bundle_sha = _h.sha256(fh.read()).hexdigest()
+    except OSError:
+        bundle_sha = None
+    artifact = BundleArtifact(
+        group_id=group.id,
+        device_dna=group.device_dna,
+        version_seq=next_seq,
+        file_path=str(bundle_path),
+        sha256=bundle_sha,
+        dna_snapshot=dna,
+        brain_snapshot=brain,
+        cert_fingerprint=cc.get("cert_fingerprint"),
+        emergency_fingerprint=eg.get("cert_fingerprint"),
+        status="current",
+    )
+    session.add(artifact)
+    await session.flush()
 
     await record(
         session, actor=actor.id, actor_kind="ui_session",
@@ -2104,6 +2153,88 @@ async def wizard_build_bundle(
             "components": len(dna.get("components") or []),
             "interlocks": len((brain.get("safety") or {}).get("interlocks") or []),
         },
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
+@router.post("/api/wizard/{group_id}/rollback/{artifact_id}", response_class=JSONResponse)
+async def wizard_rollback_bundle(
+    group_id: str,
+    artifact_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Promote a superseded BundleArtifact back to current. Pins the
+    group's firmware_bundle_path + dna_json + brain_json to that
+    artifact's snapshot so a subsequent /deploy reuses it. Doesn't
+    auto-deploy — the operator clicks 🚀 Deploy after the flip so the
+    rollback is intentional + auditable."""
+    from ..models import BundleArtifact
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    if (group.lifecycle_status or "active") == "retired":
+        raise HTTPException(400, "Group is retired — rollback not permitted.")
+    target = await session.get(BundleArtifact, artifact_id)
+    if target is None or target.group_id != group.id:
+        raise HTTPException(404, "bundle artifact not found in this group")
+    if target.status in ("revoked",):
+        raise HTTPException(400, "Artifact is revoked — can't roll back to it.")
+    # Demote current artifact(s).
+    current = (await session.execute(
+        select(BundleArtifact).where(BundleArtifact.group_id == group.id,
+                                     BundleArtifact.status == "current")
+    )).scalars().all()
+    for c in current:
+        if c.id != target.id:
+            c.status = "superseded"
+    target.status = "current"
+    group.dna_json = target.dna_snapshot
+    group.brain_json = target.brain_snapshot
+    group.firmware_bundle_path = target.file_path
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.rollback", target_kind="edge_group", target_id=group.id,
+        detail={"to_version": target.version_seq, "artifact_id": target.id,
+                "from_versions": [c.version_seq for c in current if c.id != target.id]},
+    )
+    await session.commit()
+    return {"ok": True, "to_version": target.version_seq, "artifact_id": target.id}
+
+
+@router.post("/ui/devices/wizard/{group_id}/decommission")
+async def wizard_decommission_group(
+    group_id: str,
+    request: Request,
+    confirm: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Retire the group. Marks lifecycle_status='retired', marks every
+    BundleArtifact 'revoked', stamps decommissioned_at. After this:
+    no further builds, no deploys, no rollbacks until the row is
+    re-activated manually (DB-side for now)."""
+    from ..models import BundleArtifact
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    if (confirm or "").strip() != "RETIRE":
+        raise HTTPException(400, "Type RETIRE in the confirm field to decommission.")
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    group.lifecycle_status = "retired"
+    group.decommissioned_at = now
+    arts = (await session.execute(
+        select(BundleArtifact).where(BundleArtifact.group_id == group.id)
+    )).scalars().all()
+    for a in arts:
+        a.status = "revoked"
+        a.decommissioned_at = now
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.decommission", target_kind="edge_group", target_id=group.id,
+        detail={"artifact_count": len(arts), "device_dna": group.device_dna},
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)

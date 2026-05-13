@@ -431,6 +431,10 @@ class EdgeGroup(Base):
     # already lives in primary_wifi_id / secondary_wifi_id.
     ntp_servers_json: Mapped[list | None] = mapped_column(JSON)
     bluetooth_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # active | retired   (retired = decommissioned, certs revoked, no
+    # further deploys / rollbacks permitted).
+    lifecycle_status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    decommissioned_at: Mapped[datetime | None] = mapped_column()
     # 2026-05: connectivity & access (spec step 2). Captured on the
     # compute-pick screen alongside asset_id + UUID display.
     local_ip:    Mapped[str | None] = mapped_column(String(60))
@@ -575,6 +579,46 @@ class ComponentInstance(Base):
 
     __table_args__ = (
         UniqueConstraint("board_instance_id", "instance_id", name="uq_component_per_board"),
+    )
+
+
+class BundleArtifact(Base):
+    """Historical record of every firmware bundle built for an EdgeGroup.
+
+    The group itself only tracks the *currently active* bundle
+    (firmware_bundle_path, dna_json, brain_json). Every previous build
+    is rolled into a row here so the operator can:
+      • see deploy history with timestamps + per-build fingerprints,
+      • rollback to a previous version (redeploys + flips current),
+      • audit which cert fingerprints were on the wire when.
+
+    The on-disk .zip lives at file_path until pruning policy says
+    otherwise. dna_json + brain_json are persisted as snapshots so
+    history is meaningful even after the .zip is GC'd.
+    """
+    __tablename__ = "bundle_artifacts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    group_id: Mapped[str] = mapped_column(
+        ForeignKey("edge_groups.id"), nullable=False, index=True
+    )
+    device_dna: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    version_seq: Mapped[int] = mapped_column(nullable=False)
+    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    sha256: Mapped[str | None] = mapped_column(String(64))
+    dna_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    brain_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    cert_fingerprint: Mapped[str | None] = mapped_column(String(80))
+    emergency_fingerprint: Mapped[str | None] = mapped_column(String(80))
+    # current | superseded | revoked | failed
+    status: Mapped[str] = mapped_column(String(20), default="current", nullable=False)
+    built_at: Mapped[datetime] = mapped_column(default=_now)
+    deployed_at: Mapped[datetime | None] = mapped_column()
+    decommissioned_at: Mapped[datetime | None] = mapped_column()
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("group_id", "version_seq", name="uq_bundle_per_group_version"),
     )
 
 
