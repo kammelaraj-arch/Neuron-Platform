@@ -278,6 +278,120 @@ async def wizard_delete_rule(
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
 
 
+_TELEMETRY_CHANNELS = (
+    "cpu", "memory", "disk", "temperature", "uptime",
+    "network", "cycle_count", "fault_state",
+)
+_ALERT_SEVERITIES = ("info", "warning", "critical")
+
+
+@router.post("/ui/devices/wizard/{group_id}/telemetry")
+async def wizard_set_telemetry(
+    group_id: str,
+    request: Request,
+    sample_interval_seconds: int = Form(10),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Persist the ticked telemetry channels + sample interval. The
+    multi-checkbox form sends each enabled channel as 'channel_<name>=on';
+    we read them directly from request.form() so the handler stays
+    decoupled from the channel list (we can add a new channel by just
+    adding a checkbox in the template)."""
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    form = await request.form()
+    enabled = sorted({
+        ch for ch in _TELEMETRY_CHANNELS
+        if form.get(f"channel_{ch}") in ("on", "1", "true")
+    })
+    interval = max(1, min(int(sample_interval_seconds or 10), 3600))
+    existing = dict(group.telemetry_json or {})
+    existing["channels"] = enabled
+    existing["sample_interval_seconds"] = interval
+    existing.setdefault("alerts", [])
+    group.telemetry_json = existing
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.set_telemetry", target_kind="edge_group", target_id=group.id,
+        detail={"channels": enabled, "sample_interval_seconds": interval,
+                "alert_count": len(existing["alerts"])},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/telemetry/alerts/add")
+async def wizard_add_telemetry_alert(
+    group_id: str,
+    request: Request,
+    channel: str = Form(...),
+    op: str = Form(...),
+    threshold: str = Form(...),
+    severity: str = Form("warning"),
+    action: str = Form("publish_alarm"),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    from ..models import RULE_OPS, RULE_ACTIONS
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    if channel not in _TELEMETRY_CHANNELS:
+        raise HTTPException(400, f"channel must be one of {_TELEMETRY_CHANNELS}")
+    if op not in RULE_OPS:
+        raise HTTPException(400, f"op must be one of {RULE_OPS}")
+    if action not in RULE_ACTIONS:
+        raise HTTPException(400, f"action must be one of {RULE_ACTIONS}")
+    if severity not in _ALERT_SEVERITIES:
+        raise HTTPException(400, f"severity must be one of {_ALERT_SEVERITIES}")
+    try:
+        val: float | int | str = float(threshold)
+        if val.is_integer(): val = int(val)
+    except ValueError:
+        val = threshold
+
+    tel = dict(group.telemetry_json or {})
+    alerts = list(tel.get("alerts") or [])
+    alerts.append({"channel": channel, "op": op, "threshold": val,
+                   "severity": severity, "action": action})
+    tel["alerts"] = alerts
+    group.telemetry_json = tel
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.add_telemetry_alert", target_kind="edge_group", target_id=group.id,
+        detail={"channel": channel, "op": op, "threshold": val,
+                "severity": severity, "action": action},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/telemetry/alerts/{idx}/delete")
+async def wizard_delete_telemetry_alert(
+    group_id: str,
+    idx: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    tel = dict(group.telemetry_json or {})
+    alerts = list(tel.get("alerts") or [])
+    if 0 <= idx < len(alerts):
+        removed = alerts.pop(idx)
+        tel["alerts"] = alerts
+        group.telemetry_json = tel
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="group.delete_telemetry_alert",
+            target_kind="edge_group", target_id=group.id,
+            detail={"index": idx, "removed": removed, "remaining": len(alerts)},
+        )
+        await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/review", status_code=303)
+
+
 @router.post("/ui/devices/wizard/{group_id}/ssh")
 async def wizard_set_ssh(
     group_id: str,

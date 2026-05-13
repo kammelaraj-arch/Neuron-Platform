@@ -163,6 +163,88 @@
       </form>
     </details>
 
+    <!-- ── TELEMETRY + ALERTS ──────────────────────────────────────────── -->
+    {% set tel = group.telemetry_json or {} %}
+    {% set tel_channels = tel.get('channels') or [] %}
+    {% set tel_alerts = tel.get('alerts') or [] %}
+    {% set tel_interval = tel.get('sample_interval_seconds') or 10 %}
+    {% set CHANNELS = ['cpu','memory','disk','temperature','uptime','network','cycle_count','fault_state'] %}
+    <details class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5" {% if tel_channels or tel_alerts %}open{% endif %}>
+      <summary class="cursor-pointer font-semibold text-cyan-300 flex items-center gap-2">
+        📈 Telemetry &amp; alerts
+        <span class="text-[10px] text-slate-400">({{ tel_channels|length }} channel{{ '' if tel_channels|length == 1 else 's' }} · {{ tel_alerts|length }} alert{{ '' if tel_alerts|length == 1 else 's' }})</span>
+      </summary>
+      <p class="mt-2 text-[11px] text-slate-400">
+        Health metrics + industrial counters the on-device agent samples at
+        <strong>sample_interval_seconds</strong>. Alert rules fire when a channel
+        crosses its threshold and emit an MQTT message under
+        <code>factory/&lt;f&gt;/&lt;line&gt;/&lt;machine&gt;/alerts</code>.
+      </p>
+
+      <form method="post" action="/ui/devices/wizard/{{ group.id }}/telemetry" class="mt-4 space-y-3">
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Channels (tick to enable)</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+            {% for ch in CHANNELS %}
+              <label class="flex items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1 cursor-pointer hover:border-cyan-500/50 has-[:checked]:border-cyan-400 has-[:checked]:bg-cyan-500/10">
+                <input type="checkbox" name="channel_{{ ch }}" {% if ch in tel_channels %}checked{% endif %}>
+                <span class="font-mono">{{ ch }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <label class="text-slate-400">Sample interval</label>
+          <input name="sample_interval_seconds" type="number" min="1" max="3600" value="{{ tel_interval }}"
+                 class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1 font-mono w-20">
+          <span class="text-slate-500">seconds</span>
+          <button class="ml-auto rounded-md bg-cyan-500 px-3 py-1.5 font-medium text-slate-950 hover:bg-cyan-400">💾 Save channels</button>
+        </div>
+      </form>
+
+      <!-- Alert rules -->
+      <div class="mt-5 border-t border-slate-800 pt-4">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500">Alert thresholds ({{ tel_alerts|length }})</div>
+        {% if tel_alerts %}
+          <ul class="mt-2 space-y-1 text-xs">
+            {% for a in tel_alerts %}
+              {% set sev_color = {'info': 'bg-slate-700 text-slate-200', 'warning': 'bg-amber-500/20 text-amber-300', 'critical': 'bg-red-500/20 text-red-300'} %}
+              <li class="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 font-mono">
+                <span class="text-cyan-300">{{ a.channel }}</span>
+                <span class="text-slate-400">{{ a.op }}</span>
+                <span class="text-emerald-300">{{ a.threshold }}</span>
+                <span class="text-slate-500">→</span>
+                <span class="text-amber-300">{{ a.action }}</span>
+                <span class="ml-2 rounded-full px-1.5 py-0.5 text-[10px] {{ sev_color.get(a.severity, 'bg-slate-700') }}">{{ a.severity }}</span>
+                <form method="post" action="/ui/devices/wizard/{{ group.id }}/telemetry/alerts/{{ loop.index0 }}/delete" class="ml-auto">
+                  <button class="text-slate-500 hover:text-red-300">✕</button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <form method="post" action="/ui/devices/wizard/{{ group.id }}/telemetry/alerts/add" class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto] text-xs items-center">
+          <select name="channel" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 font-mono">
+            {% for ch in CHANNELS %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}
+          </select>
+          <select name="op" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5">
+            <option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option><option>==</option><option>!=</option>
+          </select>
+          <input name="threshold" placeholder="value (e.g. 80)" required class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 font-mono">
+          <select name="severity" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5">
+            <option value="info">info</option>
+            <option value="warning" selected>warning</option>
+            <option value="critical">critical</option>
+          </select>
+          <select name="action" class="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5">
+            <option>publish_alarm</option><option>stop_motor</option><option>set_pwm_zero</option>
+            <option>open_relay</option><option>close_relay</option><option>safe_shutdown</option><option>ignore</option>
+          </select>
+          <button class="rounded-md bg-amber-500 px-3 py-1.5 font-medium text-slate-950 hover:bg-amber-400">+ add alert</button>
+        </form>
+      </div>
+    </details>
+
     <!-- Group summary -->
     <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 p-5
                 shadow-[0_0_30px_-12px_rgba(16,185,129,0.4)]">
