@@ -1,0 +1,75 @@
+{
+  "stable_id": "board.ai.pi_ai_kit_hailo8l",
+  "name": "Raspberry Pi AI Kit (Hailo-8L M.2)",
+  "vendor": "Raspberry Pi Foundation",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "ai_accelerator",
+  "description": "Official Pi 5 AI Kit. M.2 HAT+ carrier + Hailo-8L neural accelerator (13 TOPS). PCIe Gen3 over the Pi 5 FPC connector. Runs vision/voice/LLM-light inference at the edge without the CPU. Programmed via Hailo's HailoRT runtime + Python bindings.",
+  "tags": [
+    "ai",
+    "neural_accelerator",
+    "pi5",
+    "hailo",
+    "m.2",
+    "pcie"
+  ],
+  "capabilities": [
+    "neural_inference",
+    "vision",
+    "object_detection",
+    "pose_estimation"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PCIe",
+      "direction": "bidir",
+      "voltage": 3.3,
+      "notes": "PCIe Gen3 ×1 via Pi 5 FPC ribbon cable; M.2 2242 slot on the carrier"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 1200,
+    "current_ma_peak": 2500,
+    "power_source": "from_compute"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    "hailo-rt",
+    "hailo-tappas"
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Hailo-8L enumerates",
+      "blocking": false,
+      "steps": [
+        "lspci | grep Hailo",
+        "hailortcli scan"
+      ],
+      "expected": "device listed"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://assets.raspberrypi.com/static/raspberry-pi-ai-kit-3a3b6f1b9c8a0a9d0c6f8e3d2a1b4c5e.jpg",
+    "datasheet_url": "https://datasheets.raspberrypi.com/ai-kit/ai-kit-product-brief.pdf",
+    "brand_variants": [
+      "Raspberry Pi AI Kit"
+    ],
+    "price_usd_range": [
+      70,
+      90
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "stable_id": "board.ai.pi_ai_hat_plus_hailo8",
+  "name": "Raspberry Pi AI HAT+ (Hailo-8 26 TOPS)",
+  "vendor": "Raspberry Pi Foundation",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "ai_accelerator",
+  "description": "Higher-end AI HAT+ for Pi 5 with the full Hailo-8 accelerator (26 TOPS). Drop-in PCIe HAT, no separate M.2 carrier. Doubles the throughput of the AI Kit for heavier vision workloads (multi-stream object detection, segmentation, pose).",
+  "tags": [
+    "ai",
+    "neural_accelerator",
+    "pi5",
+    "hailo",
+    "pcie"
+  ],
+  "capabilities": [
+    "neural_inference",
+    "vision",
+    "object_detection",
+    "segmentation",
+    "pose_estimation"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "PCIe",
+      "direction": "bidir",
+      "voltage": 3.3,
+      "notes": "PCIe Gen3 ×1 via Pi 5 FPC ribbon cable"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 2000,
+    "current_ma_peak": 4000,
+    "power_source": "from_compute"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    "hailo-rt",
+    "hailo-tappas"
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Hailo-8 enumerates",
+      "blocking": false,
+      "steps": [
+        "lspci | grep Hailo",
+        "hailortcli scan"
+      ],
+      "expected": "device listed"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://assets.raspberrypi.com/static/raspberry-pi-ai-hat-plus.jpg",
+    "datasheet_url": "https://datasheets.raspberrypi.com/ai-hat-plus/ai-hat-plus-product-brief.pdf",
+    "brand_variants": [
+      "Raspberry Pi AI HAT+"
+    ],
+    "price_usd_range": [
+      100,
+      130
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

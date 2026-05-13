@@ -1,0 +1,78 @@
+{
+  "stable_id": "board.ai.coral_usb_accelerator",
+  "name": "Google Coral USB Accelerator (Edge TPU)",
+  "vendor": "Google",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "ai_accelerator",
+  "description": "USB-C accelerator with Google Edge TPU (4 TOPS). Plugs into any Pi (3/4/5/CM4/CM5). Runs TensorFlow Lite models with a thin Python API (pycoral). Doesn't need PCIe — useful when the M.2 slot is occupied by storage. Lower TOPS than the Hailo-8 but excellent for object detection, key-points and audio inference.",
+  "tags": [
+    "ai",
+    "neural_accelerator",
+    "edge_tpu",
+    "usb",
+    "tflite"
+  ],
+  "capabilities": [
+    "neural_inference",
+    "vision",
+    "object_detection",
+    "audio_classification"
+  ],
+  "dependencies": [],
+  "interfaces": [
+    {
+      "type": "USB",
+      "direction": "bidir",
+      "voltage": 5.0,
+      "notes": "USB-C 3.0 (works on USB 2.0 at reduced throughput)"
+    }
+  ],
+  "power": {
+    "voltage_v": 5.0,
+    "voltage_tolerance_pct": 5,
+    "current_ma_typical": 500,
+    "current_ma_peak": 900,
+    "power_source": "from_compute"
+  },
+  "safety_class": "advisory",
+  "drivers": [
+    "libedgetpu",
+    "pycoral"
+  ],
+  "self_tests": [
+    {
+      "id": "presence",
+      "name": "Edge TPU enumerates",
+      "blocking": false,
+      "steps": [
+        "lsusb | grep -i google",
+        "python -c 'from pycoral.utils.edgetpu import list_edge_tpus; print(list_edge_tpus())'"
+      ],
+      "expected": "device listed"
+    }
+  ],
+  "compatibility": {
+    "compute": [
+      "compute.rpi3",
+      "compute.rpi4",
+      "compute.rpi5",
+      "compute.cm4",
+      "compute.cm5"
+    ],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://coral.ai/static/images/products/usb-accelerator.png",
+    "datasheet_url": "https://coral.ai/docs/accelerator/datasheet/",
+    "brand_variants": [
+      "Coral USB Accelerator"
+    ],
+    "price_usd_range": [
+      60,
+      80
+    ],
+    "source": "tools/seed_catalog.py"
+  }
+}

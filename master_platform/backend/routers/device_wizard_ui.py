@@ -417,14 +417,19 @@ async def _group_status(session: AsyncSession, g: EdgeGroup) -> dict:
     has_firmware = bool(g.firmware_bundle_path)
     is_locked = bool(g.lock_pin_hash)
 
+    # Master / Node devices may have no control boards at all (they're
+    # the control plane, not the I/O endpoint). Skip the boards /
+    # components / pinmap gates for those roles.
+    headless = (g.role or "edge") in ("master", "node")
+
     # next-step routing
     if not g.compute_stable_id:
         next_step, status = "compute", "incomplete · pick compute"
-    elif boards_count == 0:
+    elif boards_count == 0 and not headless:
         next_step, status = "boards", "incomplete · no boards"
-    elif comps_count == 0:
+    elif comps_count == 0 and not headless:
         next_step, status = "components", "incomplete · no components"
-    elif pins_count == 0:
+    elif pins_count == 0 and not headless and boards_count > 0:
         next_step, status = "pinmap", "needs pin map"
     elif not has_firmware:
         next_step, status = "review", "ready to build"
@@ -1746,8 +1751,8 @@ async def wizard_build_bundle(
             .where(BoardInstance.group_id == group.id)
         )
     ).scalar_one()
-    if boards_count == 0:
-        raise HTTPException(400, "Add at least one board before building.")
+    if boards_count == 0 and (group.role or "edge") in ("edge", "gateway"):
+        raise HTTPException(400, "Add at least one board before building (edge / gateway devices wire to physical I/O).")
 
     bundle_path, dna, brain = await build_group_bundle(
         session, group, Path(settings.build_artifacts_dir)
