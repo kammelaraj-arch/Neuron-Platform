@@ -1,73 +1,147 @@
 {% extends "base.html" %}
-{% block title %}Device wizard · Compute{% endblock %}
+{% block title %}Device wizard · Compute + Identity{% endblock %}
 {% block content %}
   {% include "_wizard_header.html" %}
 
   <form method="post" action="/ui/devices/wizard/{{ group.id }}/compute" class="space-y-6">
     <div>
-      <h2 class="text-lg font-semibold">2. Pick the compute module</h2>
+      <h2 class="text-lg font-semibold">2. Identity, connectivity & compute module</h2>
       <p class="mt-1 text-sm text-slate-400">
-        One compute module per group. It owns all the GPIO pins and runs the
-        brain that drives the boards.
+        Lock in the hardware reference (Asset ID + UUID), how the master will
+        reach it (local IP / hostname), and which compute module is inside the
+        unit. The compute owns all GPIO pins and runs the brain.
       </p>
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {% for c in computes %}
-        {% set sel = (group.compute_stable_id == c.stable_id) %}
-        <label class="group relative cursor-pointer rounded-2xl border bg-slate-900/40 p-4 transition
-                      {% if sel %}border-emerald-400 shadow-[0_0_18px_-4px_rgba(16,185,129,0.6)]
-                      {% else %}border-slate-800 hover:border-emerald-500/60{% endif %}">
-          <input type="radio" name="compute_stable_id" value="{{ c.stable_id }}"
-                 {% if sel %}checked{% endif %} required class="sr-only peer">
-          <!-- selected ring -->
-          <div class="absolute inset-0 rounded-2xl pointer-events-none peer-checked:ring-2 peer-checked:ring-emerald-400"></div>
+    <!-- ── UUID + ASSET ID ────────────────────────────────────────────────── -->
+    <fieldset class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
+      <legend class="px-2 text-[10px] uppercase tracking-widest text-slate-400">Identity</legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">UUID</label>
+          <input value="{{ group.device_dna or '' }}"
+                 placeholder="(blank — filled at first boot from compute hardware ID)"
+                 readonly
+                 class="mt-1 w-full rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm font-mono text-slate-400 placeholder-slate-600 cursor-not-allowed" />
+          <p class="mt-1 text-[10px] text-slate-500">
+            Initially blank. The firmware auto-populates it on first boot from the
+            compute module's hardware ID and reports it to the parent.
+          </p>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">Asset ID *</label>
+          <input name="asset_id" value="{{ group.asset_id or '' }}" required maxlength="120"
+                 placeholder="e.g. ASSET-FAC1-L2-M03"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          <p class="mt-1 text-[10px] text-slate-500">CMMS / inventory reference — stays with the unit for its lifetime.</p>
+        </div>
+      </div>
+    </fieldset>
 
-          <!-- SVG silhouette: compute board with pin dots -->
-          <svg viewBox="0 0 160 110" class="mb-3 w-full">
-            <defs>
-              <linearGradient id="gx-{{ loop.index }}" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%"  stop-color="#0f172a"/>
-                <stop offset="100%" stop-color="#1e293b"/>
-              </linearGradient>
-            </defs>
-            <rect x="14" y="14" width="132" height="82" rx="8"
-                  fill="url(#gx-{{ loop.index }})"
-                  stroke="{% if sel %}#34d399{% else %}#334155{% endif %}" stroke-width="1.5"/>
-            <!-- chip -->
-            <rect x="60" y="40" width="40" height="30" rx="3" fill="#020617" stroke="#64748b" stroke-width="0.6"/>
-            <text x="80" y="59" font-size="6" text-anchor="middle"
-                  fill="{% if sel %}#34d399{% else %}#94a3b8{% endif %}" font-family="ui-monospace">MCU</text>
-            <!-- pin rings: top + bottom -->
-            {% for i in range(20) %}
-              <circle cx="{{ 24 + i*6 }}" cy="14" r="1.4" fill="{% if sel %}#34d399{% else %}#475569{% endif %}"/>
-              <circle cx="{{ 24 + i*6 }}" cy="96" r="1.4" fill="{% if sel %}#34d399{% else %}#475569{% endif %}"/>
-            {% endfor %}
-          </svg>
+    <!-- ── CONNECTIVITY ──────────────────────────────────────────────────── -->
+    <fieldset class="rounded-2xl border border-cyan-500/30 bg-cyan-500/[0.04] p-5 space-y-3">
+      <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Connectivity & access</legend>
+      <div class="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">Local IP</label>
+          <input name="local_ip" value="{{ group.local_ip or '' }}" maxlength="60"
+                 placeholder="e.g. 192.168.1.50"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">External IP (optional)</label>
+          <input name="external_ip" value="{{ group.external_ip or '' }}" maxlength="60"
+                 placeholder="e.g. 203.0.113.42"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">Hostname</label>
+          <input name="hostname" value="{{ group.hostname or '' }}" maxlength="200"
+                 placeholder="e.g. raspberrypi.local"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+        </div>
+      </div>
+      <p class="text-[10px] text-slate-500">
+        Local IP + hostname are what the master uses for SSH / mTLS push.
+        External IP is informational (e.g. behind-NAT advisory) and isn't dialled.
+      </p>
+    </fieldset>
 
-          <div class="flex items-baseline justify-between gap-2">
-            <div class="font-semibold text-sm">{{ c.name }}</div>
-            <span class="text-[10px] font-mono text-slate-500">v{{ c.version }}</span>
-          </div>
-          <div class="mt-1 font-mono text-[10px] text-cyan-300">{{ c.stable_id }}</div>
-          <div class="mt-2 text-xs text-slate-400 line-clamp-3">
-            {{ c.manifest.get('description', '') }}
-          </div>
-        </label>
-      {% else %}
-        <p class="text-sm text-slate-500 italic col-span-full">No micro-compute modules in the catalog yet.</p>
-      {% endfor %}
-    </div>
+    <!-- ── COMPUTE PICKER (search-and-select) ───────────────────────────── -->
+    <fieldset class="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5 space-y-3">
+      <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Compute module *</legend>
+      <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div>
+          <input id="compute-search" type="search" autocomplete="off"
+                 placeholder="🔍 Search e.g. Pi 5, Pico 2 W, CM4, rpi4 8GB…"
+                 class="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">Hardware rev.</label>
+          <input name="hardware_revision" value="{{ group.hardware_revision or 'rev_a' }}" maxlength="40"
+                 class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono w-28" />
+        </div>
+      </div>
 
-    <div>
-      <label class="block text-xs uppercase tracking-wider text-slate-400">Hardware revision</label>
-      <input name="hardware_revision" value="{{ group.hardware_revision or 'rev_a' }}" maxlength="40"
-             class="mt-1 w-48 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
-    </div>
+      <!-- Selectable list — filterable, with thumbnail + vendor + tags -->
+      <div id="compute-list" class="max-h-96 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 divide-y divide-slate-800">
+        {% for c in computes %}
+          {% set sel = (group.compute_stable_id == c.stable_id) %}
+          <label data-name="{{ c.name|lower }} {{ c.stable_id|lower }} {{ (c.manifest.tags or [])|join(' ')|lower }} {{ (c.manifest.vendor or '')|lower }}"
+                 class="compute-row flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-900/60 has-[:checked]:bg-emerald-500/10">
+            <input type="radio" name="compute_stable_id" value="{{ c.stable_id }}"
+                   {% if sel %}checked{% endif %} required
+                   class="accent-emerald-400 shrink-0">
+            {% if c.manifest.metadata and c.manifest.metadata.image_url %}
+              <img src="{{ c.manifest.metadata.image_url }}" loading="lazy" alt=""
+                   class="h-10 w-14 object-contain rounded bg-slate-900 shrink-0">
+            {% else %}
+              <div class="h-10 w-14 grid place-items-center rounded bg-slate-900 text-[10px] text-slate-500 shrink-0">no img</div>
+            {% endif %}
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-medium text-slate-200 truncate">{{ c.name }}</div>
+              <div class="text-[11px] text-slate-500 truncate">
+                <span class="font-mono">{{ c.stable_id }}</span>
+                {% if c.manifest.vendor %}· {{ c.manifest.vendor }}{% endif %}
+                {% if c.manifest.tags %}· {{ c.manifest.tags|join(' · ') }}{% endif %}
+              </div>
+            </div>
+          </label>
+        {% else %}
+          <p class="px-3 py-4 text-sm text-slate-500 italic">No micro-compute modules in the catalog yet.</p>
+        {% endfor %}
+      </div>
+      <p id="compute-empty" class="hidden text-[11px] text-amber-300/80">No compute modules match that search.</p>
+    </fieldset>
 
     <div class="flex gap-3">
-      <a href="/ui/devices/wizard" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">← Back</a>
-      <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">Continue →</button>
+      <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+        Continue →
+      </button>
+      <a href="/ui/devices/wizard" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Back to wizard</a>
     </div>
   </form>
+
+  <script>
+    // Free-text filter over the compute list. data-name on each row holds
+    // a lowercased haystack (name + stable_id + vendor + tags).
+    const search = document.getElementById('compute-search');
+    const rows   = Array.from(document.querySelectorAll('.compute-row'));
+    const empty  = document.getElementById('compute-empty');
+    function applyFilter() {
+      const q = (search.value || '').trim().toLowerCase();
+      let visible = 0;
+      rows.forEach(r => {
+        const hay = r.dataset.name || '';
+        const show = !q || hay.includes(q);
+        r.classList.toggle('hidden', !show);
+        if (show) visible++;
+      });
+      empty.classList.toggle('hidden', visible !== 0);
+    }
+    search.addEventListener('input', applyFilter);
+    // Auto-scroll to the currently selected row on first paint.
+    const selected = document.querySelector('.compute-row input:checked');
+    if (selected) selected.closest('.compute-row').scrollIntoView({block: 'center'});
+  </script>
 {% endblock %}

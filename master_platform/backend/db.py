@@ -172,6 +172,9 @@ def _apply_lightweight_migrations(sync_conn) -> None:
             ("telemetry_json", "JSON"),
             ("ntp_servers_json", "JSON"),
             ("bluetooth_enabled", "BOOLEAN NOT NULL DEFAULT 0"),
+            ("local_ip", "VARCHAR(60)"),
+            ("external_ip", "VARCHAR(60)"),
+            ("hostname", "VARCHAR(200)"),
         ]:
             if not _has_column("edge_groups", col):
                 sync_conn.exec_driver_sql(f"ALTER TABLE edge_groups ADD COLUMN {col} {sql_type}")

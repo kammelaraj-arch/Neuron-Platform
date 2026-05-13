@@ -677,16 +677,35 @@ async def wizard_save_compute(
     request: Request,
     compute_stable_id: str = Form(...),
     hardware_revision: str = Form("rev_a"),
+    asset_id: str = Form(""),
+    local_ip: str = Form(""),
+    external_ip: str = Form(""),
+    hostname: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
     group = await _load_group(session, group_id)
+    # Asset ID is mandatory at the end of step 2 — by the time the
+    # operator commits the hardware, the asset reference must be set
+    # (it lives with the unit for its lifetime).
+    asset_id_clean = (asset_id or "").strip()
+    if not asset_id_clean:
+        raise HTTPException(400, "Asset ID is required.")
     group.compute_stable_id = compute_stable_id
     group.hardware_revision = hardware_revision.strip() or "rev_a"
+    group.asset_id = asset_id_clean
+    group.local_ip = local_ip.strip() or None
+    group.external_ip = external_ip.strip() or None
+    group.hostname = hostname.strip() or None
     await record(
         session, actor=actor.id, actor_kind="ui_session",
         action="group.set_compute", target_kind="edge_group", target_id=group.id,
-        detail={"compute": compute_stable_id},
+        detail={
+            "compute": compute_stable_id,
+            "asset_id": group.asset_id,
+            "local_ip": group.local_ip, "external_ip": group.external_ip,
+            "hostname": group.hostname,
+        },
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/wifi", status_code=303)

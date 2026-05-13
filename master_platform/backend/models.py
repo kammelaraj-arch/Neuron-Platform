@@ -401,6 +401,11 @@ class EdgeGroup(Base):
     # already lives in primary_wifi_id / secondary_wifi_id.
     ntp_servers_json: Mapped[list | None] = mapped_column(JSON)
     bluetooth_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
+    # 2026-05: connectivity & access (spec step 2). Captured on the
+    # compute-pick screen alongside asset_id + UUID display.
+    local_ip:    Mapped[str | None] = mapped_column(String(60))
+    external_ip: Mapped[str | None] = mapped_column(String(60))
+    hostname:    Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
