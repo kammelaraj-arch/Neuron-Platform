@@ -65,6 +65,63 @@
         Local IP + hostname are what the master uses for SSH / mTLS push.
         External IP is informational (e.g. behind-NAT advisory) and isn't dialled.
       </p>
+
+      <div class="flex flex-wrap items-baseline gap-3">
+        <button type="button" onclick="testConnectivity(event)"
+                class="rounded-md border border-cyan-500/60 px-3 py-1.5 text-xs text-cyan-300 hover:bg-cyan-500/10">
+          📡 Test connectivity
+        </button>
+        <span id="conn-status" class="text-[11px] text-slate-500 italic">
+          Probes TCP ssh-host:port, port 80, and DNS / mDNS for the configured hostname.
+          Fill the fields above + Save SSH credentials on the Review step first if you want
+          the SSH-host probe to use a non-default port.
+        </span>
+      </div>
+      <div id="conn-results" class="hidden rounded-md border border-slate-800 bg-slate-950 p-3 text-[11px] font-mono"></div>
+
+      <script>
+        async function testConnectivity(ev) {
+          ev && ev.preventDefault();
+          const status = document.getElementById('conn-status');
+          const out    = document.getElementById('conn-results');
+          out.classList.add('hidden'); out.innerHTML = '';
+          status.textContent = '⏳ probing…';
+          status.className = 'text-[11px] text-cyan-300';
+          try {
+            const r = await fetch('/api/wizard/{{ group.id }}/test-connectivity',
+                                  {method: 'POST', credentials: 'same-origin'});
+            const d = await r.json();
+            if (!r.ok) {
+              status.textContent = '❌ HTTP ' + r.status;
+              status.className = 'text-[11px] text-red-300';
+              return;
+            }
+            if (d.hint) {
+              status.textContent = '⚠ ' + d.hint;
+              status.className = 'text-[11px] text-amber-300';
+              return;
+            }
+            const ok = d.ok;
+            status.textContent = ok
+              ? `✓ reachable on ${d.host}:${d.port}`
+              : `✗ no TCP path to ${d.host || 'host'}`;
+            status.className = 'text-[11px] ' + (ok ? 'text-emerald-300' : 'text-red-300');
+            out.classList.remove('hidden');
+            out.innerHTML = (d.checks || []).map(c => {
+              const badge = c.ok ? '<span class="text-emerald-400">✓</span>'
+                                 : '<span class="text-red-400">✗</span>';
+              const tail = c.ok
+                ? (c.ms != null ? ` <span class="text-slate-500">${c.ms} ms</span>` :
+                   c.addresses ? ` <span class="text-cyan-300">${c.addresses.join(', ')}</span>` : '')
+                : ` <span class="text-red-300">${c.error || ''}</span>`;
+              return `<div>${badge} ${c.check}${tail}</div>`;
+            }).join('');
+          } catch (e) {
+            status.textContent = '❌ ' + e;
+            status.className = 'text-[11px] text-red-300';
+          }
+        }
+      </script>
     </fieldset>
 
     <!-- ── COMPUTE PICKER (collapses to a summary once selected) ─────────── -->

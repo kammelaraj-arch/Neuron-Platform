@@ -676,6 +676,76 @@ async def wizard_step_compute(
     )
 
 
+@router.post("/api/wizard/{group_id}/test-connectivity", response_class=JSONResponse)
+async def wizard_test_connectivity(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Probe the configured compute module from the master. Tries:
+        1. TCP connect to ssh_host:ssh_port (or hostname:22)
+        2. TCP connect to port 80 (catches a local UI)
+        3. DNS / mDNS resolution of the hostname
+    Returns a per-check JSON report so the wizard renders pass/fail
+    next to each individual probe."""
+    import asyncio, socket
+    group = await _load_group(session, group_id)
+
+    host = (group.ssh_host or group.hostname or group.local_ip or "").strip()
+    port = int(group.ssh_port or 22)
+    mdns = (group.mdns_hostname or group.hostname or "").strip()
+
+    if not host:
+        return {
+            "ok": False,
+            "host": None,
+            "checks": [],
+            "hint": "No local IP / hostname / SSH host configured yet. Fill them in the Connectivity section above first.",
+        }
+
+    async def _tcp(target: str, p: int, timeout: float = 3.0) -> dict:
+        loop = asyncio.get_event_loop()
+        t0 = loop.time()
+        try:
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(target, p), timeout=timeout
+            )
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except Exception:
+                pass
+            return {"check": f"TCP {target}:{p}", "ok": True,
+                    "ms": int((loop.time() - t0) * 1000)}
+        except Exception as e:
+            return {"check": f"TCP {target}:{p}", "ok": False, "error": str(e)[:160]}
+
+    async def _resolve(name: str) -> dict:
+        try:
+            loop = asyncio.get_event_loop()
+            infos = await loop.run_in_executor(None, socket.getaddrinfo, name, None)
+            addrs = sorted({i[4][0] for i in infos})
+            return {"check": f"DNS / mDNS {name}", "ok": True, "addresses": addrs}
+        except Exception as e:
+            return {"check": f"DNS / mDNS {name}", "ok": False, "error": str(e)[:160]}
+
+    results: list[dict] = []
+    results.append(await _tcp(host, port))
+    results.append(await _tcp(host, 80, timeout=1.5))
+    if mdns and not mdns.replace(".", "").isdigit():
+        results.append(await _resolve(mdns))
+
+    overall = any(r.get("ok") for r in results if r["check"].startswith("TCP"))
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.test_connectivity", target_kind="edge_group", target_id=group.id,
+        detail={"host": host, "port": port, "ok": overall,
+                "checks": [{"check": r["check"], "ok": r.get("ok")} for r in results]},
+    )
+    return {"ok": overall, "host": host, "port": port, "checks": results}
+
+
 @router.post("/ui/devices/wizard/{group_id}/compute")
 async def wizard_save_compute(
     group_id: str,
