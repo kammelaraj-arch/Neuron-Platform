@@ -2278,6 +2278,75 @@ async def wizard_deploy_to_device(
     }
 
 
+@router.post("/api/wizard/{group_id}/build-golden")
+async def wizard_build_golden_image(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Build a flashable golden image / overlay for this group on top
+    of the most recently built firmware bundle. Falls back to the
+    overlay tarball when the master image lacks xz/losetup/parted."""
+    from ..golden_image import build_golden_image
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    if not group.firmware_bundle_path:
+        raise HTTPException(400, "Build the firmware bundle first.")
+    bundle_zip = Path(group.firmware_bundle_path)
+    if not bundle_zip.is_file():
+        raise HTTPException(410, "Bundle .zip missing on disk; rebuild required.")
+    device_runtime_dir = Path(__file__).resolve().parent.parent.parent.parent / "device_runtime"
+    out_dir = Path(settings.build_artifacts_dir)
+    result = await build_golden_image(
+        bundle_zip=bundle_zip,
+        device_runtime_dir=device_runtime_dir,
+        out_dir=out_dir,
+        device_dna=group.device_dna or group.id,
+    )
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.build_golden", target_kind="edge_group", target_id=group.id,
+        detail={"ok": result.ok, "mode": result.mode,
+                "path": str(result.path) if result.path else None,
+                "sha256": (result.sha256 or "")[:16], "detail": result.detail},
+    )
+    await session.commit()
+    return {
+        "ok": result.ok,
+        "mode": result.mode,
+        "path": str(result.path) if result.path else None,
+        "sha256": result.sha256,
+        "detail": result.detail,
+        "download_url": (f"/ui/devices/wizard/{group.id}/golden/{result.path.name}"
+                         if result.path else None),
+    }
+
+
+@router.get("/ui/devices/wizard/{group_id}/golden/{filename}")
+async def wizard_download_golden(
+    group_id: str,
+    filename: str,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Serve a previously-built golden image (or overlay tarball)."""
+    # Prevent path traversal — filename must match the pattern
+    # neuron-overlay-<dna>.tar.xz or golden-image-<dna>.img.xz.
+    if "/" in filename or "\\" in filename or not (
+        filename.startswith("neuron-overlay-") or filename.startswith("golden-image-")
+    ):
+        raise HTTPException(400, "invalid filename")
+    p = Path(settings.build_artifacts_dir) / filename
+    if not p.is_file():
+        raise HTTPException(404, "golden image not found — build it first")
+    return FileResponse(
+        path=str(p),
+        media_type="application/x-xz",
+        filename=filename,
+    )
+
+
 async def wizard_download_bundle(
     group_id: str,
     session: AsyncSession = Depends(get_session),
