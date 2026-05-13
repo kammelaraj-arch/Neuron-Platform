@@ -61,9 +61,37 @@ from .models import (
     WifiNetwork,
 )
 from .security.secret_crypto import decrypt_secret
+from .security import mtls as _mtls
 
 
 _BUNDLE_VERSION = "1.0.0"
+
+
+def _issue_device_certs(device_dna: str, validity_days: int = 365) -> dict:
+    """Mint device + emergency client certs signed by the platform CA,
+    return PEMs ready to write into the bundle. The CA cert is also
+    bundled so the agent can verify the parent.
+
+    Plaintext private keys appear only in the returned dict and in the
+    .zip — neither is persisted in the master DB. Audit captures
+    fingerprints only (no key material)."""
+    device_kit    = _mtls.issue_edge_cert(subject_cn=f"device:{device_dna}",
+                                          validity_days=validity_days)
+    emergency_kit = _mtls.issue_edge_cert(subject_cn=f"emergency:{device_dna}",
+                                          validity_days=validity_days)
+    return {
+        "ca_cert_pem":          _mtls.ca_cert_pem(),
+        "ca_fingerprint":       _mtls.ca_fingerprint_sha256(),
+        "device_cert_pem":      device_kit["cert_pem"],
+        "device_key_pem":       device_kit["key_pem"],
+        "device_fingerprint":   device_kit["fingerprint_sha256"],
+        "emergency_cert_pem":   emergency_kit["cert_pem"],
+        "emergency_key_pem":    emergency_kit["key_pem"],
+        "emergency_fingerprint":emergency_kit["fingerprint_sha256"],
+        "issued_at":            device_kit["issued_at"],
+        "expires_at":           device_kit["expires_at"],
+    }
+
 
 
 def _utc_iso() -> str:
@@ -146,8 +174,18 @@ def _build_dna(group: EdgeGroup, boards: list[tuple[BoardInstance, list[Componen
 
 
 # ─── Brain ───────────────────────────────────────────────────────────────────
-def _build_channels(parent_url: str | None, device_dna: str) -> dict:
-    """The three durable channels every device gets by default."""
+def _build_channels(parent_url: str | None, device_dna: str,
+                    certs: dict | None = None) -> dict:
+    """The three durable channels every device gets by default.
+
+    `certs` (when provided) carries the fingerprints of the per-device
+    certs shipped under certs/ in the bundle. They get echoed into the
+    channel config so the on-device agent + the parent can both
+    refer to the same identity material without parsing PEM at
+    runtime."""
+    fp_device    = (certs or {}).get("device_fingerprint")
+    fp_emergency = (certs or {}).get("emergency_fingerprint")
+    fp_ca        = (certs or {}).get("ca_fingerprint")
     return {
         "command_and_control": {
             "type": "mtls",
@@ -158,15 +196,25 @@ def _build_channels(parent_url: str | None, device_dna: str) -> dict:
             },
             "qos": 1,
             "heartbeat_ms": 1000,
+            "cert_path":  "certs/device.crt",
+            "key_path":   "certs/device.key",
+            "ca_path":    "certs/ca.crt",
+            "cert_fingerprint": fp_device,
+            "ca_fingerprint":   fp_ca,
         },
         "emergency": {
             "type": "mtls",
             "parent_url": parent_url,
-            "cert_id": "emergency",   # separate cert distinct from main C&C
+            "cert_id": "emergency",
             "allowed_commands": ["safe_stop", "safe_shutdown", "status"],
             "topic": f"emergency/{device_dna}",
             "qos": 2,
             "always_reachable": True,
+            "cert_path":  "certs/emergency.crt",
+            "key_path":   "certs/emergency.key",
+            "ca_path":    "certs/ca.crt",
+            "cert_fingerprint": fp_emergency,
+            "ca_fingerprint":   fp_ca,
         },
         "ota": {
             "type": "https",
@@ -174,6 +222,8 @@ def _build_channels(parent_url: str | None, device_dna: str) -> dict:
             "manifest_path": f"/api/ota/manifest?dna={device_dna}",
             "check_interval_seconds": 3600,
             "base_version_gating": True,
+            "ca_path": "certs/ca.crt",
+            "ca_fingerprint": fp_ca,
         },
     }
 
@@ -209,6 +259,7 @@ def _build_brain(
     boards: list[tuple[BoardInstance, list[ComponentInstance], list[GpioMapping]]],
     parent_url: str | None,
     device_dna: str,
+    certs: dict | None = None,
 ) -> dict:
     all_comps = [c for _b, comps, _p, _d in boards for c in comps]
     interlocks = _build_interlocks_from_components(all_comps)
@@ -249,7 +300,7 @@ def _build_brain(
             }
             for _b, _c, _p, drvs in boards for d in drvs
         ],
-        "channels": _build_channels(parent_url, device_dna),
+        "channels": _build_channels(parent_url, device_dna, certs),
         # Parent-only communication contract (CLAUDE.md hard rule).
         # Firmware first-boot script enforces this via nftables.
         "network_policy": {
@@ -437,7 +488,12 @@ async def build_group_bundle(
 
     dna = _build_dna(group, boards)
     device_dna = dna["device_dna"]
-    brain = _build_brain(group, boards, parent_url, device_dna)
+    # Issue mTLS material per device at build time: one cert for the
+    # main C&C channel + one for the emergency channel. CA pem so the
+    # device can verify the parent. Plaintext key only exists inside
+    # this function + in the .zip; never persists in the master DB.
+    certs = _issue_device_certs(device_dna)
+    brain = _build_brain(group, boards, parent_url, device_dna, certs)
     wifi = _wifi_payload(primary, secondary)
     vendor_accounts = await _vendor_accounts_payload(session, boards)
 
@@ -451,6 +507,20 @@ async def build_group_bundle(
         ("brain.json", _det_dumps(brain)),
         ("wifi.json",  _det_dumps(wifi)),
         ("vendor_accounts.json", _det_dumps(vendor_accounts)),
+        # mTLS material — separate files under certs/ so the agent's
+        # channels.py picks them up at /boot/neuron/certs/.
+        ("certs/ca.crt",         certs["ca_cert_pem"].encode("utf-8")),
+        ("certs/device.crt",     certs["device_cert_pem"].encode("utf-8")),
+        ("certs/device.key",     certs["device_key_pem"].encode("utf-8")),
+        ("certs/emergency.crt",  certs["emergency_cert_pem"].encode("utf-8")),
+        ("certs/emergency.key",  certs["emergency_key_pem"].encode("utf-8")),
+        ("certs/fingerprints.json", _det_dumps({
+            "device_fingerprint":    certs["device_fingerprint"],
+            "emergency_fingerprint": certs["emergency_fingerprint"],
+            "ca_fingerprint":        certs["ca_fingerprint"],
+            "issued_at":             certs["issued_at"],
+            "expires_at":            certs["expires_at"],
+        })),
     ]
 
     manifest = {

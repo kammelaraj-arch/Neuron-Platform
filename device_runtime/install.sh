@@ -31,6 +31,13 @@ fi
 # 1. Unpack.
 mkdir -p "$TARGET"
 unzip -o "$BUNDLE_ZIP" -d "$TARGET"
+# Lock down private keys — ZIP doesn't reliably preserve unix perms.
+if [[ -d "$TARGET/certs" ]]; then
+    chmod 700 "$TARGET/certs"
+    find "$TARGET/certs" -name '*.key' -exec chmod 600 {} \;
+    find "$TARGET/certs" -name '*.crt' -exec chmod 644 {} \;
+    echo "✓ cert permissions locked (key 600 / crt 644)"
+fi
 ls -la "$TARGET"
 
 # 2. WiFi (if a primary network is configured).
