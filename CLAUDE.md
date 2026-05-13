@@ -6,6 +6,17 @@
 
 ## Operating constraints (do not violate)
 
+- **Parent-only communication is a hard rule.** No child device (Edge /
+  Gateway / Device) may accept inbound traffic from anyone but its
+  parent. Firmware bundles MUST emit deny-all inbound firewall rules
+  (except loopback + the established mTLS session to the parent). SSH
+  on the child is disabled at boot; the parent exposes a reverse-tunnel
+  on demand. No peer-to-peer between siblings. See
+  `docs/wizard_spec.md` § "Hard rules".
+- **The canonical wizard spec lives at `docs/wizard_spec.md`.** It is
+  the streamlined 10-screen funnel that supersedes the historical
+  per-step layout. When code disagrees with that file, the file wins
+  until amended there.
 - **No coupling to ShitalEco.** The platform deploys at
   `https://neuron.shital.org.uk` but the only acceptable touchpoint with
   `/opt/shitaleco/` is the host nginx vhost at
