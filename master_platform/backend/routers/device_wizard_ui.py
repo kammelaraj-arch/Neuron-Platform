@@ -448,69 +448,101 @@ async def wizard_entry(
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
+    # Wizard entry is now a clean "what role am I configuring + what's
+    # its name" card. The Root/Node/Edge tree is managed on
+    # /ui/systems; the wizard's parent dropdown lists existing rows
+    # filtered by the chosen role (auto-creates a default tree if the
+    # operator picks no parent).
     roots = (await session.execute(
-        select(RootSystem).order_by(RootSystem.created_at)
+        select(RootSystem).order_by(RootSystem.name)
     )).scalars().all()
     nodes = (await session.execute(
-        select(NodeSystem).order_by(NodeSystem.created_at)
+        select(NodeSystem).order_by(NodeSystem.name)
     )).scalars().all()
     edges = (await session.execute(
-        select(EdgeSystem).order_by(EdgeSystem.created_at)
+        select(EdgeSystem).order_by(EdgeSystem.name)
     )).scalars().all()
-
-    # Existing groups (so the operator can resume / inspect partial work)
-    groups = (await session.execute(
-        select(EdgeGroup).order_by(EdgeGroup.updated_at.desc())
-    )).scalars().all()
-    catalog = load_catalog()
-    edge_by_id = {e.id: e for e in edges}
-    group_rows: list[dict] = []
-    for g in groups:
-        st = await _group_status(session, g)
-        edge = edge_by_id.get(g.edge_id)
-        compute = catalog.get(g.compute_stable_id) if g.compute_stable_id else None
-        group_rows.append({
-            "group": g,
-            "edge": edge,
-            "compute_name": (compute.name if compute else (g.compute_stable_id or "—")),
-            **st,
-        })
-
     return templates.TemplateResponse(
         "device_wizard_step1.html",
         {
             "request": request,
+            "steps": WIZARD_STEPS,
+            "step_idx": 0,
             "roots": roots,
             "nodes": nodes,
             "edges": edges,
-            "group_rows": group_rows,
-            "steps": WIZARD_STEPS,
-            "step_idx": 0,
         },
     )
+
+
+async def _ensure_parent_for_role(
+    session: AsyncSession,
+    role: str,
+    actor: APIKey,
+) -> tuple[str, str]:
+    """Auto-resolve (parent_kind, parent_id) for the given device role.
+    Creates a default Root / Node / Edge in place if none exists yet, so
+    the operator never has to touch the System Designer first. The tree
+    can still be edited later at /ui/systems."""
+    # Always need a Root — every tier hangs off it.
+    root = (await session.execute(
+        select(RootSystem).order_by(RootSystem.created_at).limit(1)
+    )).scalar_one_or_none()
+    if root is None:
+        root = RootSystem(name="Default Root")
+        session.add(root)
+        await session.flush()
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="root.create", target_kind="root_system", target_id=root.id,
+            detail={"name": root.name, "source": "wizard.auto"},
+        )
+
+    if role == "master":
+        return "root", root.id
+
+    # node / edge / gateway all live under a Node.
+    node = (await session.execute(
+        select(NodeSystem).where(NodeSystem.root_id == root.id)
+        .order_by(NodeSystem.created_at).limit(1)
+    )).scalar_one_or_none()
+    if node is None:
+        node = NodeSystem(root_id=root.id, name="Default Node")
+        session.add(node)
+        await session.flush()
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="node.create", target_kind="node_system", target_id=node.id,
+            detail={"root_id": root.id, "name": node.name, "source": "wizard.auto"},
+        )
+
+    if role == "node":
+        return "node", node.id
+
+    # edge + gateway: live under an Edge (gateway is a protocol-bridge edge).
+    edge = (await session.execute(
+        select(EdgeSystem).where(EdgeSystem.node_id == node.id)
+        .order_by(EdgeSystem.created_at).limit(1)
+    )).scalar_one_or_none()
+    if edge is None:
+        edge = EdgeSystem(node_id=node.id, name="Default Edge", site_id="default")
+        session.add(edge)
+        await session.flush()
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="edge.create", target_kind="edge_system", target_id=edge.id,
+            detail={"node_id": node.id, "name": edge.name, "source": "wizard.auto"},
+        )
+    return "edge", edge.id
 
 
 @router.post("/ui/devices/wizard/create-group")
 async def wizard_create_group(
     request: Request,
-    # Root: pick existing OR create new (one of these is required)
-    root_id: str = Form(""),
-    new_root_name: str = Form(""),
-    # Node (optional): pick existing OR create new OR skip (edge attaches to root directly)
-    node_mode: str = Form("skip"),   # "skip" | "existing" | "new"
-    node_id: str = Form(""),
-    new_node_name: str = Form(""),
-    new_node_region: str = Form(""),
-    # Edge: pick existing OR create new
-    edge_mode: str = Form("new"),    # "existing" | "new"
-    edge_id: str = Form(""),
-    new_edge_name: str = Form(""),
-    new_edge_site_id: str = Form(""),
-    new_edge_address: str = Form(""),
-    # Group — identity + role + location
     name: str = Form(...),
     description: str = Form(""),
     role: str = Form("edge"),
+    parent_id: str = Form(""),  # explicit pick; blank → auto-resolve
     asset_id: str = Form(""),
     factory: str = Form(""),
     line: str = Form(""),
@@ -518,114 +550,52 @@ async def wizard_create_group(
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
-    # ── 1. Resolve / create Root ────────────────────────────────────────────
-    root: RootSystem | None = None
-    if root_id:
-        root = await session.get(RootSystem, root_id)
-        if root is None:
-            raise HTTPException(404, f"root {root_id} not found")
-    elif new_root_name.strip():
-        root = RootSystem(name=new_root_name.strip())
-        session.add(root)
-        await session.flush()
-        await record(
-            session, actor=actor.id, actor_kind="ui_session",
-            action="root.create", target_kind="root_system", target_id=root.id,
-            detail={"name": root.name, "source": "wizard"},
-        )
-
-    # ── 2. Resolve / create Node (optional) ─────────────────────────────────
-    node: NodeSystem | None = None
-    if node_mode == "existing" and node_id:
-        node = await session.get(NodeSystem, node_id)
-        if node is None:
-            raise HTTPException(404, f"node {node_id} not found")
-        if root is None:
-            root = await session.get(RootSystem, node.root_id)
-    elif node_mode == "new" and new_node_name.strip():
-        if root is None:
-            raise HTTPException(400, "node requires a root — pick one or create a new one")
-        node = NodeSystem(
-            root_id=root.id,
-            name=new_node_name.strip(),
-            region=new_node_region.strip() or None,
-        )
-        session.add(node)
-        await session.flush()
-        await record(
-            session, actor=actor.id, actor_kind="ui_session",
-            action="node.create", target_kind="node_system", target_id=node.id,
-            detail={"root_id": root.id, "name": node.name, "source": "wizard"},
-        )
-
-    # ── 3. Validate role + asset_id (drives the parent-attachment level) ───
+    # Step 1 captures role + identity. If the operator picked an
+    # explicit parent in the dropdown we use it (validated below);
+    # otherwise _ensure_parent_for_role auto-resolves the tree
+    # (creating defaults where missing).
     from ..models import DEVICE_ROLES
     role_clean = (role or "edge").strip().lower()
     if role_clean not in DEVICE_ROLES:
         raise HTTPException(400, f"role must be one of {DEVICE_ROLES}")
-    asset_id_clean = (asset_id or "").strip()
-    if not asset_id_clean:
-        raise HTTPException(400, "Asset ID is required.")
-
-    # Per the corrected hierarchy (docs/wizard_spec.md):
-    #   master  → bundle attaches directly to the Root
-    #   gateway → bundle attaches to a Node
-    #   edge    → bundle attaches to an Edge unit
-    # The wizard captures Root + Node + Edge form fields regardless;
-    # role decides which of them becomes the *parent* of this Group.
-    edge: EdgeSystem | None = None
-    if role_clean == "edge":
-        if edge_mode == "existing" and edge_id:
-            edge = await session.get(EdgeSystem, edge_id)
-            if edge is None:
-                raise HTTPException(404, f"edge {edge_id} not found")
-        elif edge_mode == "new" and new_edge_name.strip() and new_edge_site_id.strip():
-            if node is None and root is None:
-                raise HTTPException(400, "edge requires a parent (node or root)")
-            edge = EdgeSystem(
-                node_id=node.id if node is not None else None,
-                root_id=root.id if node is None else None,
-                name=new_edge_name.strip(),
-                site_id=new_edge_site_id.strip(),
-                address=new_edge_address.strip() or None,
-            )
-            session.add(edge)
-            await session.flush()
-            await record(
-                session, actor=actor.id, actor_kind="ui_session",
-                action="edge.create", target_kind="edge_system", target_id=edge.id,
-                detail={
-                    "node_id": node.id if node is not None else None,
-                    "root_id": root.id if node is None else None,
-                    "name": edge.name,
-                    "site_id": edge.site_id,
-                    "source": "wizard",
-                },
-            )
-        if edge is None:
-            raise HTTPException(400, "Edge role: pick or create an Edge to attach to.")
-    elif role_clean == "gateway":
-        if node is None:
-            raise HTTPException(400, "Gateway role: pick or create a Node to attach to.")
-    elif role_clean == "master":
-        if root is None:
-            raise HTTPException(400, "Master role: pick or create a Root to attach to.")
-
-    # Resolve the single (parent_kind, parent_id) pair — the setup is
-    # identical for all roles, so we don't need three FK columns.
-    if role_clean == "master":
-        parent_kind, parent_id_v = "root", root.id
-    elif role_clean == "gateway":
-        parent_kind, parent_id_v = "node", node.id
-    else:
-        parent_kind, parent_id_v = "edge", edge.id
-
-    # ── 4. Create Group ─────────────────────────────────────────────────────
     name = name.strip()
     if not name:
         raise HTTPException(400, "name is required")
+    asset_id_clean = (asset_id or "").strip() or None   # optional now
 
-    # Per-parent uniqueness check (replaces the dropped DB unique).
+    # Map role → expected parent_kind. Master always attaches to a Root
+    # (and the form disables the parent picker for Master, since there
+    # is at most one Root in a single-tenant deployment).
+    expected_kind = {
+        "master":  "root",
+        "node":    "root",
+        "edge":    "node",
+        "gateway": "node",
+    }[role_clean]
+
+    parent_id_clean = (parent_id or "").strip()
+    if parent_id_clean and role_clean != "master":
+        # Validate the picked parent is the right kind.
+        if expected_kind == "root":
+            row = await session.get(RootSystem, parent_id_clean)
+        elif expected_kind == "node":
+            row = await session.get(NodeSystem, parent_id_clean)
+        else:
+            row = await session.get(EdgeSystem, parent_id_clean)
+        if row is None:
+            raise HTTPException(400, f"parent {parent_id_clean} not found ({expected_kind})")
+        parent_kind = expected_kind
+        parent_id_v = parent_id_clean
+        # For roles whose bundle pins to an edge (edge / gateway), the
+        # operator's pick is the parent Node — we still need an Edge
+        # row under that Node, so fall through to ensure helper to
+        # find-or-create one.
+        if role_clean in ("edge", "gateway"):
+            parent_kind, parent_id_v = await _ensure_parent_for_role(session, role_clean, actor)
+    else:
+        parent_kind, parent_id_v = await _ensure_parent_for_role(session, role_clean, actor)
+
+    # Per-parent uniqueness check.
     existing_group = (
         await session.execute(
             select(EdgeGroup).where(
@@ -647,14 +617,14 @@ async def wizard_create_group(
         # Re-pin parent in case the role changed.
         group.parent_kind = parent_kind
         group.parent_id = parent_id_v
-        group.edge_id = edge.id if role_clean == "edge" else None
+        group.edge_id = parent_id_v if parent_kind == "edge" else None
         if description.strip():
             group.description = description.strip()
     else:
         group = EdgeGroup(
             parent_kind=parent_kind,
             parent_id=parent_id_v,
-            edge_id=edge.id if role_clean == "edge" else None,
+            edge_id=parent_id_v if parent_kind == "edge" else None,
             name=name,
             description=description.strip() or None,
             role=role_clean,

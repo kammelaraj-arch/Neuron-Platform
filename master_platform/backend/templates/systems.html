@@ -41,6 +41,55 @@
         </form>
       </details>
     </section>
+
+    {% if groups %}
+      <!-- Resume / inspect existing configurations -->
+      <section class="mt-4 rounded-2xl border border-cyan-700/30 bg-cyan-500/5 p-4">
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 class="text-sm font-medium text-cyan-200">▶ Resume an existing configuration ({{ groups|length }})</h2>
+          <a href="/ui/devices/wizard" class="text-xs text-cyan-300 underline hover:text-cyan-200">+ new</a>
+        </div>
+        <div class="mt-3 overflow-x-auto">
+          <table class="min-w-full text-xs">
+            <thead class="text-left uppercase tracking-wider text-slate-400">
+              <tr>
+                <th class="px-2 py-1.5">Name</th>
+                <th class="px-2 py-1.5">Role</th>
+                <th class="px-2 py-1.5">Asset ID</th>
+                <th class="px-2 py-1.5">Location</th>
+                <th class="px-2 py-1.5">Compute</th>
+                <th class="px-2 py-1.5">Updated</th>
+                <th class="px-2 py-1.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70">
+              {% for g in groups %}
+                <tr class="hover:bg-slate-900/40">
+                  <td class="px-2 py-1.5">
+                    <div class="font-medium">{{ g.name }}</div>
+                    <div class="font-mono text-[10px] text-slate-500">{{ g.id[:8] }}…</div>
+                  </td>
+                  <td class="px-2 py-1.5">
+                    <span class="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] uppercase">{{ g.role or 'edge' }}</span>
+                    {% if g.lock_pin_hash %}<span title="locked">🔒</span>{% endif %}
+                  </td>
+                  <td class="px-2 py-1.5 font-mono">{{ g.asset_id or '—' }}</td>
+                  <td class="px-2 py-1.5 text-slate-400">
+                    {% if g.factory or g.line or g.machine %}{{ g.factory or '–' }} / {{ g.line or '–' }} / {{ g.machine or '–' }}{% else %}—{% endif %}
+                  </td>
+                  <td class="px-2 py-1.5 font-mono text-slate-400">{{ g.compute_stable_id or '—' }}</td>
+                  <td class="px-2 py-1.5 text-slate-500">{{ g.updated_at.strftime('%Y-%m-%d %H:%M') if g.updated_at else '—' }}</td>
+                  <td class="px-2 py-1.5 text-right space-x-2">
+                    <a href="/ui/devices/wizard/{{ g.id }}/compute" class="rounded-md border border-cyan-700/60 px-2 py-1 text-cyan-300 hover:bg-cyan-500/10">Resume →</a>
+                    <a href="/ui/devices/wizard/{{ g.id }}/review" class="rounded-md border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800">Review</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
   {% endif %}
 
   {% if flash %}

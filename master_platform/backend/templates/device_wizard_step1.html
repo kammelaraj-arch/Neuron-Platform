@@ -1,237 +1,75 @@
 {% extends "base.html" %}
-{% block title %}Device wizard · Start{% endblock %}
+{% block title %}Device wizard · Identity{% endblock %}
 {% block content %}
   {% include "_wizard_header.html" %}
 
-  {% if group_rows %}
-    <section class="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5">
-      <header class="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 class="text-lg font-semibold text-emerald-300">▶ Resume an existing group</h2>
-        <span class="text-xs text-slate-500">{{ group_rows | length }} saved group(s)</span>
-      </header>
-
-      <div class="mt-4 overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="text-left text-[10px] uppercase tracking-widest text-slate-400">
-            <tr>
-              <th class="px-2 py-2">Group</th>
-              <th class="px-2 py-2">Edge</th>
-              <th class="px-2 py-2">Compute</th>
-              <th class="px-2 py-2">Boards · Comps · Pins</th>
-              <th class="px-2 py-2">Status</th>
-              <th class="px-2 py-2">Updated</th>
-              <th class="px-2 py-2 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-800/70">
-            {% for r in group_rows %}
-              {% set g = r.group %}
-              {% set status_color = {
-                'incomplete · pick compute':  'bg-amber-500/20 text-amber-300',
-                'incomplete · no boards':     'bg-amber-500/20 text-amber-300',
-                'incomplete · no components': 'bg-cyan-500/20 text-cyan-300',
-                'needs pin map':              'bg-cyan-500/20 text-cyan-300',
-                'ready to build':             'bg-emerald-500/20 text-emerald-300',
-                'built':                      'bg-emerald-500/30 text-emerald-200',
-              } %}
-              <tr class="hover:bg-slate-900/40">
-                <td class="px-2 py-2">
-                  <div class="font-semibold text-slate-100">{{ g.name }}</div>
-                  <div class="font-mono text-[10px] text-slate-500">{{ g.id[:8] }}…</div>
-                </td>
-                <td class="px-2 py-2 text-xs">
-                  {% if r.edge %}<span class="text-cyan-300">{{ r.edge.name }}</span><br><span class="font-mono text-[10px] text-slate-500">{{ r.edge.site_id }}</span>{% else %}<span class="text-slate-500">—</span>{% endif %}
-                </td>
-                <td class="px-2 py-2 text-xs font-mono text-slate-300">{{ r.compute_name }}</td>
-                <td class="px-2 py-2 text-xs font-mono text-slate-400">
-                  {{ r.boards_count }} · {{ r.comps_count }} · {{ r.pins_count }}
-                </td>
-                <td class="px-2 py-2">
-                  <div class="flex items-center gap-1.5 text-[11px]">
-                    {% if r.is_locked %}<span class="rounded bg-amber-500/30 text-amber-200 px-1.5 py-0.5">🔒</span>{% endif %}
-                    <span class="rounded-full px-2 py-0.5 {{ status_color.get(r.status, 'bg-slate-700 text-slate-200') }}">{{ r.status }}</span>
-                  </div>
-                </td>
-                <td class="px-2 py-2 text-[10px] font-mono text-slate-500">
-                  {{ g.updated_at.strftime('%Y-%m-%d %H:%M') if g.updated_at else '—' }}
-                </td>
-                <td class="px-2 py-2 text-right whitespace-nowrap">
-                  <a href="/ui/devices/wizard/{{ g.id }}/{{ r.next_step }}"
-                     class="rounded-md bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-1 text-[11px] text-emerald-300 hover:bg-emerald-500 hover:text-slate-950">
-                    Resume →
-                  </a>
-                  <a href="/ui/devices/wizard/{{ g.id }}/review"
-                     class="ml-1 rounded-md border border-slate-700 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-slate-800">
-                    Review
-                  </a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <p class="mt-3 text-[11px] text-slate-500 italic">
-        Click <strong>Resume</strong> to jump to the next incomplete step, or <strong>Review</strong> to see the
-        full configuration and lock / build firmware. Or fill the form below to create a brand new group.
+  <section class="space-y-6">
+    <div>
+      <h2 class="text-lg font-semibold">1. Pick role + name the target</h2>
+      <p class="mt-1 text-sm text-slate-400">
+        Pick which kind of device you are configuring — the wizard auto-resolves
+        the upstream Root / Node / Edge tree based on your choice. Manage the
+        tree explicitly on <a class="underline text-emerald-300" href="/ui/systems">System Designer</a>.
       </p>
-    </section>
-  {% endif %}
+    </div>
 
-  <section class="grid gap-6 lg:grid-cols-[2fr_1fr]">
-    <!-- LEFT: form -->
-    <form method="post" action="/ui/devices/wizard/create-group"
-          class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6">
-      <div>
-        <h2 class="text-lg font-semibold">1. Place the new group in the system</h2>
-        <p class="mt-1 text-sm text-slate-400">
-          Pick an existing parent at any level, or create a new one inline.
-          Node is optional — Edge can attach directly to a Root for small
-          deployments.
-        </p>
-      </div>
-
-      <!-- ─── ROOT ──────────────────────────────────────────────────────── -->
-      <fieldset class="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
-        <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Root / Master</legend>
-        {% if roots %}
-          <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">Pick existing Root</label>
-            <select name="root_id" id="root-pick"
-                    onchange="document.getElementById('new-root-name').value=''"
-                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
-              <option value="">— none / create new below —</option>
-              {% for r in roots %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
-            </select>
-          </div>
-        {% endif %}
-        <div>
-          <label class="block text-xs uppercase tracking-wider text-slate-400">…or create a new Root</label>
-          <input id="new-root-name" name="new_root_name" maxlength="120"
-                 placeholder="e.g. Acme Foods"
-                 oninput="if(this.value && document.getElementById('root-pick')){document.getElementById('root-pick').value=''}"
-                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
-        </div>
-      </fieldset>
-
-      <!-- ─── NODE ──────────────────────────────────────────────────────── -->
-      <fieldset class="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
-        <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Node (optional)</legend>
-        <div class="flex flex-wrap gap-3 text-xs">
-          <label class="inline-flex items-center gap-2">
-            <input type="radio" name="node_mode" value="skip" checked class="text-emerald-500">
-            <span>Skip Node — attach Edge directly to Root</span>
-          </label>
-          {% if nodes %}
-            <label class="inline-flex items-center gap-2">
-              <input type="radio" name="node_mode" value="existing" class="text-emerald-500">
-              <span>Pick existing Node</span>
-            </label>
-          {% endif %}
-          <label class="inline-flex items-center gap-2">
-            <input type="radio" name="node_mode" value="new" class="text-emerald-500">
-            <span>Create new Node</span>
-          </label>
-        </div>
-
-        {% if nodes %}
-          <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">Existing Node</label>
-            <select name="node_id"
-                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
-              <option value="">— select —</option>
-              {% for n in nodes %}<option value="{{ n.id }}">{{ n.name }} {% if n.region %}· {{ n.region }}{% endif %}</option>{% endfor %}
-            </select>
-          </div>
-        {% endif %}
-
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">New Node name</label>
-            <input name="new_node_name" maxlength="120" placeholder="e.g. UK"
-                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">Region (optional)</label>
-            <input name="new_node_region" maxlength="120" placeholder="e.g. London"
-                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
-          </div>
-        </div>
-      </fieldset>
-
-      <!-- ─── EDGE ──────────────────────────────────────────────────────── -->
-      <fieldset class="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
-        <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Edge (factory site) *</legend>
-        <div class="flex flex-wrap gap-3 text-xs">
-          {% if edges %}
-            <label class="inline-flex items-center gap-2">
-              <input type="radio" name="edge_mode" value="existing" {% if edges %}checked{% endif %} class="text-emerald-500">
-              <span>Pick existing Edge</span>
-            </label>
-          {% endif %}
-          <label class="inline-flex items-center gap-2">
-            <input type="radio" name="edge_mode" value="new" {% if not edges %}checked{% endif %} class="text-emerald-500">
-            <span>Create new Edge</span>
-          </label>
-        </div>
-
-        {% if edges %}
-          <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">Existing Edge</label>
-            <select name="edge_id"
-                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm">
-              <option value="">— select —</option>
-              {% for e in edges %}<option value="{{ e.id }}">{{ e.name }} · {{ e.site_id }}</option>{% endfor %}
-            </select>
-          </div>
-        {% endif %}
-
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">New Edge name</label>
-            <input name="new_edge_name" maxlength="120" placeholder="e.g. Wembley factory"
-                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">Site id</label>
-            <input name="new_edge_site_id" maxlength="120" placeholder="e.g. wembley-1"
-                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
-          </div>
-          <div class="sm:col-span-2">
-            <label class="block text-xs uppercase tracking-wider text-slate-400">Edge URL (optional)</label>
-            <input name="new_edge_address" maxlength="200" placeholder="http://192.168.10.10:8090"
-                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
-          </div>
-        </div>
-      </fieldset>
-
-      <!-- ─── GROUP ─────────────────────────────────────────────────────── -->
+    <form method="post" action="/ui/devices/wizard/create-group" class="space-y-6">
       <fieldset class="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-4 space-y-3">
-        <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Group · target device *</legend>
+        <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Device · target *</legend>
 
-        <!-- Role: Master / Edge / Gateway (radio chips, friendlier than a select) -->
+        <!-- Role: Master / Node / Edge / Gateway (radio chips) -->
         <div>
           <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Device role *</label>
-          <div class="grid grid-cols-3 gap-2 text-xs">
-            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-2 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-3 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
               <input type="radio" name="role" value="master" class="sr-only">
               <span class="text-base">🧠</span>
               <span class="font-medium">Master</span>
               <span class="text-[10px] text-slate-500 text-center">Control plane + dashboard</span>
             </label>
-            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-2 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
+            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-3 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
+              <input type="radio" name="role" value="node" class="sr-only">
+              <span class="text-base">🛰️</span>
+              <span class="font-medium">Node</span>
+              <span class="text-[10px] text-slate-500 text-center">Regional aggregator</span>
+            </label>
+            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-3 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
               <input type="radio" name="role" value="edge" checked class="sr-only">
               <span class="text-base">⚡</span>
               <span class="font-medium">Edge</span>
               <span class="text-[10px] text-slate-500 text-center">Sensors / actuators</span>
             </label>
-            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-2 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
+            <label class="flex flex-col items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 p-3 cursor-pointer hover:border-emerald-500 has-[:checked]:border-emerald-400 has-[:checked]:bg-emerald-500/10">
               <input type="radio" name="role" value="gateway" class="sr-only">
               <span class="text-base">🌉</span>
               <span class="font-medium">Gateway</span>
               <span class="text-[10px] text-slate-500 text-center">Protocol bridge</span>
             </label>
           </div>
+        </div>
+
+        <!-- Parent — auto-disabled for Master (Root is implicit / singleton) -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-slate-400">
+            Parent <span id="parent-hint" class="text-slate-500 normal-case">(node)</span>
+          </label>
+          <select id="parent-select" name="parent_id"
+                  class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono">
+            <option value="">— auto (use first / create default) —</option>
+            {% for r in roots %}
+              <option value="{{ r.id }}" data-kind="root">Root: {{ r.name }}</option>
+            {% endfor %}
+            {% for n in nodes %}
+              <option value="{{ n.id }}" data-kind="node">Node: {{ n.name }}</option>
+            {% endfor %}
+            {% for e in edges %}
+              <option value="{{ e.id }}" data-kind="edge">Edge: {{ e.name }} · {{ e.site_id }}</option>
+            {% endfor %}
+          </select>
+          <p class="mt-1 text-[10px] text-slate-500" id="parent-help">
+            Optional — leave blank and the wizard auto-creates / reuses a default tree. Manage tree on
+            <a class="underline text-emerald-300" href="/ui/systems">System Designer</a>.
+          </p>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
@@ -242,17 +80,16 @@
                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label class="block text-xs uppercase tracking-wider text-slate-400">Asset ID *</label>
-            <input name="asset_id" required maxlength="120"
+            <label class="block text-xs uppercase tracking-wider text-slate-400">Asset ID (optional)</label>
+            <input name="asset_id" maxlength="120"
                    placeholder="e.g. ASSET-FAC1-L2-M03"
                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
-            <p class="mt-1 text-[10px] text-slate-500">Inventory / CMMS reference. Stays with the unit for its lifetime.</p>
+            <p class="mt-1 text-[10px] text-slate-500">CMMS / inventory reference. Can be filled later on the Review step.</p>
           </div>
         </div>
 
-        <!-- Factory / Line / Machine — physical placement triple -->
         <div>
-          <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Physical location</label>
+          <label class="block text-xs uppercase tracking-wider text-slate-400 mb-1">Physical location (optional)</label>
           <div class="grid gap-2 sm:grid-cols-3 text-sm">
             <input name="factory" maxlength="120" placeholder="Factory (e.g. Wembley-1)"
                    class="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2" />
@@ -272,8 +109,8 @@
         </div>
 
         <p class="text-[10px] text-slate-500">
-          <strong>UUID</strong> is left blank — the firmware auto-populates it on first boot from the
-          compute module's hardware ID and reports it back to the parent.
+          <strong>UUID</strong> is left blank — the firmware auto-populates it on first boot
+          from the compute module's hardware ID and reports it back to the parent.
         </p>
       </fieldset>
 
@@ -281,49 +118,54 @@
         <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
           Continue →
         </button>
-        <a href="/ui/devices" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Cancel</a>
+        <a href="/ui/systems" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Cancel</a>
       </div>
     </form>
 
-    <!-- RIGHT: live hierarchy preview -->
-    <aside class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/60 to-slate-900/20 p-6 relative overflow-hidden">
-      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_60%)]"></div>
-      <h3 class="font-semibold text-slate-200">Hierarchy</h3>
-      <p class="mt-1 text-[11px] text-slate-500">
-        The bundle below (compute → boards → components → pin map) is the
-        <strong>same for every role</strong>. The role you pick decides
-        which level of the tree it physically hangs off.
-      </p>
-      <pre class="mt-3 font-mono text-xs leading-6 text-slate-400">
-<span class="text-cyan-300">Root</span>          ← required
-  ├─ <span class="text-emerald-300">[bundle]</span>    ← role = 🧠 Master
-  └─ <span class="text-cyan-300">Node</span>    ← optional
-       ├─ <span class="text-emerald-300">[bundle]</span> ← role = 🌉 Gateway
-       └─ <span class="text-cyan-300">Edge</span>
-            └─ <span class="text-emerald-300">[bundle]</span> ← role = ⚡ Edge
+    <script>
+      // role → which parent kind to allow + whether the picker is enabled
+      const ROLE_PARENT_KIND = {
+        master:  'root',   // singleton, picker disabled
+        node:    'root',
+        edge:    'node',
+        gateway: 'node',
+      };
+      const select = document.getElementById('parent-select');
+      const hint   = document.getElementById('parent-hint');
+      const help   = document.getElementById('parent-help');
 
-<span class="text-emerald-300">[bundle]</span> =
-  Compute
-   └─ Board(s)        (one or more)
-        └─ Component(s)  (one or more)
-             └─ GPIO pin map</pre>
-      <p class="mt-4 text-xs text-slate-500">
-        Already-existing systems below — pick one or replace with a new entry inline.
-      </p>
-      <div class="mt-4 space-y-2 text-xs">
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-500">Existing roots ({{ roots | length }})</div>
-          {% for r in roots %}<div class="font-mono text-slate-300">· {{ r.name }}</div>{% else %}<div class="italic text-slate-600">— none —</div>{% endfor %}
-        </div>
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-500">Existing nodes ({{ nodes | length }})</div>
-          {% for n in nodes %}<div class="font-mono text-slate-300">· {{ n.name }}</div>{% else %}<div class="italic text-slate-600">— none —</div>{% endfor %}
-        </div>
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-500">Existing edges ({{ edges | length }})</div>
-          {% for e in edges %}<div class="font-mono text-slate-300">· {{ e.name }} <span class="text-slate-500">·</span> {{ e.site_id }}</div>{% else %}<div class="italic text-slate-600">— none —</div>{% endfor %}
-        </div>
-      </div>
-    </aside>
+      function refreshParentPicker() {
+        const role = (document.querySelector('input[name="role"]:checked') || {}).value || 'edge';
+        const wantKind = ROLE_PARENT_KIND[role];
+        hint.textContent = `(${wantKind})`;
+
+        if (role === 'master') {
+          // Master attaches to the Root. Single-tenant deploys have one
+          // Root only; the picker is irrelevant.
+          select.disabled = true;
+          select.value = '';
+          select.classList.add('opacity-40','cursor-not-allowed');
+          help.textContent = 'Master always attaches to the (singleton) Root — no pick needed.';
+          return;
+        }
+        select.disabled = false;
+        select.classList.remove('opacity-40','cursor-not-allowed');
+        help.textContent = `Pick an existing ${wantKind}, or leave blank to auto-create one. Tree lives on System Designer.`;
+
+        // Filter options: keep the blank + only those whose data-kind matches.
+        Array.from(select.options).forEach(opt => {
+          if (!opt.value) { opt.hidden = false; return; }
+          opt.hidden = (opt.dataset.kind !== wantKind);
+        });
+        // If currently selected option is now hidden, reset to blank.
+        const cur = select.selectedOptions[0];
+        if (cur && cur.hidden) select.value = '';
+      }
+
+      document.querySelectorAll('input[name="role"]').forEach(r => {
+        r.addEventListener('change', refreshParentPicker);
+      });
+      refreshParentPicker();
+    </script>
   </section>
 {% endblock %}

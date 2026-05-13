@@ -450,7 +450,7 @@ class BoardInstance(Base):
 # safety_class with the operator's per-install judgement (a heater wired
 # next to flammable material is a different risk class from the same
 # heater wired into a temperature-controlled water bath).
-DEVICE_ROLES = ("master", "edge", "gateway")
+DEVICE_ROLES = ("master", "node", "edge", "gateway")
 PROTOCOL_KEYS = ("mqtt", "opcua", "modbus", "can")
 RULE_ACTIONS = (
     "stop_motor", "set_pwm_zero", "open_relay", "close_relay",

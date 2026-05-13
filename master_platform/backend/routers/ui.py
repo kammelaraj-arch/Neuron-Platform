@@ -119,13 +119,21 @@ async def ui_systems(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ):
+    from ..models import EdgeGroup
     roots = (await session.execute(select(RootSystem).order_by(RootSystem.created_at))).scalars().all()
     nodes = (await session.execute(select(NodeSystem).order_by(NodeSystem.created_at))).scalars().all()
     edges = (await session.execute(select(EdgeSystem).order_by(EdgeSystem.created_at))).scalars().all()
+    # Resume-existing-groups list was moved from the wizard entry to
+    # the System Designer per UX feedback (configuration belongs with
+    # the fabric view, not buried in the wizard).
+    groups = (await session.execute(
+        select(EdgeGroup).order_by(EdgeGroup.updated_at.desc())
+    )).scalars().all()
     flash = request.session.pop("systems_flash", None)
     return templates.TemplateResponse(
         "systems.html",
         {"request": request, "roots": roots, "nodes": nodes, "edges": edges,
+         "groups": groups,
          "signed_in": bool(request.session.get("neuron_api_key_id")),
          "flash": flash},
     )
