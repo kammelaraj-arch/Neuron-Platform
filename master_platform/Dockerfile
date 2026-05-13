@@ -18,6 +18,13 @@ COPY master_platform /app/master_platform
 COPY libraries /app/libraries
 COPY shared_schemas /app/shared_schemas
 
+# Build-arg → env var so /healthz + /api/version can surface the running
+# commit. Defaults to "unknown" if the workflow didn't pass --build-arg.
+ARG NEURON_GIT_SHA=unknown
+ARG NEURON_BUILD_TIME=unknown
+ENV NEURON_GIT_SHA=${NEURON_GIT_SHA} \
+    NEURON_BUILD_TIME=${NEURON_BUILD_TIME}
+
 ENV NEURON_LIBRARIES_DIR=/app/libraries \
     NEURON_SHARED_SCHEMAS_DIR=/app/shared_schemas \
     NEURON_DB_URL=sqlite+aiosqlite:////app/master_platform/data/neuron.db \

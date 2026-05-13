@@ -75,8 +75,17 @@ cd "$NEURON_DIR/master_platform"
 
 # ─── 2. Build ────────────────────────────────────────────────────────────────
 step "[2/4] Building neuron-master image"
-docker compose -f "$COMPOSE" build neuron-master
-ok "Image built"
+# Stamp the running container with the deployed commit + build time so
+# /api/version and /healthz can answer "what's running?" in one curl.
+GIT_SHA="$(git -C "$NEURON_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
+BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "  git sha:        $GIT_SHA"
+echo "  build time:     $BUILD_TIME"
+NEURON_GIT_SHA="$GIT_SHA" NEURON_BUILD_TIME="$BUILD_TIME" \
+  docker compose -f "$COMPOSE" build neuron-master \
+    --build-arg "NEURON_GIT_SHA=$GIT_SHA" \
+    --build-arg "NEURON_BUILD_TIME=$BUILD_TIME"
+ok "Image built ($GIT_SHA / $BUILD_TIME)"
 
 # ─── 3. Up ───────────────────────────────────────────────────────────────────
 step "[3/4] Starting neuron-master"

@@ -267,8 +267,26 @@ app.include_router(mtls.router)
 @app.get("/healthz", tags=["meta"])
 async def healthz() -> dict:
     catalog = load_catalog()
+    import os
     return {
         "status": "ok",
         "library_items": len(catalog.by_id),
         "version": app.version,
+        "git_sha": os.environ.get("NEURON_GIT_SHA", "unknown"),
+    }
+
+
+@app.get("/api/version", tags=["meta"])
+async def api_version() -> dict:
+    """Surface the running git SHA + build time so deploy verification is
+    a one-liner. Set at image-build time via the NEURON_GIT_SHA +
+    NEURON_BUILD_TIME Dockerfile ARGs; the deploy workflow passes the
+    GITHUB_SHA + ISO timestamp through --build-arg. Falls back to
+    'unknown' when run outside CI (local docker compose build)."""
+    import os
+    return {
+        "version": app.version,
+        "git_sha": os.environ.get("NEURON_GIT_SHA", "unknown"),
+        "git_sha_short": os.environ.get("NEURON_GIT_SHA", "unknown")[:7],
+        "build_time": os.environ.get("NEURON_BUILD_TIME", "unknown"),
     }

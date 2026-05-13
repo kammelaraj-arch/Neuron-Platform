@@ -55,8 +55,53 @@ permissions:
   contents: read
 
 jobs:
+  validate:
+    # Pre-deploy gate: validates every libraries/**/manifests/*.json
+    # against shared_schemas/manifest_schema.json. Catches the class of
+    # bugs that took prod down in May 2026 (PCIe interface type / bare-
+    # string drivers / 'from_compute' power_source) BEFORE the master
+    # container ever rebuilds. Fails the workflow fast — the deploy job
+    # only runs when validate is green.
+    name: Validate manifest schemas
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install jsonschema
+      - name: Lint every manifest against shared_schemas/manifest_schema.json
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, sys
+          from jsonschema import Draft7Validator
+          schema = json.loads(pathlib.Path('shared_schemas/manifest_schema.json').read_text())
+          v = Draft7Validator(schema)
+          bad = 0
+          checked = 0
+          for path in pathlib.Path('libraries').glob('*/manifests/*.json'):
+              checked += 1
+              try:
+                  doc = json.loads(path.read_text())
+              except json.JSONDecodeError as e:
+                  print(f'::error file={path}::not valid JSON: {e}', file=sys.stderr)
+                  bad += 1
+                  continue
+              errs = list(v.iter_errors(doc))
+              if errs:
+                  for e in errs[:3]:
+                      loc = '/'.join(str(p) for p in e.absolute_path) or '(root)'
+                      print(f'::error file={path}::{loc}: {e.message}', file=sys.stderr)
+                  bad += 1
+          print(f'{checked} manifest(s) checked, {bad} invalid')
+          sys.exit(1 if bad else 0)
+          PY
+
   deploy:
     name: Trigger webhook + verify
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
