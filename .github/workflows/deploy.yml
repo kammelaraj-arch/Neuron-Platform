@@ -37,6 +37,7 @@ on:
       - 'shared_schemas/**'
       - 'deployer/**'
       - 'nginx/**'
+      - 'device_runtime/**'
       - 'deploy.sh'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:

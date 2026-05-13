@@ -1,0 +1,12 @@
+# Neuron device-runtime — Python deps for the on-device agent (Pi 5/4/Zero 2W).
+# Kept deliberately tight so the agent fits on a memory-constrained Pi.
+# Versions pinned to avoid surprise upgrades on a deployed device.
+
+paho-mqtt==2.1.0       # MQTT client for C&C + emergency + telemetry channels
+cryptography==42.0.8   # mTLS cert validation, Fernet decrypt of cached creds
+requests==2.32.3       # OTA manifest fetch + state-change pushes (sync only)
+
+# GPIO bindings — both installed; the agent picks whichever import succeeds.
+# On non-Pi dev hosts both fail and the mock backend kicks in.
+gpiozero==2.0.1
+RPi.GPIO==0.7.1; platform_machine == "armv7l" or platform_machine == "aarch64"

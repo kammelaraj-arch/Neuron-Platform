@@ -2110,6 +2110,43 @@ async def wizard_build_bundle(
 
 
 @router.get("/ui/devices/wizard/{group_id}/bundle.zip")
+@router.post("/api/wizard/{group_id}/deploy", response_class=JSONResponse)
+async def wizard_deploy_to_device(
+    group_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Push the most recently built firmware bundle to the device over
+    SSH and run install.sh. Returns a per-step pass/fail report."""
+    from ..deploy_worker import deploy_bundle_via_ssh
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    if not group.firmware_bundle_path:
+        raise HTTPException(400, "Build the firmware bundle first.")
+    bundle_path = Path(group.firmware_bundle_path)
+    result = await deploy_bundle_via_ssh(group, bundle_path)
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="group.deploy", target_kind="edge_group", target_id=group.id,
+        detail={
+            "ok": result.ok, "host": result.host, "summary": result.summary,
+            "steps": [{"name": s.name, "ok": s.ok} for s in result.steps],
+        },
+    )
+    await session.commit()
+    return {
+        "ok": result.ok,
+        "host": result.host,
+        "device_dna": result.device_dna,
+        "summary": result.summary,
+        "steps": [
+            {"name": s.name, "ok": s.ok, "detail": s.detail, "ms": s.ms}
+            for s in result.steps
+        ],
+    }
+
+
 async def wizard_download_bundle(
     group_id: str,
     session: AsyncSession = Depends(get_session),
