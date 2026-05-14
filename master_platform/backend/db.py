@@ -220,6 +220,12 @@ def _apply_lightweight_migrations(sync_conn) -> None:
     # 2026-05: board-pin assignment + functional label on
     # component_instances so each output channel of a board carries a
     # named function ("stirring", "tilt-z", "mixer") + asset id.
+    # 2026-05: operator-defined custom pins on uncatalogued boards
+    # (CNC shields, custom PCBs, …).
+    if _has_table("board_instances"):
+        if not _has_column("board_instances", "custom_pinout_json"):
+            sync_conn.exec_driver_sql("ALTER TABLE board_instances ADD COLUMN custom_pinout_json JSON")
+
     if _has_table("component_instances"):
         if not _has_column("component_instances", "board_pin"):
             sync_conn.exec_driver_sql("ALTER TABLE component_instances ADD COLUMN board_pin VARCHAR(40)")

@@ -515,6 +515,13 @@ class BoardInstance(Base):
     label: Mapped[str] = mapped_column(String(120), nullable=False)  # operator-given name
     role: Mapped[str | None] = mapped_column(String(80))  # e.g. "main", "redundant"
     position: Mapped[int] = mapped_column(default=0, nullable=False)  # display order
+    # Operator-defined extra pins for uncatalogued boards (CNC shields,
+    # custom PCBs, etc.). Each entry: {name, kind, description, hint}.
+    # Merged with the catalogue pinout at lookup time; never replaces it.
+    # When the board's stable_id has no catalogue entry, this is the
+    # ONLY source — board_pinouts.pinout_for() returns None and the
+    # pinmap step UI falls through to this list.
+    custom_pinout_json: Mapped[list | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
     group: Mapped[EdgeGroup] = relationship(back_populates="boards")

@@ -308,6 +308,42 @@ def pinout_for(board_stable_id: str | None) -> list | None:
     return BOARD_PINOUTS.get(board_stable_id)
 
 
+# Valid pin kinds for the operator-defined "custom pins" UI. Matches the
+# kind keys in PINOUT_KIND_COLORS / PINOUT_KIND_COLORS_OUT so wires get
+# the correct colour on the digital-twin canvas.
+VALID_PIN_KINDS = tuple(PINOUT_KIND_COLORS.keys())
+
+
+def merged_pinout(
+    board_stable_id: str | None,
+    custom: list | None,
+) -> list | None:
+    """Catalogue pinout (if any) merged with the BoardInstance's
+    operator-defined custom pins. Custom entries with names that
+    already exist in the catalogue override the catalogue one (so the
+    operator can rename / re-kind a catalogue pin on a specific
+    installation). Tuple shape preserved: (name, kind, description, hint)."""
+    base = list(BOARD_PINOUTS.get(board_stable_id, []) if board_stable_id else [])
+    if not custom:
+        return base or None
+    by_name = {row[0].lower(): i for i, row in enumerate(base)}
+    for entry in custom:
+        if not isinstance(entry, dict): continue
+        name = (entry.get("name") or "").strip()
+        if not name: continue
+        kind = (entry.get("kind") or "special").strip().lower()
+        desc = (entry.get("description") or "").strip() or None
+        hint = (entry.get("hint") or "").strip() or None
+        row = (name, kind, desc, hint)
+        key = name.lower()
+        if key in by_name:
+            base[by_name[key]] = row
+        else:
+            base.append(row)
+            by_name[key] = len(base) - 1
+    return base or None
+
+
 # ─── Pin-kind compatibility ────────────────────────────────────────────────
 # Which board-pin kinds (right) are safe to wire to which compute-pin
 # kinds (left). Prevents the operator from accidentally tying 5V to a

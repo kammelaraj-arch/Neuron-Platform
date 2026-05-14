@@ -1175,6 +1175,16 @@ async def wizard_step_boards(
             .order_by(BoardInstance.position)
         )
     ).scalars().all()
+    # Resolved pinout per attached board — catalogue + operator's custom
+    # pins merged. Passed to the template so each board card can show
+    # its full pin list with delete buttons for the custom ones.
+    from ..board_pinouts import merged_pinout, VALID_PIN_KINDS, BOARD_PINOUTS
+    pinouts: dict[str, list] = {}
+    catalogue_pin_names: dict[str, set] = {}
+    for b in boards:
+        pinouts[b.id] = merged_pinout(b.board_stable_id, b.custom_pinout_json) or []
+        cat = BOARD_PINOUTS.get(b.board_stable_id) or []
+        catalogue_pin_names[b.id] = {row[0].lower() for row in cat}
     return templates.TemplateResponse(
         "device_wizard_step3.html",
         {
@@ -1183,6 +1193,9 @@ async def wizard_step_boards(
             "available_boards": available_boards,
             "boards": boards,
             "catalog": catalog,
+            "pinouts": pinouts,
+            "catalogue_pin_names": catalogue_pin_names,
+            "valid_pin_kinds": VALID_PIN_KINDS,
             "steps": WIZARD_STEPS,
             "step_idx": 3,
         },
@@ -1267,6 +1280,91 @@ async def wizard_delete_board(
     await record(
         session, actor=actor.id, actor_kind="ui_session",
         action="board.delete", target_kind="board_instance", target_id=board_id,
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/boards", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/boards/{board_id}/pins/add")
+async def wizard_add_board_pin(
+    group_id: str,
+    board_id: str,
+    request: Request,
+    name: str = Form(...),
+    kind: str = Form("special"),
+    description: str = Form(""),
+    hint: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Add a custom pin to a BoardInstance — for uncatalogued boards
+    (CNC shields, custom PCBs). Upserts into custom_pinout_json by
+    pin name (case-insensitive)."""
+    from ..board_pinouts import VALID_PIN_KINDS
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    board = await session.get(BoardInstance, board_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "board not in this group")
+    pname = (name or "").strip()
+    if not pname:
+        raise HTTPException(400, "pin name is required")
+    pkind = (kind or "special").strip().lower()
+    if pkind not in VALID_PIN_KINDS:
+        raise HTTPException(400, f"kind must be one of {VALID_PIN_KINDS}")
+    pins = list(board.custom_pinout_json or [])
+    # Upsert by name.
+    existing_idx = next((i for i, p in enumerate(pins)
+                         if isinstance(p, dict)
+                         and (p.get("name") or "").lower() == pname.lower()), None)
+    entry = {
+        "name": pname,
+        "kind": pkind,
+        "description": (description or "").strip() or None,
+        "hint": (hint or "").strip() or None,
+    }
+    if existing_idx is None:
+        pins.append(entry)
+        action = "board.pin.add"
+    else:
+        pins[existing_idx] = entry
+        action = "board.pin.update"
+    board.custom_pinout_json = pins
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action=action, target_kind="board_instance", target_id=board.id,
+        detail={"pin": pname, "kind": pkind, "total_pins": len(pins)},
+    )
+    await session.commit()
+    return RedirectResponse(f"/ui/devices/wizard/{group.id}/boards", status_code=303)
+
+
+@router.post("/ui/devices/wizard/{group_id}/boards/{board_id}/pins/{pin_name}/delete")
+async def wizard_delete_board_pin(
+    group_id: str,
+    board_id: str,
+    pin_name: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    group = await _load_group(session, group_id)
+    _require_unlocked(group, request)
+    board = await session.get(BoardInstance, board_id)
+    if board is None or board.group_id != group.id:
+        raise HTTPException(404, "board not in this group")
+    pins = list(board.custom_pinout_json or [])
+    before = len(pins)
+    pins = [p for p in pins
+            if not (isinstance(p, dict)
+                    and (p.get("name") or "").lower() == pin_name.lower())]
+    if len(pins) == before:
+        raise HTTPException(404, f"pin {pin_name!r} not in this board's custom list")
+    board.custom_pinout_json = pins or None
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="board.pin.delete", target_kind="board_instance", target_id=board.id,
+        detail={"pin": pin_name, "remaining": len(pins)},
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/boards", status_code=303)
@@ -1864,11 +1962,12 @@ async def wizard_step_pinmap(
         for m in _maps:
             used_pins.setdefault(m.compute_pin, []).append(m)
 
-    # Per-board pinouts: stable_id → [(name, kind, description, suggest), ...]
+    # Per-board pinouts — catalogue + operator-defined custom pins merged.
+    from ..board_pinouts import merged_pinout
     board_pinouts: dict[str, list] = {}
     board_pinouts_split: dict[str, tuple[list, list]] = {}
     for _b, _ in boards_pins:
-        po = pinout_for(_b.board_stable_id)
+        po = merged_pinout(_b.board_stable_id, _b.custom_pinout_json)
         if po:
             board_pinouts[_b.id] = po
             board_pinouts_split[_b.id] = split_pinout(po)
