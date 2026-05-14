@@ -87,18 +87,31 @@
           </tr>
           <!-- ── Per-account device list (the things you actually bind to) ─── -->
           {% set devs = devices_by_account.get(a.id, []) %}
+          {% set has_real_discovery = a.provider in ('tapo',) %}
           <tr><td colspan="8" class="bg-slate-950/40 px-4 py-3 border-t border-slate-800">
-            <details class="text-xs" {% if devs %}open{% endif %}>
+            <details class="text-xs" open>
               <summary class="cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white">
                 📦 Devices on this account
                 <span class="text-[10px] text-slate-400">({{ devs|length }})</span>
                 <span class="ml-auto flex items-center gap-2">
                   <button type="button" onclick="discoverDevices('{{ a.id }}', this)"
-                          class="rounded-md border border-cyan-500/50 px-2 py-0.5 text-[11px] text-cyan-300 hover:bg-cyan-500/10">
-                    🔄 Discover from {{ a.provider }} API
+                          class="rounded-md border {% if has_real_discovery %}border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10{% else %}border-slate-700 text-slate-400 hover:bg-slate-800{% endif %} px-2 py-0.5 text-[11px]"
+                          title="{% if has_real_discovery %}Calls the {{ a.provider }} cloud API + populates the device list below.{% else %}No discovery driver wired for {{ a.provider }} yet — use the manual-add form below instead.{% endif %}">
+                    🔄 Discover from {{ a.provider }} API{% if not has_real_discovery %} (stub){% endif %}
                   </button>
+                  <span class="text-slate-500">or</span>
+                  <a href="#add-{{ a.id }}" class="text-emerald-300 hover:text-emerald-200 underline">+ add manually ↓</a>
                 </span>
               </summary>
+              <p class="mt-2 text-[10px] text-slate-500">
+                {% if has_real_discovery %}
+                  Discover auto-pulls the device list from the vendor's cloud. If a device is missing
+                  (just added, or local-only), use the manual-add form below.
+                {% else %}
+                  Discovery isn't wired for {{ a.provider }} yet — add each device manually below.
+                  The Components step in the wizard binds to the same VendorDevice rows either way.
+                {% endif %}
+              </p>
               <div id="discover-status-{{ a.id }}" class="mt-2 hidden text-[11px] font-mono"></div>
               {% if devs %}
                 <div class="mt-3 overflow-x-auto rounded-md border border-slate-800 bg-slate-950">
@@ -135,8 +148,8 @@
                   </table>
                 </div>
               {% endif %}
-              <details class="mt-3">
-                <summary class="cursor-pointer text-slate-400 hover:text-white">+ Add device manually</summary>
+              <details id="add-{{ a.id }}" class="mt-3" {% if not devs %}open{% endif %}>
+                <summary class="cursor-pointer text-emerald-300 hover:text-emerald-200">+ Add device manually</summary>
                 <form method="post" action="/ui/vendor-accounts/{{ a.id }}/devices/add"
                       class="mt-2 grid gap-2 sm:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto] text-[11px]">
                   <input name="name" required placeholder="Friendly name (e.g. Living-room cam)"
