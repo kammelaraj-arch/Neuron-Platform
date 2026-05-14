@@ -546,9 +546,45 @@ PROTOCOL_KEYS = ("mqtt", "opcua", "modbus", "can")
 # ComponentInstance that's a smart-home gadget (Tapo plug, Hue bulb,
 # Nest thermostat, etc.) binds to one VendorAccount by id.
 VENDOR_PROVIDERS = (
-    "tapo", "kasa", "hue", "nest", "ecobee", "ring", "eufy",
-    "aqara", "sonoff", "shelly", "smartthings", "homekit",
-    "alexa", "google_home", "other",
+    # ── Voice / hub fleets ──────────────────────────────────────────────
+    "alexa", "google_home", "homekit", "smartthings", "hubitat",
+    "home_assistant", "ifttt",
+    # ── Smart plugs / switches ──────────────────────────────────────────
+    "tapo", "kasa", "shelly", "sonoff", "meross", "wyze",
+    "wemo", "gosund", "teckin", "athom",
+    # ── Lighting ────────────────────────────────────────────────────────
+    "hue", "lifx", "yeelight", "nanoleaf", "ikea_tradfri",
+    "govee", "innr", "wiz",
+    # ── Climate / HVAC ──────────────────────────────────────────────────
+    "nest", "ecobee", "honeywell", "tado", "sensi", "drayton_wiser",
+    # ── Cameras / doorbells / security ──────────────────────────────────
+    "ring", "eufy", "arlo", "blink", "reolink", "amcrest",
+    "swann", "wyze_cam", "google_nest_cam",
+    # ── Locks ───────────────────────────────────────────────────────────
+    "august", "yale", "schlage", "nuki",
+    # ── Garage / shutters ───────────────────────────────────────────────
+    "myq", "garadget", "somfy", "lutron",
+    # ── Sensors / hubs / mesh ───────────────────────────────────────────
+    "aqara", "xiaomi_mihome", "fibaro", "smartwings",
+    # ── Robotic vacuums / floor care ────────────────────────────────────
+    "roborock", "irobot", "shark_ion", "dyson", "ecovacs", "dreame",
+    # ── Energy / solar / EV ─────────────────────────────────────────────
+    "sense_energy", "emporia", "tesla", "enphase", "solaredge",
+    "chargepoint", "wallbox", "juicebox", "ohme",
+    # ── Network gear / infrastructure ───────────────────────────────────
+    "unifi", "tp_link_omada", "asus_router", "eero",
+    # ── Irrigation / outdoor ────────────────────────────────────────────
+    "rachio", "gardena", "orbit_bhyve",
+    # ── Audio / media ───────────────────────────────────────────────────
+    "sonos", "bose", "chromecast", "roku", "apple_tv", "spotify_connect",
+    # ── Appliances ──────────────────────────────────────────────────────
+    "lg_thinq", "samsung_smartthings_app", "miele", "bosch_home_connect",
+    "whirlpool_smarthq",
+    # ── Generic / industrial protocols ──────────────────────────────────
+    "mqtt_generic", "modbus_generic", "http_generic", "rest_api_generic",
+    "websocket_generic",
+    # ── Catch-all ───────────────────────────────────────────────────────
+    "other",
 )
 RULE_ACTIONS = (
     "stop_motor", "set_pwm_zero", "open_relay", "close_relay",
