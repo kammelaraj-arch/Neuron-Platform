@@ -176,6 +176,40 @@ async def _discover_tapo(account: VendorAccount) -> list[dict]:
     return out
 
 
+async def _discover_alexa(account: VendorAccount) -> list[dict]:
+    """Amazon Alexa Smart Home discovery via Login With Amazon (LWA) +
+    the Alexa Smart Home Skill API.
+
+    Full OAuth flow not yet wired — needs an LWA developer registration
+    + skill setup on the master side, which is a separate piece of
+    operator setup. Until that lands the operator adds Alexa devices
+    manually with the device serial / endpointId from the Alexa app
+    (Settings → Device Settings → "About"), or by exporting the device
+    list from alexa.amazon.com.
+
+    When the OAuth path is wired this becomes:
+      1. POST https://api.amazon.com/auth/o2/token with refresh_token
+         + LWA client_id/secret → access_token.
+      2. POST https://api.eu.amazonalexa.com/v3/events with a
+         Discovery.DiscoverRequest directive → endpoints[] list.
+    """
+    log.warning("Alexa discovery not implemented — add devices manually "
+                "(Alexa app → Settings → Device Settings → 'About' → "
+                "copy the Device Serial Number)")
+    return []
+
+
+async def _discover_google_home(account: VendorAccount) -> list[dict]:
+    """Google Home / Nest device discovery via Smart Device Management
+    API. Requires Google Cloud project + OAuth client + SDM API enable
+    fee ($5 one-time). Stubbed for now — operator adds devices manually
+    with the resource name from the Google Home app."""
+    log.warning("Google Home discovery not implemented — add devices "
+                "manually (Google Home app → device → Settings → Device "
+                "information → copy the device id)")
+    return []
+
+
 async def _discover_stub(account: VendorAccount) -> list[dict]:
     """Placeholder for providers we haven't wired discovery for yet.
     Returns an empty list so the operator gets a clear "no devices
@@ -186,7 +220,11 @@ async def _discover_stub(account: VendorAccount) -> list[dict]:
 
 _PROVIDERS = {
     "tapo":  _discover_tapo,
-    # Stubs — wire real APIs as needed.
+    # Voice-assistant fleets (LWA / Google OAuth not wired yet — stubs
+    # log a helpful "add manually with this id" message).
+    "alexa":       _discover_alexa,
+    "google_home": _discover_google_home,
+    # Other smart-home clouds — wire real APIs as needed.
     "kasa":        _discover_stub,
     "hue":         _discover_stub,
     "nest":        _discover_stub,

@@ -547,7 +547,8 @@ PROTOCOL_KEYS = ("mqtt", "opcua", "modbus", "can")
 # Nest thermostat, etc.) binds to one VendorAccount by id.
 VENDOR_PROVIDERS = (
     "tapo", "kasa", "hue", "nest", "ecobee", "ring", "eufy",
-    "aqara", "sonoff", "shelly", "smartthings", "homekit", "other",
+    "aqara", "sonoff", "shelly", "smartthings", "homekit",
+    "alexa", "google_home", "other",
 )
 RULE_ACTIONS = (
     "stop_motor", "set_pwm_zero", "open_relay", "close_relay",
