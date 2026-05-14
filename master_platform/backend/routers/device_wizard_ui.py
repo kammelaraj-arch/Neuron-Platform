@@ -867,16 +867,34 @@ async def wizard_save_compute(
     compute_stable_id: str = Form(...),
     hardware_revision: str = Form("rev_a"),
     asset_id: str = Form(""),
+    # ── Connectivity (was on review page; consolidated to step 2) ─────
     local_ip: str = Form(""),
     external_ip: str = Form(""),
     hostname: str = Form(""),
+    device_username: str = Form(""),
+    device_password: str = Form(""),
+    # ── SSH for first-boot deploy (was on review page) ────────────────
+    ssh_enabled: bool = Form(False),
+    ssh_host: str = Form(""),
+    ssh_port: int = Form(22),
+    ssh_username: str = Form(""),
+    ssh_password: str = Form(""),
+    ssh_private_key: str = Form(""),
+    sudo_password: str = Form(""),
+    mdns_hostname: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
+    """Save Identity + Compute + Connectivity (incl. SSH) in one shot.
+
+    SSH creds + device login are Fernet-encrypted at rest via
+    secret_crypto. Leaving a secret field blank preserves the existing
+    value — we never silently null-out a stored secret on form save."""
+    from ..security.secret_crypto import encrypt_secret
     group = await _load_group(session, group_id)
-    # Asset ID is mandatory at the end of step 2 — by the time the
-    # operator commits the hardware, the asset reference must be set
-    # (it lives with the unit for its lifetime).
+    _require_unlocked(group, request)
+    # Asset ID is mandatory at this step — the hardware reference is
+    # committed when the compute model is committed.
     asset_id_clean = (asset_id or "").strip()
     if not asset_id_clean:
         raise HTTPException(400, "Asset ID is required.")
@@ -886,6 +904,24 @@ async def wizard_save_compute(
     group.local_ip = local_ip.strip() or None
     group.external_ip = external_ip.strip() or None
     group.hostname = hostname.strip() or None
+    group.ssh_enabled = bool(ssh_enabled)
+    group.ssh_host = ssh_host.strip() or group.hostname
+    group.ssh_port = int(ssh_port or 22)
+    # Distinct device login + SSH login. When SSH user/pwd are blank
+    # we fall back to the device login so operators with a single
+    # account don't have to type it twice.
+    dev_user = device_username.strip() or None
+    dev_pwd_in = device_password.strip()
+    ssh_user = ssh_username.strip() or dev_user
+    ssh_pwd_in = ssh_password.strip() or dev_pwd_in
+    group.ssh_username = ssh_user
+    if ssh_pwd_in:
+        group.ssh_password_encrypted = encrypt_secret(ssh_pwd_in)
+    if ssh_private_key.strip():
+        group.ssh_private_key_encrypted = encrypt_secret(ssh_private_key)
+    if sudo_password.strip():
+        group.sudo_password_encrypted = encrypt_secret(sudo_password)
+    group.mdns_hostname = mdns_hostname.strip() or None
     await record(
         session, actor=actor.id, actor_kind="ui_session",
         action="group.set_compute", target_kind="edge_group", target_id=group.id,
@@ -894,6 +930,12 @@ async def wizard_save_compute(
             "asset_id": group.asset_id,
             "local_ip": group.local_ip, "external_ip": group.external_ip,
             "hostname": group.hostname,
+            "ssh_enabled": group.ssh_enabled,
+            "ssh_host": group.ssh_host, "ssh_port": group.ssh_port,
+            "ssh_username": group.ssh_username,
+            "has_ssh_password": bool(group.ssh_password_encrypted),
+            "has_ssh_private_key": bool(group.ssh_private_key_encrypted),
+            "has_sudo_password": bool(group.sudo_password_encrypted),
         },
     )
     await session.commit()

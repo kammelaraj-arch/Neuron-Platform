@@ -401,6 +401,13 @@ class EdgeGroup(Base):
     ssh_private_key_encrypted: Mapped[str | None] = mapped_column(Text)
     sudo_password_encrypted: Mapped[str | None] = mapped_column(Text)
     mdns_hostname: Mapped[str | None] = mapped_column(String(200))      # e.g. raspberrypi.local
+    # Whether the operator wants the master to use SSH for the
+    # first-boot bundle push. The firmware itself disables ssh.service
+    # at boot regardless (CLAUDE.md parent-only rule); this flag only
+    # affects how the master gets the bundle onto the device.
+    #   True  → 🚀 Deploy uses SSH (default)
+    #   False → operator manually flashes the golden image / overlay
+    ssh_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
     # Operator-set PIN that locks the wizard configuration after testing.
     # When lock_pin_hash is set, write endpoints (boards / components /
     # gpio mappings / wifi / risk) require the matching plaintext PIN

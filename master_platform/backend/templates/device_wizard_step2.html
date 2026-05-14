@@ -1,21 +1,29 @@
 {% extends "base.html" %}
-{% block title %}Device wizard · Compute + Identity{% endblock %}
+{% block title %}Device wizard · Identity + Compute + Connectivity{% endblock %}
 {% block content %}
   {% include "_wizard_header.html" %}
 
   <form method="post" action="/ui/devices/wizard/{{ group.id }}/compute" class="space-y-6">
     <div>
-      <h2 class="text-lg font-semibold">2. Identity, connectivity & compute module</h2>
+      <h2 class="text-lg font-semibold">2. Identity, compute & connectivity</h2>
       <p class="mt-1 text-sm text-slate-400">
-        Lock in the hardware reference (Asset ID + UUID), how the master will
-        reach it (local IP / hostname), and which compute module is inside the
-        unit. The compute owns all GPIO pins and runs the brain.
+        Three sections in order: <strong>Identity</strong> (UUID + Asset ID),
+        <strong>Compute module</strong> (the Pi / Pico inside the box),
+        <strong>Connectivity</strong> (how the master reaches it for the
+        first-boot push). Save + Test from the bottom of the page.
+      </p>
+      <p class="mt-2 text-[11px] text-amber-300/80">
+        After the first install the firmware <strong>configures its own
+        command-and-control channel back to the parent via the
+        <code>/api/state-change</code> + mTLS heartbeat endpoints</strong>.
+        SSH on the device is disabled at boot per the parent-only contract;
+        the master only uses it once during initial provisioning.
       </p>
     </div>
 
-    <!-- ── UUID + ASSET ID ────────────────────────────────────────────────── -->
+    <!-- ── 1. IDENTITY ───────────────────────────────────────────────────── -->
     <fieldset class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
-      <legend class="px-2 text-[10px] uppercase tracking-widest text-slate-400">Identity</legend>
+      <legend class="px-2 text-[10px] uppercase tracking-widest text-slate-400">① Identity</legend>
       <div class="grid gap-3 sm:grid-cols-2">
         <div>
           <label class="block text-xs uppercase tracking-wider text-slate-400">UUID</label>
@@ -24,8 +32,7 @@
                  readonly
                  class="mt-1 w-full rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm font-mono text-slate-400 placeholder-slate-600 cursor-not-allowed" />
           <p class="mt-1 text-[10px] text-slate-500">
-            Initially blank. The firmware auto-populates it on first boot from the
-            compute module's hardware ID and reports it to the parent.
+            Filled by the firmware on first boot from CPU serial + first MAC, reported to the parent.
           </p>
         </div>
         <div>
@@ -38,99 +45,11 @@
       </div>
     </fieldset>
 
-    <!-- ── CONNECTIVITY ──────────────────────────────────────────────────── -->
-    <fieldset class="rounded-2xl border border-cyan-500/30 bg-cyan-500/[0.04] p-5 space-y-3">
-      <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">Connectivity & access</legend>
-      <div class="grid gap-3 sm:grid-cols-3">
-        <div>
-          <label class="block text-xs uppercase tracking-wider text-slate-400">Local IP</label>
-          <input name="local_ip" value="{{ group.local_ip or '' }}" maxlength="60"
-                 placeholder="e.g. 192.168.1.50"
-                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
-        </div>
-        <div>
-          <label class="block text-xs uppercase tracking-wider text-slate-400">External IP (optional)</label>
-          <input name="external_ip" value="{{ group.external_ip or '' }}" maxlength="60"
-                 placeholder="e.g. 203.0.113.42"
-                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
-        </div>
-        <div>
-          <label class="block text-xs uppercase tracking-wider text-slate-400">Hostname</label>
-          <input name="hostname" value="{{ group.hostname or '' }}" maxlength="200"
-                 placeholder="e.g. raspberrypi.local"
-                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
-        </div>
-      </div>
-      <p class="text-[10px] text-slate-500">
-        Local IP + hostname are what the master uses for SSH / mTLS push.
-        External IP is informational (e.g. behind-NAT advisory) and isn't dialled.
-      </p>
-
-      <div class="flex flex-wrap items-baseline gap-3">
-        <button type="button" onclick="testConnectivity(event)"
-                class="rounded-md border border-cyan-500/60 px-3 py-1.5 text-xs text-cyan-300 hover:bg-cyan-500/10">
-          📡 Test connectivity
-        </button>
-        <span id="conn-status" class="text-[11px] text-slate-500 italic">
-          Probes TCP ssh-host:port, port 80, and DNS / mDNS for the configured hostname.
-          Fill the fields above + Save SSH credentials on the Review step first if you want
-          the SSH-host probe to use a non-default port.
-        </span>
-      </div>
-      <div id="conn-results" class="hidden rounded-md border border-slate-800 bg-slate-950 p-3 text-[11px] font-mono"></div>
-
-      <script>
-        async function testConnectivity(ev) {
-          ev && ev.preventDefault();
-          const status = document.getElementById('conn-status');
-          const out    = document.getElementById('conn-results');
-          out.classList.add('hidden'); out.innerHTML = '';
-          status.textContent = '⏳ probing…';
-          status.className = 'text-[11px] text-cyan-300';
-          try {
-            const r = await fetch('/api/wizard/{{ group.id }}/test-connectivity',
-                                  {method: 'POST', credentials: 'same-origin'});
-            const d = await r.json();
-            if (!r.ok) {
-              status.textContent = '❌ HTTP ' + r.status;
-              status.className = 'text-[11px] text-red-300';
-              return;
-            }
-            if (d.hint) {
-              status.textContent = '⚠ ' + d.hint;
-              status.className = 'text-[11px] text-amber-300';
-              return;
-            }
-            const ok = d.ok;
-            status.textContent = ok
-              ? `✓ reachable on ${d.host}:${d.port}`
-              : `✗ no TCP path to ${d.host || 'host'}`;
-            status.className = 'text-[11px] ' + (ok ? 'text-emerald-300' : 'text-red-300');
-            out.classList.remove('hidden');
-            out.innerHTML = (d.checks || []).map(c => {
-              const badge = c.ok ? '<span class="text-emerald-400">✓</span>'
-                                 : '<span class="text-red-400">✗</span>';
-              const tail = c.ok
-                ? (c.ms != null ? ` <span class="text-slate-500">${c.ms} ms</span>` :
-                   c.addresses ? ` <span class="text-cyan-300">${c.addresses.join(', ')}</span>` : '')
-                : ` <span class="text-red-300">${c.error || ''}</span>`;
-              return `<div>${badge} ${c.check}${tail}</div>`;
-            }).join('');
-          } catch (e) {
-            status.textContent = '❌ ' + e;
-            status.className = 'text-[11px] text-red-300';
-          }
-        }
-      </script>
-    </fieldset>
-
-    <!-- ── COMPUTE PICKER (collapses to a summary once selected) ─────────── -->
+    <!-- ── 2. COMPUTE MODULE ─────────────────────────────────────────────── -->
+    {% set selected_compute = computes|selectattr("stable_id","equalto", group.compute_stable_id)|list|first %}
     <fieldset class="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5 space-y-3">
-      <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">Compute module *</legend>
+      <legend class="px-2 text-[10px] uppercase tracking-widest text-emerald-300">② Compute module *</legend>
 
-      {% set selected_compute = computes|selectattr("stable_id","equalto", group.compute_stable_id)|list|first %}
-
-      <!-- Compact summary view (shown when something is already selected) -->
       <div id="compute-summary" class="{% if not selected_compute %}hidden{% endif %} flex items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/[0.06] px-3 py-2.5">
         {% if selected_compute and selected_compute.manifest.metadata and selected_compute.manifest.metadata.image_url %}
           <img id="summary-img" src="{{ selected_compute.manifest.metadata.image_url }}" alt=""
@@ -153,7 +72,6 @@
         </div>
       </div>
 
-      <!-- Picker view (search + scrollable list) — hidden when something is selected -->
       <div id="compute-picker" class="{% if selected_compute %}hidden{% endif %} space-y-3">
         <input id="compute-search" type="search" autocomplete="off"
                placeholder="🔍 Search e.g. Pi 5, Pico 2 W, CM4, rpi4 8GB…"
@@ -193,23 +111,161 @@
       </div>
     </fieldset>
 
-    <div class="flex gap-3">
-      <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
-        Continue →
-      </button>
-      <a href="/ui/devices/wizard" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Back to wizard</a>
-    </div>
+    <!-- ── 3. CONNECTIVITY (network + device login + SSH) ───────────────── -->
+    <fieldset class="rounded-2xl border border-cyan-500/30 bg-cyan-500/[0.04] p-5 space-y-4">
+      <legend class="px-2 text-[10px] uppercase tracking-widest text-cyan-300">③ Connectivity & access</legend>
+
+      <!-- 3a. Network — how the master finds the unit on the LAN -->
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Network</div>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label class="block text-xs text-slate-400">Local IP</label>
+            <input name="local_ip" value="{{ group.local_ip or '' }}" maxlength="60"
+                   placeholder="e.g. 192.168.1.50"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400">External IP (optional)</label>
+            <input name="external_ip" value="{{ group.external_ip or '' }}" maxlength="60"
+                   placeholder="e.g. 203.0.113.42"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400">Hostname / mDNS</label>
+            <input name="hostname" value="{{ group.hostname or '' }}" maxlength="200"
+                   placeholder="e.g. raspberrypi.local"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3b. Device login — generic OS account on the Pi -->
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Device login (OS account)</div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="block text-xs text-slate-400">Username</label>
+            <input name="device_username" maxlength="120"
+                   value="{{ group.ssh_username or '' }}"
+                   placeholder="pi / ubuntu / neuron"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400">
+              Password
+              {% if group.ssh_password_encrypted %}<span class="text-slate-500">(blank = keep)</span>{% endif %}
+            </label>
+            <input name="device_password" type="password" autocomplete="new-password"
+                   placeholder="{{ '••••••••' if group.ssh_password_encrypted else 'OS login password' }}"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3c. SSH — separate account if different + enabled toggle -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <div class="text-[10px] uppercase tracking-wider text-slate-500">SSH (first-boot deploy)</div>
+          <label class="flex items-center gap-2 text-xs cursor-pointer">
+            <input type="checkbox" name="ssh_enabled" value="true"
+                   {% if group.ssh_enabled is not defined or group.ssh_enabled %}checked{% endif %}>
+            <span class="text-slate-300">SSH enabled for initial push</span>
+          </label>
+        </div>
+        <p class="text-[10px] text-slate-500 mb-2">
+          Master uses SSH <strong>once</strong> to scp the bundle + run install.sh, then
+          install.sh disables <code>ssh.service</code> at boot. The agent's mTLS channel
+          takes over afterward. Untick to skip SSH entirely — operator must flash the
+          golden image / overlay manually.
+        </p>
+        <div class="grid gap-3 sm:grid-cols-[2fr_auto_2fr]">
+          <div>
+            <label class="block text-xs text-slate-400">SSH host</label>
+            <input name="ssh_host" value="{{ group.ssh_host or '' }}" maxlength="200"
+                   placeholder="blank → use Hostname / Local IP above"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400">Port</label>
+            <input name="ssh_port" type="number" min="1" max="65535"
+                   value="{{ group.ssh_port or 22 }}"
+                   class="mt-1 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono w-24" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400">mDNS hostname (optional)</label>
+            <input name="mdns_hostname" value="{{ group.mdns_hostname or '' }}" maxlength="200"
+                   placeholder="raspberrypi.local"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="block text-xs text-slate-400">
+              SSH username
+              <span class="text-slate-500">(blank → reuse Device username)</span>
+            </label>
+            <input name="ssh_username" value="{{ group.ssh_username or '' }}" maxlength="120"
+                   placeholder="leave blank to reuse device login"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400">
+              SSH password
+              <span class="text-slate-500">(blank → reuse Device password)</span>
+              {% if group.ssh_password_encrypted %}<span class="text-slate-500">· stored</span>{% endif %}
+            </label>
+            <input name="ssh_password" type="password" autocomplete="new-password"
+                   placeholder="leave blank if same as device password"
+                   class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="block text-xs text-slate-400">
+            SSH private key (PEM / OpenSSH) — preferred over password
+            {% if group.ssh_private_key_encrypted %}<span class="text-slate-500">· stored (blank = keep)</span>{% endif %}
+          </label>
+          <textarea name="ssh_private_key" rows="4" autocomplete="new-password"
+                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;…&#10;-----END OPENSSH PRIVATE KEY-----"
+                    class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-[11px] font-mono"></textarea>
+        </div>
+        <div class="mt-3">
+          <label class="block text-xs text-slate-400">
+            sudo password (optional, blank if passwordless sudo)
+            {% if group.sudo_password_encrypted %}<span class="text-slate-500">· stored</span>{% endif %}
+          </label>
+          <input name="sudo_password" type="password" autocomplete="new-password"
+                 placeholder="only if sudo requires a password"
+                 class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-mono" />
+        </div>
+      </div>
+
+      <!-- Save + Test -->
+      <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-800">
+        <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+          💾 Save & continue →
+        </button>
+        <button type="button" onclick="testConnectivity(event)"
+                class="rounded-md border border-cyan-500/60 px-3 py-1.5 text-xs text-cyan-300 hover:bg-cyan-500/10">
+          📡 Test connectivity
+        </button>
+        <span id="conn-status" class="text-[11px] text-slate-500 italic">
+          Save first, then test — the probe reads from the persisted SSH host / port / hostname.
+        </span>
+      </div>
+      <div id="conn-results" class="hidden rounded-md border border-slate-800 bg-slate-950 p-3 text-[11px] font-mono"></div>
+    </fieldset>
+
+    <a href="/ui/devices/wizard" class="text-xs text-slate-400 hover:text-white underline">← back to wizard</a>
   </form>
 
   <script>
-    // Free-text filter over the compute list. data-name on each row holds
-    // a lowercased haystack (name + stable_id + vendor + tags).
+    // ── compute filter + collapse-on-select ───────────────────────────
     const search = document.getElementById('compute-search');
     const rows   = Array.from(document.querySelectorAll('.compute-row'));
     const empty  = document.getElementById('compute-empty');
     const summary = document.getElementById('compute-summary');
     const picker  = document.getElementById('compute-picker');
-
     function applyFilter() {
       const q = (search.value || '').trim().toLowerCase();
       let visible = 0;
@@ -222,11 +278,7 @@
       empty.classList.toggle('hidden', visible !== 0);
     }
     search.addEventListener('input', applyFilter);
-
     function collapseToSummary(row) {
-      // Update the summary card from the picked row's data-* attrs and
-      // swap visibility. The form-control radio inside the row is still
-      // checked, so submit will carry compute_stable_id correctly.
       const name = row.dataset.displayName || '';
       const meta = row.dataset.displayMeta || '';
       const img  = row.dataset.displayImg  || '';
@@ -234,42 +286,58 @@
       document.getElementById('summary-meta').textContent = meta;
       const imgEl = document.getElementById('summary-img');
       if (img) {
-        // Replace whichever element is currently in #summary-img with an <img>.
         if (imgEl.tagName !== 'IMG') {
           const newImg = document.createElement('img');
           newImg.id = 'summary-img';
           newImg.className = 'h-10 w-14 object-contain rounded bg-slate-900 shrink-0';
-          newImg.alt = '';
-          newImg.src = img;
+          newImg.alt = ''; newImg.src = img;
           imgEl.replaceWith(newImg);
-        } else {
-          imgEl.src = img;
-        }
+        } else { imgEl.src = img; }
       }
       picker.classList.add('hidden');
       summary.classList.remove('hidden');
     }
-
     window.expandComputePicker = function () {
       summary.classList.add('hidden');
       picker.classList.remove('hidden');
       const selected = picker.querySelector('input[name="compute_stable_id"]:checked');
       if (selected) selected.closest('.compute-row').scrollIntoView({block: 'center'});
     };
-
-    // When a row is picked, immediately collapse to the summary view.
     rows.forEach(r => {
       const input = r.querySelector('input[type="radio"]');
-      if (!input) return;
-      input.addEventListener('change', () => { if (input.checked) collapseToSummary(r); });
+      if (input) input.addEventListener('change', () => { if (input.checked) collapseToSummary(r); });
     });
 
-    // First paint: if something's already checked in the picker but we're
-    // showing the picker (e.g. server-side selected_compute lookup missed),
-    // scroll to it. The summary already shows the right thing.
-    const initial = document.querySelector('input[name="compute_stable_id"]:checked');
-    if (initial && !picker.classList.contains('hidden')) {
-      initial.closest('.compute-row').scrollIntoView({block: 'center'});
+    // ── test connectivity ─────────────────────────────────────────────
+    async function testConnectivity(ev) {
+      ev && ev.preventDefault();
+      const status = document.getElementById('conn-status');
+      const out    = document.getElementById('conn-results');
+      out.classList.add('hidden'); out.innerHTML = '';
+      status.textContent = '⏳ probing…';
+      status.className = 'text-[11px] text-cyan-300';
+      try {
+        const r = await fetch('/api/wizard/{{ group.id }}/test-connectivity',
+                              {method: 'POST', credentials: 'same-origin'});
+        const d = await r.json();
+        if (!r.ok) { status.textContent = '❌ HTTP ' + r.status; status.className = 'text-[11px] text-red-300'; return; }
+        if (d.hint) { status.textContent = '⚠ ' + d.hint; status.className = 'text-[11px] text-amber-300'; return; }
+        const ok = d.ok;
+        status.textContent = ok ? `✓ reachable on ${d.host}:${d.port}` : `✗ no TCP path to ${d.host || 'host'}`;
+        status.className = 'text-[11px] ' + (ok ? 'text-emerald-300' : 'text-red-300');
+        out.classList.remove('hidden');
+        out.innerHTML = (d.checks || []).map(c => {
+          const badge = c.ok ? '<span class="text-emerald-400">✓</span>' : '<span class="text-red-400">✗</span>';
+          const tail = c.ok
+            ? (c.ms != null ? ` <span class="text-slate-500">${c.ms} ms</span>` :
+               c.addresses ? ` <span class="text-cyan-300">${c.addresses.join(', ')}</span>` : '')
+            : ` <span class="text-red-300">${c.error || ''}</span>`;
+          return `<div>${badge} ${c.check}${tail}</div>`;
+        }).join('');
+      } catch (e) {
+        status.textContent = '❌ ' + e;
+        status.className = 'text-[11px] text-red-300';
+      }
     }
   </script>
 {% endblock %}

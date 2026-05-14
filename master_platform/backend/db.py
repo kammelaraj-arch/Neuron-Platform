@@ -208,6 +208,7 @@ def _apply_lightweight_migrations(sync_conn) -> None:
             ("ssh_private_key_encrypted", "TEXT", None),
             ("sudo_password_encrypted", "TEXT", None),
             ("mdns_hostname", "VARCHAR(200)", None),
+            ("ssh_enabled", "BOOLEAN NOT NULL DEFAULT 1", None),
         ]:
             if not _has_column("edge_groups", col):
                 sync_conn.exec_driver_sql(f"ALTER TABLE edge_groups ADD COLUMN {col} {sql_type}")
