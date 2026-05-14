@@ -1,0 +1,202 @@
+"""Per-vendor device-discovery dispatch.
+
+Each registered provider implements `discover(account, ...)` and
+returns a list of dicts with keys:
+    vendor_device_id (str, required) — the vendor's own opaque id
+    name              (str)           — operator-friendly label
+    model             (str | None)
+    device_type       (str | None)    — plug / camera / bulb / hub / …
+    mac               (str | None)
+    ip_local          (str | None)
+    firmware_version  (str | None)
+    metadata          (dict, free-form)
+
+`discover_devices(account)` picks the right module based on
+account.provider and upserts the result into VendorDevice rows by
+(vendor_account_id, vendor_device_id). Re-running is idempotent.
+"""
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..models import VendorAccount, VendorDevice
+
+
+log = logging.getLogger("neuron.vendor_discovery")
+
+
+class DiscoveryError(RuntimeError):
+    pass
+
+
+async def discover_devices(session: AsyncSession,
+                           account: VendorAccount) -> dict:
+    """Run discovery for `account`, upsert VendorDevice rows, return
+    a per-action report:
+        {ok, provider, discovered, added, updated, errors[]}
+    """
+    if account.status != "active":
+        raise DiscoveryError(f"account {account.id} status={account.status!r}; expected 'active'")
+
+    provider = (account.provider or "").lower()
+    fn = _PROVIDERS.get(provider)
+    if fn is None:
+        return {
+            "ok": False,
+            "provider": provider,
+            "discovered": 0, "added": 0, "updated": 0,
+            "errors": [f"no discovery driver for provider {provider!r}"],
+        }
+
+    try:
+        devices = await fn(account)
+    except Exception as e:
+        log.exception("discovery failed for %s/%s", account.provider, account.label)
+        return {
+            "ok": False, "provider": provider,
+            "discovered": 0, "added": 0, "updated": 0,
+            "errors": [f"{type(e).__name__}: {str(e)[:200]}"],
+        }
+
+    existing = {d.vendor_device_id: d for d in (await session.execute(
+        select(VendorDevice).where(VendorDevice.vendor_account_id == account.id)
+    )).scalars().all()}
+
+    added = updated = 0
+    now = datetime.now(timezone.utc)
+    for d in devices:
+        vid = (d.get("vendor_device_id") or "").strip()
+        if not vid:
+            continue
+        row = existing.get(vid)
+        if row is None:
+            row = VendorDevice(
+                vendor_account_id=account.id,
+                vendor_device_id=vid,
+                name=d.get("name") or vid,
+                model=d.get("model"),
+                device_type=d.get("device_type"),
+                mac=d.get("mac"),
+                ip_local=d.get("ip_local"),
+                firmware_version=d.get("firmware_version"),
+                metadata_json=d.get("metadata") or {},
+                last_seen_at=now,
+            )
+            session.add(row)
+            added += 1
+        else:
+            row.name = d.get("name") or row.name
+            row.model = d.get("model") or row.model
+            row.device_type = d.get("device_type") or row.device_type
+            row.mac = d.get("mac") or row.mac
+            row.ip_local = d.get("ip_local") or row.ip_local
+            row.firmware_version = d.get("firmware_version") or row.firmware_version
+            if d.get("metadata"):
+                row.metadata_json = d["metadata"]
+            row.last_seen_at = now
+            updated += 1
+    return {
+        "ok": True, "provider": provider,
+        "discovered": len(devices), "added": added, "updated": updated,
+        "errors": [],
+    }
+
+
+# ─── Provider drivers ──────────────────────────────────────────────────
+async def _discover_tapo(account: VendorAccount) -> list[dict]:
+    """TP-Link Tapo cloud discovery. Login → token, then getDeviceList.
+    Endpoint: https://wap.tplinkcloud.com (or eu-wap, us-wap, etc.)."""
+    import httpx
+    import uuid as _uuid
+    from ..security.secret_crypto import decrypt_secret
+
+    if not account.password_encrypted:
+        raise DiscoveryError("Tapo account has no password — cannot login")
+    password = decrypt_secret(account.password_encrypted)
+    email = account.username or ""
+    if not email:
+        raise DiscoveryError("Tapo account has no username (email)")
+
+    base = (account.base_url or "").rstrip("/") or "https://wap.tplinkcloud.com"
+    term_uuid = (account.extra_json or {}).get("terminal_uuid") or str(_uuid.uuid4())
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        login_payload = {
+            "method": "login",
+            "params": {
+                "appType": "Tapo_Ios", "cloudUserName": email,
+                "cloudPassword": password, "terminalUUID": term_uuid,
+            },
+        }
+        r = await client.post(base, json=login_payload)
+        r.raise_for_status()
+        body = r.json()
+        if body.get("error_code") != 0:
+            raise DiscoveryError(
+                f"Tapo login error_code={body.get('error_code')} msg={body.get('msg','')[:120]}"
+            )
+        token = body["result"]["token"]
+
+        r = await client.post(f"{base}?token={token}", json={"method": "getDeviceList"})
+        r.raise_for_status()
+        body = r.json()
+        if body.get("error_code") != 0:
+            raise DiscoveryError(
+                f"Tapo getDeviceList error_code={body.get('error_code')}"
+            )
+
+    out: list[dict] = []
+    import base64
+    for d in (body.get("result") or {}).get("deviceList") or []:
+        # Tapo returns the alias base64-encoded.
+        alias = d.get("alias") or ""
+        try:
+            alias = base64.b64decode(alias).decode("utf-8")
+        except Exception:
+            pass
+        out.append({
+            "vendor_device_id": d.get("deviceId") or "",
+            "name": alias or d.get("deviceName") or d.get("deviceId") or "",
+            "model": d.get("deviceModel"),
+            "device_type": d.get("deviceType"),
+            "mac": d.get("deviceMac"),
+            "ip_local": d.get("deviceLocalIP"),
+            "firmware_version": d.get("fwVer"),
+            "metadata": {
+                "deviceRegion": d.get("deviceRegion"),
+                "deviceHwVer":  d.get("deviceHwVer"),
+                "role":          d.get("role"),
+                "appServerUrl":  d.get("appServerUrl"),
+            },
+        })
+    return out
+
+
+async def _discover_stub(account: VendorAccount) -> list[dict]:
+    """Placeholder for providers we haven't wired discovery for yet.
+    Returns an empty list so the operator gets a clear "no devices
+    discovered" rather than a 500."""
+    log.warning("discovery stub for %s — returning empty list", account.provider)
+    return []
+
+
+_PROVIDERS = {
+    "tapo":  _discover_tapo,
+    # Stubs — wire real APIs as needed.
+    "kasa":        _discover_stub,
+    "hue":         _discover_stub,
+    "nest":        _discover_stub,
+    "ring":        _discover_stub,
+    "eufy":        _discover_stub,
+    "ecobee":      _discover_stub,
+    "aqara":       _discover_stub,
+    "sonoff":      _discover_stub,
+    "shelly":      _discover_stub,
+    "smartthings": _discover_stub,
+    "homekit":     _discover_stub,
+    "other":       _discover_stub,
+}

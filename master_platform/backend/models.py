@@ -299,6 +299,43 @@ class WifiNetwork(Base):
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
 
+class VendorDevice(Base):
+    """A single device registered to a VendorAccount — a specific Tapo
+    plug, IP camera, Hue bulb, etc. ComponentInstance.vendor_device_id
+    points here, NOT at the parent account (the account drives many
+    devices; we want the operator to bind to the *specific* one).
+
+    Rows are populated either by auto-discovery (POST /vendor-accounts/
+    {id}/discover hits the vendor's API to list devices) or manually
+    (add-form on the vendor account row). Re-running discovery upserts
+    by (vendor_account_id, vendor_device_id).
+    """
+    __tablename__ = "vendor_devices"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    vendor_account_id: Mapped[str] = mapped_column(
+        ForeignKey("vendor_accounts.id"), nullable=False, index=True
+    )
+    # Vendor's own device identifier — Tapo deviceId hex, Hue 'id_v2',
+    # Ring doorbell serial, etc. Treat as opaque from our side.
+    vendor_device_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)       # operator-friendly
+    model: Mapped[str | None] = mapped_column(String(80))                 # e.g. P100, C100
+    device_type: Mapped[str | None] = mapped_column(String(80))           # plug / camera / bulb
+    mac: Mapped[str | None] = mapped_column(String(40))
+    ip_local: Mapped[str | None] = mapped_column(String(60))
+    firmware_version: Mapped[str | None] = mapped_column(String(40))
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    last_seen_at: Mapped[datetime | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+    __table_args__ = (
+        UniqueConstraint("vendor_account_id", "vendor_device_id",
+                         name="uq_vendor_device_per_account"),
+    )
+
+
 class VendorAccount(Base):
     """Cloud-account credentials for third-party vendors (TP-Link Tapo,
     Philips Hue, Google Nest, Ring, Ecobee, Aqara, …). One account
@@ -579,6 +616,13 @@ class ComponentInstance(Base):
     # VendorAccount row + are decrypted at firmware-bundle-build time.
     vendor_account_id: Mapped[str | None] = mapped_column(
         ForeignKey("vendor_accounts.id"), index=True
+    )
+    # The *specific* device on the account this component represents
+    # (a particular Tapo camera, a specific Hue bulb). The agent on
+    # the Pi targets this device id when sending commands; the parent
+    # account just provides the auth context.
+    vendor_device_id: Mapped[str | None] = mapped_column(
+        ForeignKey("vendor_devices.id"), index=True
     )
     created_at: Mapped[datetime] = mapped_column(default=_now)
 

@@ -1313,11 +1313,17 @@ async def wizard_step_components(
         c for c in catalog.list_library("control_board_library")
         if (c.manifest.get("subcategory") or "").lower() in _DRIVER_SUBCATS
     ]
-    # Vendor accounts available for smart-home component binding.
-    from ..models import VendorAccount
+    # Vendor accounts + their devices for the component binding UI.
+    # The operator binds a ComponentInstance to a *specific* device on
+    # the account, not the parent account itself — a Tapo camera is one
+    # device among many on the same Tapo cloud login.
+    from ..models import VendorAccount, VendorDevice
     vendor_accounts = (await session.execute(
         select(VendorAccount).where(VendorAccount.status == "active")
         .order_by(VendorAccount.provider, VendorAccount.label)
+    )).scalars().all()
+    vendor_devices = (await session.execute(
+        select(VendorDevice).order_by(VendorDevice.name)
     )).scalars().all()
     return templates.TemplateResponse(
         "device_wizard_step4.html",
@@ -1328,6 +1334,7 @@ async def wizard_step_components(
             "available_components": available_components,
             "available_drivers": available_drivers,
             "vendor_accounts": vendor_accounts,
+            "vendor_devices": vendor_devices,
             "catalog": catalog,
             "RISK_LEVELS": RISK_LEVELS,
             "RISK_TYPES": RISK_TYPES,
@@ -1531,15 +1538,20 @@ async def wizard_set_component_vendor_account(
     comp_id: str,
     request: Request,
     vendor_account_id: str = Form(""),
+    vendor_device_id: str = Form(""),
     api_endpoint: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_login),
 ):
-    """Bind a smart-home ComponentInstance to a VendorAccount (Tapo /
-    Hue / Nest / Ring / …) saved at /ui/vendor-accounts. Optionally
-    pin a local API endpoint (LAN-mode device IP) alongside. Blank
-    vendor_account_id clears the binding."""
-    from ..models import VendorAccount
+    """Bind a smart-home ComponentInstance to a *specific* VendorDevice
+    on a VendorAccount. The operator picks the device (e.g. "Living
+    room camera") and we derive the parent account from it. Blank
+    vendor_device_id + blank vendor_account_id clears the binding.
+
+    Either pick a device (preferred — operator knows exactly what this
+    component represents) OR pick just the account (catch-all, when the
+    specific device isn't discovered yet or doesn't matter)."""
+    from ..models import VendorAccount, VendorDevice
     group = await _load_group(session, group_id)
     _require_unlocked(group, request)
     comp = await session.get(ComponentInstance, comp_id)
@@ -1549,18 +1561,29 @@ async def wizard_set_component_vendor_account(
     if board is None or board.group_id != group.id:
         raise HTTPException(404, "component not in this group")
 
+    did = vendor_device_id.strip() or None
     vid = vendor_account_id.strip() or None
-    if vid:
+    # If a device is picked, derive the account from it (single source
+    # of truth — operator can't accidentally bind a Tapo device under
+    # the Hue account).
+    if did:
+        dev = await session.get(VendorDevice, did)
+        if dev is None:
+            raise HTTPException(404, f"vendor device {did} not found")
+        vid = dev.vendor_account_id
+    elif vid:
         acc = await session.get(VendorAccount, vid)
         if acc is None:
             raise HTTPException(404, f"vendor account {vid} not found")
     comp.vendor_account_id = vid
+    comp.vendor_device_id = did
     comp.api_endpoint = api_endpoint.strip() or None
     await record(
         session, actor=actor.id, actor_kind="ui_session",
         action="component.set_vendor_account",
         target_kind="component_instance", target_id=comp.id,
-        detail={"vendor_account_id": vid, "api_endpoint": comp.api_endpoint},
+        detail={"vendor_account_id": vid, "vendor_device_id": did,
+                "api_endpoint": comp.api_endpoint},
     )
     await session.commit()
     return RedirectResponse(f"/ui/devices/wizard/{group.id}/components", status_code=303)

@@ -58,6 +58,7 @@ from .models import (
     NodeSystem,
     RootSystem,
     VendorAccount,
+    VendorDevice,
     WifiNetwork,
 )
 from .security.secret_crypto import decrypt_secret
@@ -374,31 +375,47 @@ async def _vendor_accounts_payload(
     session: AsyncSession,
     boards: list,
 ) -> dict:
-    """Collect every distinct VendorAccount referenced by a
-    ComponentInstance in this group and emit a decrypted snapshot for
-    the on-device agent. Plaintext only appears in this function — at
-    rest in the DB the password / api_key / refresh_token are Fernet-
-    encrypted, and the resulting .zip should be transported only over
-    the mTLS deploy channel.
+    """Collect every distinct VendorAccount + VendorDevice referenced
+    by a ComponentInstance in this group and emit a decrypted snapshot
+    for the on-device agent. Plaintext only appears in this function —
+    at rest in the DB the password / api_key / refresh_token are
+    Fernet-encrypted, and the resulting .zip should be transported
+    only over the mTLS deploy channel.
 
-    Output shape (per account):
+    Output (per account):
         {
           id, provider, label, username, region, base_url,
           password, api_key, refresh_token,
-          components: ["instance_id", …]   # which on-device instances use it
+          devices: [
+            {vendor_device_id, name, model, device_type, mac,
+             ip_local, firmware_version, metadata,
+             components: ["instance_id", …]}
+          ],
+          components: ["instance_id", …]   # account-only bindings
+                                           # (no specific device picked)
         }
     """
-    by_id: dict[str, dict] = {}
+    by_acc: dict[str, dict] = {}
+    by_dev: dict[str, dict] = {}    # device_id → device entry inside its account
+
     for _b, comps, _p, _d in boards:
         for c in comps:
-            if not c.vendor_account_id:
+            if not (c.vendor_account_id or c.vendor_device_id):
                 continue
-            entry = by_id.get(c.vendor_account_id)
-            if entry is None:
-                row = await session.get(VendorAccount, c.vendor_account_id)
+            acc_id = c.vendor_account_id
+            dev = None
+            if c.vendor_device_id:
+                dev = await session.get(VendorDevice, c.vendor_device_id)
+                if dev is not None:
+                    acc_id = dev.vendor_account_id   # device wins
+            if not acc_id:
+                continue
+            acc_entry = by_acc.get(acc_id)
+            if acc_entry is None:
+                row = await session.get(VendorAccount, acc_id)
                 if row is None or row.status != "active":
                     continue
-                entry = {
+                acc_entry = {
                     "id": row.id,
                     "provider": row.provider,
                     "label": row.label,
@@ -408,13 +425,34 @@ async def _vendor_accounts_payload(
                     "password": decrypt_secret(row.password_encrypted) if row.password_encrypted else None,
                     "api_key":  decrypt_secret(row.api_key_encrypted)  if row.api_key_encrypted  else None,
                     "refresh_token": decrypt_secret(row.refresh_token_encrypted) if row.refresh_token_encrypted else None,
+                    "devices": [],
                     "components": [],
                 }
-                by_id[row.id] = entry
-            entry["components"].append(c.instance_id)
+                by_acc[acc_id] = acc_entry
+
+            if dev is not None:
+                dev_entry = by_dev.get(dev.id)
+                if dev_entry is None:
+                    dev_entry = {
+                        "vendor_device_id": dev.vendor_device_id,
+                        "name":             dev.name,
+                        "model":            dev.model,
+                        "device_type":      dev.device_type,
+                        "mac":              dev.mac,
+                        "ip_local":         dev.ip_local,
+                        "firmware_version": dev.firmware_version,
+                        "metadata":         dev.metadata_json or {},
+                        "components":       [],
+                    }
+                    by_dev[dev.id] = dev_entry
+                    acc_entry["devices"].append(dev_entry)
+                dev_entry["components"].append(c.instance_id)
+            else:
+                acc_entry["components"].append(c.instance_id)
+
     return {
         "schema_version": "1.0.0",
-        "accounts": list(by_id.values()),
+        "accounts": list(by_acc.values()),
     }
 
 

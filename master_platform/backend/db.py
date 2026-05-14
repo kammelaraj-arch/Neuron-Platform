@@ -196,6 +196,10 @@ def _apply_lightweight_migrations(sync_conn) -> None:
             sync_conn.exec_driver_sql(
                 "ALTER TABLE component_instances ADD COLUMN vendor_account_id VARCHAR(36)"
             )
+        if not _has_column("component_instances", "vendor_device_id"):
+            sync_conn.exec_driver_sql(
+                "ALTER TABLE component_instances ADD COLUMN vendor_device_id VARCHAR(36)"
+            )
 
     # 2026-05: SSH / first-boot deployment credentials on edge_groups.
     # Sensitive fields stored Fernet-encrypted via secret_crypto.

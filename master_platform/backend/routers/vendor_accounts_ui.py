@@ -4,16 +4,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..models import APIKey, VENDOR_PROVIDERS, VendorAccount
+from ..models import APIKey, VENDOR_PROVIDERS, VendorAccount, VendorDevice
 from ..security.audit import record
 from ..security.secret_crypto import encrypt_secret
 from ..security.ui_auth import ui_require_admin
+from ..vendor_discovery import discover_devices as _discover
 
 _BASE = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(_BASE / "templates"))
@@ -30,17 +31,127 @@ async def ui_vendor_accounts(
     rows = (await session.execute(
         select(VendorAccount).order_by(VendorAccount.provider, VendorAccount.label)
     )).scalars().all()
+    # Bucket devices by account so the template renders each account's
+    # device list inline beneath the account row.
+    devices_by_account: dict[str, list[VendorDevice]] = {}
+    if rows:
+        all_devices = (await session.execute(
+            select(VendorDevice).order_by(VendorDevice.name)
+        )).scalars().all()
+        for d in all_devices:
+            devices_by_account.setdefault(d.vendor_account_id, []).append(d)
     flash = request.session.pop("vendor_accounts_flash", None)
     return templates.TemplateResponse(
         "vendor_accounts.html",
         {
             "request": request,
             "accounts": rows,
+            "devices_by_account": devices_by_account,
             "providers": VENDOR_PROVIDERS,
             "flash": flash,
             "signed_in": True,
         },
     )
+
+
+@router.post("/ui/vendor-accounts/{account_id}/discover", response_class=JSONResponse)
+async def ui_vendor_accounts_discover(
+    account_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    """Call the vendor's API to list devices on this account; upsert
+    VendorDevice rows. Returns a per-action summary."""
+    row = await session.get(VendorAccount, account_id)
+    if row is None:
+        raise HTTPException(404, "account not found")
+    result = await _discover(session, row)
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="vendor_account.discover", target_kind="vendor_account", target_id=row.id,
+        detail={"ok": result["ok"], "discovered": result["discovered"],
+                "added": result["added"], "updated": result["updated"],
+                "errors": result["errors"]},
+    )
+    await session.commit()
+    return result
+
+
+@router.post("/ui/vendor-accounts/{account_id}/devices/add")
+async def ui_vendor_accounts_add_device(
+    account_id: str,
+    request: Request,
+    vendor_device_id: str = Form(...),
+    name: str = Form(...),
+    model: str = Form(""),
+    device_type: str = Form(""),
+    ip_local: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    """Manual add — for vendors without discovery, or operator pre-
+    seeding a device before bringing it online."""
+    parent = await session.get(VendorAccount, account_id)
+    if parent is None:
+        raise HTTPException(404, "account not found")
+    if not vendor_device_id.strip() or not name.strip():
+        raise HTTPException(400, "vendor_device_id and name are required")
+    # Upsert by (account, vendor_device_id).
+    existing = (await session.execute(
+        select(VendorDevice).where(
+            VendorDevice.vendor_account_id == account_id,
+            VendorDevice.vendor_device_id == vendor_device_id.strip(),
+        )
+    )).scalar_one_or_none()
+    if existing is None:
+        row = VendorDevice(
+            vendor_account_id=account_id,
+            vendor_device_id=vendor_device_id.strip(),
+            name=name.strip(),
+            model=model.strip() or None,
+            device_type=device_type.strip() or None,
+            ip_local=ip_local.strip() or None,
+        )
+        session.add(row)
+        action = "vendor_device.create"
+    else:
+        existing.name = name.strip()
+        existing.model = model.strip() or existing.model
+        existing.device_type = device_type.strip() or existing.device_type
+        existing.ip_local = ip_local.strip() or existing.ip_local
+        row = existing
+        action = "vendor_device.update"
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action=action, target_kind="vendor_device", target_id=row.id,
+        detail={"vendor_device_id": vendor_device_id, "provider": parent.provider},
+    )
+    await session.commit()
+    request.session["vendor_accounts_flash"] = {
+        "kind": "emerald", "msg": f"{parent.provider}: device '{row.name}' saved."
+    }
+    return RedirectResponse("/ui/vendor-accounts", status_code=303)
+
+
+@router.post("/ui/vendor-accounts/{account_id}/devices/{device_id}/delete")
+async def ui_vendor_accounts_delete_device(
+    account_id: str,
+    device_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    row = await session.get(VendorDevice, device_id)
+    if row is None or row.vendor_account_id != account_id:
+        raise HTTPException(404, "device not found in this account")
+    await session.delete(row)
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="vendor_device.delete", target_kind="vendor_device", target_id=device_id,
+    )
+    await session.commit()
+    return RedirectResponse("/ui/vendor-accounts", status_code=303)
 
 
 @router.post("/ui/vendor-accounts/new")
