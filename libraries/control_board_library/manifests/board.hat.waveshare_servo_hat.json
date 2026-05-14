@@ -1,0 +1,42 @@
+{
+  "stable_id": "board.hat.waveshare_servo_hat",
+  "name": "Waveshare PCA9685 + ADS1115 Servo/ADC HAT (Pi)",
+  "vendor": "Waveshare",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "servo_driver",
+  "description": "16-channel PWM/servo driver (PCA9685) plus a 4-channel 16-bit ADC (ADS1115) on a single Raspberry Pi HAT. I²C-driven so only SDA/SCL on the compute. External 4-6V servo PSU rail via terminal block. Common for hexapods, animatronics, light show controllers.",
+  "tags": ["servo", "pwm", "adc", "i2c", "pi_hat"],
+  "capabilities": ["servo_drive_x16", "analog_input_x4"],
+  "dependencies": [],
+  "interfaces": [
+    {"type": "I2C", "direction": "bidir", "pins_required": 2,
+     "address": "0x40", "speed_hz": 400000,
+     "notes": "PCA9685 at 0x40, ADS1115 at 0x48 — both on same bus"}
+  ],
+  "power": {
+    "voltage_v": 3.3, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 30, "current_ma_peak": 80,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "Both ICs respond on I²C",
+     "blocking": false, "steps": ["i2cdetect", "see 0x40 + 0x48"],
+     "expected": "both addresses visible"}
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi3", "compute.rpi4", "compute.rpi5",
+                "compute.cm4", "compute.cm5"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://www.waveshare.com/img/devkit/Servo-Driver-HAT/Servo-Driver-HAT-1.jpg",
+    "datasheet_url": "https://www.waveshare.com/wiki/Servo_Driver_HAT",
+    "brand_variants": ["Waveshare Servo Driver HAT"],
+    "price_usd_range": [15, 25],
+    "source": "tools/seed_catalog.py"
+  }
+}

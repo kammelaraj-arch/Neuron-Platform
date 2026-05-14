@@ -1,0 +1,44 @@
+{
+  "stable_id": "board.cnc.cnc_shield_v3",
+  "name": "CNC Shield V3 (Protoneer / clone, Arduino Uno form factor)",
+  "vendor": "Protoneer (original) / many clones",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "cnc",
+  "subcategory": "stepper_shield",
+  "description": "3+1 axis GRBL stepper carrier. Four socketed driver slots accepting DRV8825 / A4988 / TMC22xx / TMC2208. Standard GRBL pinout — step/dir/enable lines fixed by convention. End-stop headers, spindle / coolant outputs, abort / hold / resume inputs. Pairs with an Arduino Uno running GRBL or any compute via the same pin map.",
+  "tags": ["cnc", "stepper", "grbl", "arduino_shield"],
+  "capabilities": ["stepper_drive_x4"],
+  "dependencies": [
+    {"stable_id": "board.stepper.drv8825", "version_range": ">=1.0.0", "optional": true},
+    {"stable_id": "board.stepper.a4988",   "version_range": ">=1.0.0", "optional": true}
+  ],
+  "interfaces": [
+    {"type": "GPIO", "direction": "out", "pins_required": 7,
+     "notes": "STEP+DIR for 3-4 axes + shared EN line"}
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 100, "current_ma_peak": 200,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "Driver enable line reachable",
+     "blocking": false, "steps": ["toggle EN line", "no MCU error"],
+     "expected": "no error"}
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi3", "compute.rpi4", "compute.rpi5",
+                "compute.pico2w", "compute.pico_2"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://blog.protoneer.co.nz/wp-content/uploads/2014/10/CNC-Shield-V3.51.jpg",
+    "datasheet_url": "https://blog.protoneer.co.nz/arduino-cnc-shield/",
+    "brand_variants": ["Protoneer V3.51", "KEYESTUDIO CNC Shield", "Generic clone"],
+    "price_usd_range": [5, 20],
+    "source": "tools/seed_catalog.py"
+  }
+}

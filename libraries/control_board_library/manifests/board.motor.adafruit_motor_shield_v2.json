@@ -1,0 +1,42 @@
+{
+  "stable_id": "board.motor.adafruit_motor_shield_v2",
+  "name": "Adafruit Motor / Stepper / Servo Shield V2",
+  "vendor": "Adafruit",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "motor_driver",
+  "description": "4× DC motor + 2× stepper + 2× servo carrier driven entirely over I²C (PCA9685 + TB6612 inside). Stackable up to 32 boards on one I²C bus by changing the address jumpers. Logic side just needs SDA / SCL on the compute.",
+  "tags": ["motor", "stepper", "servo", "i2c", "adafruit"],
+  "capabilities": ["dc_motor_drive_x4", "stepper_drive_x2", "servo_drive_x2"],
+  "dependencies": [],
+  "interfaces": [
+    {"type": "I2C", "direction": "bidir", "pins_required": 2,
+     "address": "0x60", "speed_hz": 400000,
+     "notes": "Address jumper-selectable 0x60-0x7F"}
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 50, "current_ma_peak": 100,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "Adafruit shield responds on I²C",
+     "blocking": false, "steps": ["i2cdetect 0x60", "device present"],
+     "expected": "0x60 visible"}
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi3", "compute.rpi4", "compute.rpi5",
+                "compute.pico2w", "compute.pico_2"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/1438-00.jpg",
+    "datasheet_url": "https://learn.adafruit.com/adafruit-motor-shield-v2-for-arduino",
+    "brand_variants": ["Adafruit V2.3"],
+    "price_usd_range": [20, 25],
+    "source": "tools/seed_catalog.py"
+  }
+}

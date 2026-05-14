@@ -1,0 +1,40 @@
+{
+  "stable_id": "board.hat.pimoroni_inventor_2040",
+  "name": "Pimoroni Inventor 2040 W (RP2040 mini-fleet board)",
+  "vendor": "Pimoroni",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "pi_hats",
+  "subcategory": "robotics_carrier",
+  "description": "All-in-one robotics board with built-in RP2040, 2× motor drivers (DRV8833), 2 encoder inputs, 4 servo headers, 1 RGB LED, Qwiic / STEMMA QT connector + a piezo. Onboard MicroPython firmware out of the box. Often used for small mobile robots / animatronics.",
+  "tags": ["robotics", "rp2040", "motor", "servo", "encoder", "qwiic"],
+  "capabilities": ["dc_motor_drive_x2", "servo_drive_x4", "encoder_input_x2"],
+  "dependencies": [],
+  "interfaces": [
+    {"type": "Internal", "direction": "bidir",
+     "notes": "RP2040 is the compute — onboard board pinout exposed via GP0-GP29"}
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 150, "current_ma_peak": 500,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "Inventor reachable",
+     "blocking": false, "steps": ["read user-sw", "no error"],
+     "expected": "no error"}
+  ],
+  "compatibility": {
+    "compute": ["compute.pico2w", "compute.pico_2"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn.shopify.com/s/files/1/0174/1800/products/inventor-2040-1_1024x1024.jpg",
+    "datasheet_url": "https://shop.pimoroni.com/products/inventor-2040-w",
+    "brand_variants": ["Inventor 2040 W"],
+    "price_usd_range": [25, 30],
+    "source": "tools/seed_catalog.py"
+  }
+}

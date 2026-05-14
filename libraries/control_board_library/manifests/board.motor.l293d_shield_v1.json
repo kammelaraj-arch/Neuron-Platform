@@ -1,0 +1,40 @@
+{
+  "stable_id": "board.motor.l293d_shield_v1",
+  "name": "L293D Motor Shield V1 (Arduino, classic)",
+  "vendor": "Generic (originally Adafruit V1)",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "motor_drivers",
+  "subcategory": "motor_driver",
+  "description": "The original 4× DC + 2× stepper + 2× servo Arduino shield using two L293D H-bridges. No I²C — drives motors through GPIO + a shift register (74HC595). Largely superseded by V2 but still common in education kits.",
+  "tags": ["motor", "stepper", "servo", "l293d", "arduino_shield"],
+  "capabilities": ["dc_motor_drive_x4", "stepper_drive_x2", "servo_drive_x2"],
+  "dependencies": [],
+  "interfaces": [
+    {"type": "GPIO", "direction": "out", "pins_required": 6,
+     "notes": "Latch + clock + data for the shift register + 2 enable lines"}
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 80, "current_ma_peak": 200,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "Shift register reachable",
+     "blocking": false, "steps": ["pulse latch", "no MCU error"],
+     "expected": "no error"}
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi3", "compute.rpi4", "compute.rpi5"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://cdn-shop.adafruit.com/970x728/81-00.jpg",
+    "datasheet_url": "https://learn.adafruit.com/adafruit-motor-shield",
+    "brand_variants": ["Adafruit V1 (original)", "Generic clone"],
+    "price_usd_range": [5, 15],
+    "source": "tools/seed_catalog.py"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "stable_id": "board.cnc.ramps_1_4",
+  "name": "RAMPS 1.4 (Reprap Arduino Mega Pololu Shield)",
+  "vendor": "Generic / Ultimaker / RepRap",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "cnc",
+  "subcategory": "printer_mainboard",
+  "description": "The classic 3D-printer carrier for Arduino MEGA 2560. 5 socketed driver slots (X / Y / Z / E0 / E1), 3 MOSFET outputs for hotend / fan / bed, 6 endstop headers, 3 thermistor inputs, AUX1 / AUX2 expansion. Marlin pinout convention.",
+  "tags": ["3d_printer", "marlin", "stepper", "ramps"],
+  "capabilities": ["stepper_drive_x5", "heater_control", "thermistor_input"],
+  "dependencies": [],
+  "interfaces": [
+    {"type": "GPIO", "direction": "bidir", "pins_required": 22,
+     "notes": "5x STEP+DIR+EN = 15 + 6 endstops + 3 MOSFET outputs + a few aux"},
+    {"type": "ADC",  "direction": "in", "pins_required": 3,
+     "notes": "T0 / T1 / T2 thermistors"}
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 200, "current_ma_peak": 600,
+    "power_source": "bus"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "RAMPS reachable",
+     "blocking": false, "steps": ["read thermistor T0", "value plausible"],
+     "expected": "no error"}
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi4", "compute.rpi5"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://reprap.org/mediawiki/images/thumb/0/03/RAMPS1-4.jpg/600px-RAMPS1-4.jpg",
+    "datasheet_url": "https://reprap.org/wiki/RAMPS_1.4",
+    "brand_variants": ["RAMPS 1.4", "RAMPS 1.4.4"],
+    "price_usd_range": [8, 25],
+    "source": "tools/seed_catalog.py"
+  }
+}

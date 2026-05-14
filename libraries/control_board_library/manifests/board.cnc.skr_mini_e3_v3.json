@@ -1,0 +1,40 @@
+{
+  "stable_id": "board.cnc.skr_mini_e3_v3",
+  "name": "BigTreeTech SKR Mini E3 V3 (3D-printer mainboard)",
+  "vendor": "BigTreeTech",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "cnc",
+  "subcategory": "printer_mainboard",
+  "description": "Compact STM32G0B1 printer mainboard with four onboard TMC2209 stepper drivers (X / Y / Z / E0), 24V mains input, hot-end + heated-bed MOSFET outputs, dual fan PWMs, BLTouch probe header, EXP1 / EXP2 12864 LCD connectors. Klipper / Marlin compatible.",
+  "tags": ["3d_printer", "klipper", "marlin", "stepper", "tmc2209"],
+  "capabilities": ["stepper_drive_x4", "heater_control", "thermistor_input", "bltouch"],
+  "dependencies": [],
+  "interfaces": [
+    {"type": "UART", "direction": "bidir",
+     "notes": "Klipper hosts on the Pi side; serial to the SKR over USB / RX-TX"}
+  ],
+  "power": {
+    "voltage_v": 24.0, "voltage_tolerance_pct": 10,
+    "current_ma_typical": 500, "current_ma_peak": 15000,
+    "power_source": "external"
+  },
+  "safety_class": "critical",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "SKR responds on serial",
+     "blocking": false, "steps": ["query firmware version", "expect Klipper / Marlin"],
+     "expected": "no error"}
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi4", "compute.rpi5", "compute.cm4"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://biqu.equipment/cdn/shop/products/H17e4a3a9a3da4d018dc0e9c83cbd1b3dy_1024x.jpg",
+    "datasheet_url": "https://github.com/bigtreetech/BIGTREETECH-SKR-mini-E3",
+    "brand_variants": ["SKR Mini E3 V3.0"],
+    "price_usd_range": [50, 70],
+    "source": "tools/seed_catalog.py"
+  }
+}

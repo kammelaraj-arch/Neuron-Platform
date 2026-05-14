@@ -1,0 +1,40 @@
+{
+  "stable_id": "board.cnc.cnc_shield_v4",
+  "name": "CNC Shield V4 (Arduino Nano form factor, 3-axis)",
+  "vendor": "Generic / Protoneer",
+  "version": "1.0.0",
+  "library": "control_board_library",
+  "category": "cnc",
+  "subcategory": "stepper_shield",
+  "description": "Compact 3-axis GRBL carrier for Arduino Nano. Same GRBL pin convention as V3 but no 4th-axis socket. DRV8825 / A4988 driver sockets, end-stop headers, spindle / coolant.",
+  "tags": ["cnc", "stepper", "grbl", "nano", "compact"],
+  "capabilities": ["stepper_drive_x3"],
+  "dependencies": [],
+  "interfaces": [
+    {"type": "GPIO", "direction": "out", "pins_required": 7}
+  ],
+  "power": {
+    "voltage_v": 5.0, "voltage_tolerance_pct": 5,
+    "current_ma_typical": 80, "current_ma_peak": 150,
+    "power_source": "bus"
+  },
+  "safety_class": "advisory",
+  "drivers": [],
+  "self_tests": [
+    {"id": "presence", "name": "Driver enable reachable",
+     "blocking": false, "steps": ["toggle EN", "no error"],
+     "expected": "no error"}
+  ],
+  "compatibility": {
+    "compute": ["compute.rpi3", "compute.rpi4", "compute.rpi5",
+                "compute.pico2w", "compute.pico_2"],
+    "twin_controls": []
+  },
+  "metadata": {
+    "image_url": "https://blog.protoneer.co.nz/wp-content/uploads/2016/02/CNC-Shield-V4-Layout.png",
+    "datasheet_url": "https://blog.protoneer.co.nz/arduino-cnc-shield-v4-0/",
+    "brand_variants": ["Generic V4", "Protoneer V4"],
+    "price_usd_range": [4, 12],
+    "source": "tools/seed_catalog.py"
+  }
+}
