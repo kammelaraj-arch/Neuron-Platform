@@ -71,12 +71,18 @@ async def ui_apps_list(
     rows = (await session.execute(
         select(IndependentApp).order_by(IndependentApp.created_at.desc())
     )).scalars().all()
+    # Pull every EdgeGroup so the catalogue's 🚀 Deploy can offer a
+    # dropdown of available targets — no more typing UUIDs.
+    groups = (await session.execute(
+        select(EdgeGroup).order_by(EdgeGroup.name)
+    )).scalars().all()
     flash = request.session.pop("apps_flash", None)
     return templates.TemplateResponse(
         "apps.html",
         {
             "request": request,
             "apps": rows,
+            "groups": groups,
             "app_types": APP_TYPES,
             "app_statuses": APP_STATUSES,
             "autostart_methods": AUTOSTART_METHODS,

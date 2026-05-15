@@ -71,8 +71,24 @@
             <a href="{{ a.repo_url }}" target="_blank" class="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800">📦 Repo</a>
           {% endif %}
           {% if a.app_type in ('pi', 'linux', 'docker') %}
-            <button type="button" onclick="deployAppPrompt('{{ a.id }}', '{{ a.title|replace("'", "\\'") }}')"
-                    class="rounded border border-cyan-500/60 px-2 py-1 text-cyan-300 hover:bg-cyan-500/10">🚀 Deploy</button>
+            {% if groups %}
+              <div class="flex items-center gap-1 basis-full sm:basis-auto">
+                <select id="grp-{{ a.id }}"
+                        class="rounded border border-slate-700 bg-slate-900 text-slate-200 text-[10px] px-1 py-1 max-w-[140px] truncate">
+                  {% for g in groups %}
+                    <option value="{{ g.id }}"
+                            {% if not g.ssh_host or not g.ssh_enabled %}disabled{% endif %}>
+                      {{ g.name }}{% if g.compute_stable_id %} · {{ g.compute_stable_id }}{% endif %}{% if not g.ssh_host %} (no ssh){% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+                <button type="button" onclick="deployApp('{{ a.id }}')"
+                        id="dbtn-{{ a.id }}"
+                        class="rounded border border-cyan-500/60 px-2 py-1 text-cyan-300 hover:bg-cyan-500/10 whitespace-nowrap">🚀 Deploy</button>
+              </div>
+            {% else %}
+              <span class="rounded border border-slate-700 px-2 py-1 text-slate-500 italic" title="No EdgeGroups yet — create one in the wizard.">🚀 Deploy</span>
+            {% endif %}
           {% endif %}
           <form method="post" action="/ui/apps/{{ a.id }}/status" class="inline">
             <select name="status" onchange="this.form.submit()"
@@ -94,6 +110,7 @@
             {% if a.start_command %}<pre class="mt-1 rounded bg-slate-950 p-2 text-[10px] text-emerald-200 whitespace-pre-wrap">start: {{ a.start_command }}</pre>{% endif %}
           </details>
         {% endif %}
+        <div id="dep-{{ a.id }}" class="hidden mt-1 rounded border border-slate-800 bg-slate-950/60 p-2 text-[10px] text-slate-300"></div>
       </article>
     {% else %}
       <p class="col-span-full rounded-xl border border-slate-800 bg-slate-900/40 p-6 text-center text-sm text-slate-500 italic">
@@ -187,20 +204,50 @@
   </section>
 
   <script>
-    async function deployAppPrompt(appId, title) {
-      const gid = prompt('EdgeGroup id to deploy "' + title + '" to:');
-      if (!gid) return;
-      const r = await fetch(`/ui/apps/${appId}/deploy/${gid}`,
-                            {method: 'POST', credentials: 'same-origin'});
-      const d = await r.json();
-      let msg = (d.ok ? '✓ ' : '✗ ') + (d.summary || 'no detail');
-      if (d.steps) {
-        msg += '\n' + d.steps.map(s =>
-          (s.ok ? '✓' : '✗') + ' ' + s.name + ' — ' + (s.detail || '').slice(0, 100)
-        ).join('\n');
+    async function deployApp(appId) {
+      const sel = document.getElementById('grp-' + appId);
+      const btn = document.getElementById('dbtn-' + appId);
+      const out = document.getElementById('dep-' + appId);
+      if (!sel || !sel.value) {
+        out.classList.remove('hidden');
+        out.innerHTML = '<span class="text-amber-300">Pick an EdgeGroup first.</span>';
+        return;
       }
-      alert(msg);
-      if (d.ok) location.reload();
+      const gid = sel.value;
+      const groupLabel = sel.options[sel.selectedIndex].text;
+      btn.disabled = true;
+      const origLabel = btn.textContent;
+      btn.textContent = '⏳ Deploying…';
+      out.classList.remove('hidden');
+      out.innerHTML = '<span class="text-cyan-300">Deploying to <code>' + groupLabel + '</code>…</span>';
+      try {
+        const r = await fetch('/ui/apps/' + appId + '/deploy/' + gid,
+                              {method: 'POST', credentials: 'same-origin'});
+        const d = await r.json();
+        const head = (d.ok ? '<span class="text-emerald-300">✓ ' : '<span class="text-red-300">✗ ')
+                     + (d.summary || 'no detail') + '</span>';
+        let body = '';
+        if (d.steps && d.steps.length) {
+          body = '<ul class="mt-1 space-y-0.5">' + d.steps.map(s => {
+            const icon = s.ok
+              ? '<span class="text-emerald-400">✓</span>'
+              : '<span class="text-red-400">✗</span>';
+            const detail = (s.detail || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+            return '<li>' + icon + ' <span class="text-slate-200">' + s.name + '</span>'
+                   + (detail ? ' <span class="text-slate-500">— ' + detail.slice(0, 200) + '</span>' : '')
+                   + '</li>';
+          }).join('') + '</ul>';
+        }
+        out.innerHTML = head + body;
+        if (d.ok) {
+          setTimeout(() => location.reload(), 1500);
+        }
+      } catch (e) {
+        out.innerHTML = '<span class="text-red-300">✗ network error: ' + e + '</span>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = origLabel;
+      }
     }
   </script>
 {% endblock %}
