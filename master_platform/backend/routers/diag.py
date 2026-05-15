@@ -15,10 +15,14 @@ import re
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from fastapi.responses import PlainTextResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import APIKey
+from ..db import get_session
+from ..models import APIKey, User
+from ..security.audit import record
 from ..security.auth import require_scopes
 
 
@@ -124,3 +128,36 @@ async def get_diag_info(
         else:
             out[label] = {"path": str(p), "size": 0, "exists": False}
     return out
+
+
+@router.post("/users/{username}/password")
+async def admin_set_user_password(
+    username: str,
+    password: str = Form(..., min_length=8, max_length=200),
+    must_change: bool = Form(False),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(require_scopes("admin")),
+) -> dict[str, Any]:
+    """Set a user's password directly. Admin-only escape hatch for
+    out-of-band resets (lost bootstrap password, etc.). Audit logs
+    the action without recording the password material."""
+    from argon2 import PasswordHasher
+    user = (await session.execute(
+        select(User).where(User.username == username)
+    )).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(404, f"user '{username}' not found")
+    user.password_hash = PasswordHasher().hash(password)
+    user.must_change_password = bool(must_change)
+    await record(
+        session, actor=actor.id, actor_kind="api_key",
+        action="user.admin_set_password", target_kind="user",
+        target_id=user.id,
+        detail={"username": user.username, "must_change": bool(must_change)},
+    )
+    await session.commit()
+    return {
+        "ok": True,
+        "username": user.username,
+        "must_change_password": user.must_change_password,
+    }
