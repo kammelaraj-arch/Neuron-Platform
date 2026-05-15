@@ -87,7 +87,7 @@
           </tr>
           <!-- ── Per-account device list (the things you actually bind to) ─── -->
           {% set devs = devices_by_account.get(a.id, []) %}
-          {% set has_real_discovery = a.provider in ('tapo',) %}
+          {% set has_real_discovery = a.provider in ('tapo', 'ring') %}
           <tr><td colspan="8" class="bg-slate-950/40 px-4 py-3 border-t border-slate-800">
             <details class="text-xs" open>
               <summary class="cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white">

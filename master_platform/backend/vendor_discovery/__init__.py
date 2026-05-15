@@ -176,6 +176,142 @@ async def _discover_tapo(account: VendorAccount) -> list[dict]:
     return out
 
 
+async def _discover_ring(account: VendorAccount) -> list[dict]:
+    """Ring (Amazon doorbell / camera / alarm) device discovery via the
+    official OAuth API.
+
+    Ring's first-login flow requires interactive 2FA (SMS / TOTP) which
+    the master can't drive headlessly, so this driver works off a
+    long-lived refresh_token the operator generates out-of-band:
+
+        pip install ring-doorbell
+        ring-doorbell auth-token --username you@example.com
+
+    Paste the resulting token into the "Refresh token" field on the
+    VendorAccount and click 🔄 Discover.
+
+    Ring binds tokens to a `hardware_id` UUID; we reuse the same one
+    across discovery calls (stored under extra_json.hardware_id) so
+    repeat calls don't trigger fresh 2FA challenges.
+
+    Returns endpoints across all six device classes Ring exposes:
+    doorbells, stickup cams, chimes, alarm base stations, beams
+    bridges, plus authorized (shared) doorbells.
+    """
+    import httpx, uuid as _uuid
+    from ..security.secret_crypto import decrypt_secret
+
+    if not account.refresh_token_encrypted:
+        raise DiscoveryError(
+            "Ring needs a refresh token. Generate one with "
+            "`ring-doorbell auth-token --username <email>` (pip install "
+            "ring-doorbell), then paste it into the Refresh token field."
+        )
+    refresh_token = decrypt_secret(account.refresh_token_encrypted)
+
+    extra = dict(account.extra_json or {})
+    hardware_id = extra.get("hardware_id") or str(_uuid.uuid4())
+
+    base = (account.base_url or "").rstrip("/") or "https://oauth.ring.com"
+    api_base = "https://api.ring.com"
+    headers_common = {
+        "User-Agent": "Neuron Platform/0.3",
+        "hardware_id": hardware_id,
+    }
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        # 1. Refresh → access_token. Ring rotates refresh tokens, so
+        # the response carries a fresh one we should capture.
+        r = await client.post(
+            f"{base}/oauth/token",
+            data={
+                "grant_type":    "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id":     "ring_official_android",
+                "scope":         "client",
+            },
+            headers={"User-Agent": headers_common["User-Agent"]},
+        )
+        if r.status_code != 200:
+            raise DiscoveryError(
+                f"Ring oauth refresh failed: HTTP {r.status_code} "
+                f"{r.text[:200]}"
+            )
+        tok = r.json()
+        access_token = tok.get("access_token")
+        if not access_token:
+            raise DiscoveryError("Ring oauth response missing access_token")
+
+        auth_headers = {**headers_common,
+                        "Authorization": f"Bearer {access_token}"}
+
+        # 2. Bind session to hardware_id (Ring may 200 or 401 here —
+        # the device list endpoint works either way as long as the
+        # token is valid).
+        try:
+            await client.post(
+                f"{api_base}/clients_api/session",
+                json={
+                    "device": {
+                        "hardware_id": hardware_id,
+                        "metadata": {"api_version": 11,
+                                     "device_model": "neuron-master"},
+                        "os": "linux",
+                        "app_brand": "ring",
+                    }
+                },
+                headers=auth_headers,
+            )
+        except httpx.HTTPError:
+            pass   # session bind is best-effort
+
+        # 3. Device list
+        r = await client.get(
+            f"{api_base}/clients_api/ring_devices",
+            headers=auth_headers,
+        )
+        if r.status_code != 200:
+            raise DiscoveryError(
+                f"Ring device list failed: HTTP {r.status_code} "
+                f"{r.text[:200]}"
+            )
+        body = r.json()
+
+    out: list[dict] = []
+
+    def _add(entries, device_type: str) -> None:
+        for d in entries or []:
+            settings = d.get("settings") or {}
+            out.append({
+                "vendor_device_id": str(d.get("id") or ""),
+                "name":             (d.get("description")
+                                     or settings.get("device_id")
+                                     or str(d.get("id"))),
+                "model":            d.get("kind"),
+                "device_type":      device_type,
+                "mac":              d.get("device_id"),
+                "firmware_version": d.get("firmware_version"),
+                "metadata": {
+                    "battery_life":  d.get("battery_life"),
+                    "address":       d.get("address"),
+                    "time_zone":     d.get("time_zone"),
+                    "subscribed":    d.get("subscribed"),
+                    "owner":         (d.get("owner") or {}).get("email"),
+                    "ring_kind":     d.get("kind"),
+                    "led_status":    settings.get("led_status"),
+                    "siren_seconds": settings.get("chime_settings"),
+                },
+            })
+
+    _add(body.get("doorbots"),            "doorbell")
+    _add(body.get("authorized_doorbots"), "doorbell_shared")
+    _add(body.get("stickup_cams"),        "camera")
+    _add(body.get("chimes"),              "chime")
+    _add(body.get("base_stations"),       "alarm_hub")
+    _add(body.get("beams_bridges"),       "smart_lighting_bridge")
+    return out
+
+
 async def _discover_alexa(account: VendorAccount) -> list[dict]:
     """Amazon Alexa Smart Home discovery via Login With Amazon (LWA) +
     the Alexa Smart Home Skill API.
@@ -256,7 +392,7 @@ _PROVIDERS = {
     "sensi":             _discover_stub,
     "drayton_wiser":     _discover_stub,
     # ── Cameras / doorbells / security ──────────────────────────────────
-    "ring":              _discover_stub,
+    "ring":              _discover_ring,
     "eufy":              _discover_stub,
     "arlo":              _discover_stub,
     "blink":             _discover_stub,
