@@ -25,6 +25,7 @@ from .routers import (
     auth_ui,
     device_wizard_ui,
     devices,
+    diag,
     fabric,
     features_ui,
     functions_ui,
@@ -48,6 +49,37 @@ from .security.ui_auth import UILoginRequired, UIPermissionDenied
 
 
 _log = logging.getLogger("neuron.master")
+
+
+def _install_file_logging() -> None:
+    """Send the root logger to a rotating file under data/logs so the
+    /api/admin/logs endpoint can serve it. Idempotent — safe to call
+    repeatedly. Stdout/stderr handlers (docker logs) are untouched."""
+    from logging.handlers import RotatingFileHandler
+    log_dir = Path("data/logs")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    root = logging.getLogger()
+    if not any(getattr(h, "_neuron_master_file", False) for h in root.handlers):
+        h = RotatingFileHandler(
+            log_dir / "master.log", maxBytes=10 * 1024 * 1024, backupCount=5,
+        )
+        h.setLevel(logging.INFO)
+        h.setFormatter(fmt)
+        h._neuron_master_file = True  # type: ignore[attr-defined]
+        root.addHandler(h)
+        root.setLevel(logging.INFO)
+    # Bridge uvicorn loggers into root so request/access logs land in
+    # master.log alongside our app logs.
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        lg = logging.getLogger(name)
+        lg.propagate = True
+
+
+_install_file_logging()
 
 
 def _ensure_session_secret() -> str:
@@ -410,6 +442,29 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def _capture_unhandled_exceptions(request: Request, call_next):
+    """Append every unhandled exception's traceback to data/logs/errors.log
+    so /api/admin/last-error can return it later. Does NOT swallow the
+    exception — FastAPI's normal 500 handling still runs."""
+    try:
+        return await call_next(request)
+    except Exception:
+        import traceback
+        from datetime import datetime, timezone
+        log_dir = Path("data/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(timezone.utc).isoformat()
+        try:
+            with (log_dir / "errors.log").open("a", encoding="utf-8") as f:
+                f.write(f"=== {ts}  {request.method} {request.url.path} ===\n")
+                f.write(traceback.format_exc())
+                f.write("\n")
+        except Exception:
+            pass
+        raise
+
+
 @app.exception_handler(UILoginRequired)
 async def _ui_login_redirect(request: Request, exc: UILoginRequired):
     return RedirectResponse("/login", status_code=303)
@@ -448,6 +503,7 @@ app.include_router(audit.router)
 app.include_router(ota.router)
 app.include_router(recipes.router)
 app.include_router(ai_agent.router)
+app.include_router(diag.router)
 app.include_router(twin_push.router)
 app.include_router(fabric.router)
 app.include_router(mtls.router)
