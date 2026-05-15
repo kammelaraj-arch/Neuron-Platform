@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><title>SmartPlotter — manual</title>
+<link rel="stylesheet" href="/static/smartplotter.css">
+</head><body>
+<header><h1>🎮 Manual jog</h1><nav><a href="/">← Back</a></nav></header>
+<main>
+  <p>Distance (mm) <input id="dist" value="10" type="number"></p>
+  <p>Feed (mm/s) <input id="feed" value="20" type="number"></p>
+  <div class="pad">
+    <button onclick="jog(0, +d(), 0)">↑ Y+</button><br>
+    <button onclick="jog(-d(), 0, 0)">← X-</button>
+    <button onclick="jog(+d(), 0, 0)">X+ →</button><br>
+    <button onclick="jog(0, -d(), 0)">↓ Y-</button>
+    <p>Z: <button onclick="jog(0, 0, +d())">⬆ Z up</button>
+           <button onclick="jog(0, 0, -d())">⬇ Z down</button></p>
+    <p><button onclick="home()">🏠 Home all</button></p>
+  </div>
+  <pre id="log"></pre>
+</main>
+<script>
+  const log = document.getElementById('log');
+  function d() { return parseFloat(document.getElementById('dist').value); }
+  function f() { return parseFloat(document.getElementById('feed').value); }
+  async function jog(dx, dy, dz) {
+    const r = await fetch('/api/move', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({mode:'relative', dx, dy, dz, feed_mm_s: f()})
+    });
+    const j = await r.json();
+    log.textContent = JSON.stringify(j, null, 2);
+  }
+  async function home() {
+    log.textContent = 'Homing…';
+    const r = await fetch('/api/home', {method: 'POST'});
+    log.textContent = JSON.stringify(await r.json(), null, 2);
+  }
+</script></body></html>

@@ -225,8 +225,75 @@ async def _seed_independent_apps_if_empty() -> None:
             ),
         )
         session.add(plotter)
+        await session.flush()
+
+        smartplotter = IndependentApp(
+            short_id="APP-0002",
+            title="SmartPlotter — production-grade XYZ plotter (Pi 4 / 5)",
+            description=(
+                "Hardened replacement for sjweb. Container-deployed Flask + SocketIO "
+                "with trapezoidal-acceleration motion planning, hardware E-stop + "
+                "limit-switch enforcement, soft + hard limits, homing routines, "
+                "API-key authenticated web UI, MQTT telemetry to the master, "
+                "emergency-channel subscriber that fires safe-stop on the parent's "
+                "command, parent-link watchdog, audit log per profile run, and "
+                "G-code import / export for interop with LinuxCNC / GRBL / Klipper. "
+                "Targets the same 4× DRV8825 dual-Y XYZ hardware as APP-0001 but "
+                "with the safety + observability the factory needs."
+            ),
+            app_type="docker",
+            version="1.0.0",
+            vendor="Neuron Platform / community",
+            icon_url=None,
+            repo_url="https://github.com/kammelaraj-arch/Neuron-Platform/tree/main/apps/smartplotter",
+            download_url=None,
+            install_command=(
+                "set -e; mkdir -p /opt/smartplotter; "
+                "[ -d /opt/smartplotter/.repo ] || git clone "
+                "https://github.com/kammelaraj-arch/Neuron-Platform.git "
+                "/opt/smartplotter/.repo; "
+                "cp -r /opt/smartplotter/.repo/apps/smartplotter/* /opt/smartplotter/; "
+                "cd /opt/smartplotter && docker compose -f compose.yml pull "
+                "|| docker compose -f compose.yml build"
+            ),
+            start_command="/usr/bin/docker compose -f /opt/smartplotter/compose.yml up -d",
+            autostart_method="systemd",
+            autostart_unit_template=(
+                "[Unit]\n"
+                "Description=SmartPlotter (APP-0002) - production XYZ plotter\n"
+                "After=docker.service network-online.target\n"
+                "Wants=docker.service network-online.target\n"
+                "Requires=docker.service\n\n"
+                "[Service]\n"
+                "Type=oneshot\n"
+                "RemainAfterExit=yes\n"
+                "WorkingDirectory=/opt/smartplotter\n"
+                "EnvironmentFile=-/opt/smartplotter/env\n"
+                "ExecStart=/usr/bin/docker compose -f /opt/smartplotter/compose.yml up -d\n"
+                "ExecStop=/usr/bin/docker compose -f /opt/smartplotter/compose.yml down\n"
+                "StandardOutput=journal\n"
+                "StandardError=journal\n\n"
+                "[Install]\n"
+                "WantedBy=multi-user.target\n"
+            ),
+            compatible_compute_json=["compute.rpi4", "compute.rpi5"],
+            tags_json=["plotter", "production-grade", "container", "estop",
+                       "homing", "g-code", "mqtt", "mtls", "safety",
+                       "drv8825", "cnc-shield-v3"],
+            status="published",
+            notes=(
+                "Production-grade plotter — wire E-stop to BCM26 (NC contact), "
+                "limit switches to BCM16/20/21 (X/Y/Z, NC), set "
+                "SMARTPLOTTER_BROKER_URL + SMARTPLOTTER_API_KEY in "
+                "/opt/smartplotter/env before first start. The compose file "
+                "mounts /boot/neuron read-only so the bundle's mTLS certs are "
+                "available for the MQTT bridge automatically."
+            ),
+        )
+        session.add(smartplotter)
         await session.commit()
-        _log.warning("Seeded reference app: %s (%s)", plotter.short_id, plotter.title)
+        _log.warning("Seeded reference apps: APP-0001 (%s), APP-0002 (%s)",
+                     plotter.title, smartplotter.title)
 
 
 async def _bootstrap_admin_key_if_needed() -> None:

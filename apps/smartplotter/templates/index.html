@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SmartPlotter v{{ version }}</title>
+  <link rel="stylesheet" href="/static/smartplotter.css">
+</head>
+<body>
+  <header>
+    <h1>🪡 SmartPlotter <span class="ver">v{{ version }}</span></h1>
+    <nav>
+      <a href="/upload">+ Upload</a>
+      <a href="/manual">🎮 Manual</a>
+      <a href="/healthz">healthz</a>
+    </nav>
+  </header>
+
+  <main>
+    {% if not safety.is_safe %}
+      <div class="alert">
+        🛑 NOT SAFE — fault: <code>{{ safety.fault }}</code>.
+        <button onclick="resetSafety()">Reset (after physical check)</button>
+      </div>
+    {% endif %}
+
+    <h2>Profiles ({{ profiles|length }})</h2>
+    {% if profiles %}
+      <table>
+        <thead><tr><th>Name</th><th>Feed mm/s</th><th>Z lift</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for p in profiles %}
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.feed_mm_s }}</td>
+            <td>{{ p.z_lift_mm }}</td>
+            <td>{{ p.created_at }}</td>
+            <td>
+              <button onclick="runProfile({{ p.id }})">▶ Run</button>
+              <a href="/api/profile/{{ p.id }}/gcode" target="_blank">⬇ G-code</a>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No profiles yet — <a href="/upload">upload an image</a> to create the first.</p>
+    {% endif %}
+
+    <h2>Recent runs</h2>
+    <table>
+      <thead><tr><th>Run</th><th>Profile</th><th>Started</th><th>Ended</th><th>Status</th><th>Progress</th></tr></thead>
+      <tbody>
+      {% for r in runs %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.profile_id }}</td>
+          <td>{{ r.started_at }}</td>
+          <td>{{ r.ended_at or '—' }}</td>
+          <td>{{ r.status }}{% if r.fault %} ({{ r.fault }}){% endif %}</td>
+          <td>{{ r.points_completed }}/{{ r.points_total }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Live progress</h2>
+    <pre id="progress"></pre>
+  </main>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const sock = io();
+    const prog = document.getElementById("progress");
+    sock.on("progress", d => prog.textContent =
+      `Run ${d.run_id} — ${d.completed}/${d.total} (${d.pct}%)`);
+    sock.on("done", d => prog.textContent =
+      `Run ${d.run_id} → ${d.status}${d.fault ? ' (' + d.fault + ')' : ''}`);
+    sock.on("safety", d => {
+      if (!d.is_safe) prog.textContent = `🛑 SAFETY: ${d.fault}`;
+    });
+    async function runProfile(pid) {
+      const r = await fetch(`/api/profile/${pid}/run`, {method: 'POST'});
+      const d = await r.json();
+      prog.textContent = d.ok ? `Started run ${d.run_id} (${d.total} points)` : `❌ ${d.reason}`;
+    }
+    async function resetSafety() {
+      const r = await fetch('/api/safety/reset', {method: 'POST'});
+      const d = await r.json();
+      if (d.ok) location.reload();
+      else alert('Fault still active: ' + d.fault);
+    }
+  </script>
+</body>
+</html>

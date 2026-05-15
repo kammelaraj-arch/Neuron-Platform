@@ -1,0 +1,36 @@
+# SmartPlotter compose — runs the container with the GPIO + the
+# bundle dir mounted, and the saved API key + broker URL injected as
+# env. The systemd unit on the device wraps `docker compose up -d`
+# from this file.
+
+services:
+  smartplotter:
+    image: neuron/smartplotter:1.0.0
+    container_name: smartplotter
+    restart: unless-stopped
+    privileged: true            # /dev/gpiomem + /sys/class/gpio
+    network_mode: host           # serve on 0.0.0.0:5000 + reach the master
+    environment:
+      SMARTPLOTTER_DEVICE_DNA:   ${SMARTPLOTTER_DEVICE_DNA:?dna required}
+      SMARTPLOTTER_API_KEY:      ${SMARTPLOTTER_API_KEY:-}
+      SMARTPLOTTER_BROKER_URL:   ${SMARTPLOTTER_BROKER_URL:-}
+      SMARTPLOTTER_CERTS_DIR:    /boot/neuron/certs
+      SMARTPLOTTER_FACTORY:      ${SMARTPLOTTER_FACTORY:-default}
+      SMARTPLOTTER_LINE:         ${SMARTPLOTTER_LINE:-default}
+      SMARTPLOTTER_MACHINE:      ${SMARTPLOTTER_MACHINE:-smartplotter}
+      SMARTPLOTTER_MAX_X_MM:     ${SMARTPLOTTER_MAX_X_MM:-300}
+      SMARTPLOTTER_MAX_Y_MM:     ${SMARTPLOTTER_MAX_Y_MM:-300}
+      SMARTPLOTTER_MAX_Z_MM:     ${SMARTPLOTTER_MAX_Z_MM:-50}
+      SMARTPLOTTER_MAX_FEED_MM_S: ${SMARTPLOTTER_MAX_FEED_MM_S:-50}
+      SMARTPLOTTER_PARENT_GRACE_S: ${SMARTPLOTTER_PARENT_GRACE_S:-5}
+    volumes:
+      - /boot/neuron:/boot/neuron:ro         # bundle + certs
+      - smartplotter-state:/opt/smartplotter # profile DB + state
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+volumes:
+  smartplotter-state:

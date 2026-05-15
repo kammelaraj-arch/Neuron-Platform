@@ -1,0 +1,18 @@
+[Unit]
+Description=SmartPlotter (APP-0002) — production-grade XYZ plotter
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/smartplotter
+EnvironmentFile=-/opt/smartplotter/env
+ExecStart=/usr/bin/docker compose -f /opt/smartplotter/compose.yml up -d
+ExecStop=/usr/bin/docker compose -f /opt/smartplotter/compose.yml down
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
