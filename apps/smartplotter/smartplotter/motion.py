@@ -18,28 +18,22 @@ import time
 from typing import Iterable
 
 from .safety import SafetyAbort, SafetyMonitor
+from .pins import resolve as resolve_pins
 
 
 log = logging.getLogger("smartplotter.motion")
 
 
-# CNC Shield V3 / GRBL pin convention. BCM numbering.
-_PINS = {
-    "x_step": 17, "x_dir": 27,
-    "y_step": 22, "y_dir": 23,
-    "y2_step": 24, "y2_dir": 25,
-    "z_step": 5,  "z_dir": 6,
-    "enable": 12,
-}
-
-
 class MotionPlanner:
-    def __init__(self, settings, safety: SafetyMonitor, dual_y: bool = True):
+    def __init__(self, settings, safety: SafetyMonitor, dual_y: bool = True,
+                 pin_map: dict[str, int] | None = None):
         self.s = settings
         self.safety = safety
         self.dual_y = dual_y
-        # Internal position in steps (not mm — accumulator of every
-        # pulse we've issued). Reset to (0,0,0) after homing.
+        # Pin map resolved from brain.json + env + defaults. Override
+        # via the constructor when testing.
+        self.pins = pin_map or resolve_pins(settings.bundle_dir)
+        # Internal step accumulator. Reset to (0,0,0) after homing.
         self.x = 0
         self.y = 0
         self.z = 0
@@ -49,10 +43,16 @@ class MotionPlanner:
             self._gpio = GPIO
             GPIO.setmode(GPIO.BCM)
             GPIO.setwarnings(False)
-            for pin in _PINS.values():
-                GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+            for pin in self.pins.values():
+                # Skip negative / out-of-range entries (safety guards).
+                if isinstance(pin, int) and 0 <= pin <= 53:
+                    try:
+                        GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+                    except Exception as e:
+                        log.warning("motion: skip pin %s (%s)", pin, e)
             self.drivers_enable(True)
-            log.info("motion: GPIO ready (dual_y=%s)", dual_y)
+            log.info("motion: GPIO ready (dual_y=%s) — using pins %s",
+                     dual_y, self.pins)
         except Exception as e:
             log.warning("motion: GPIO unavailable (%s) — dry mode", e)
 
@@ -60,7 +60,7 @@ class MotionPlanner:
     def drivers_enable(self, enabled: bool) -> None:
         if self._gpio is None:
             return
-        self._gpio.output(_PINS["enable"], 0 if enabled else 1)
+        self._gpio.output(self.pins["enable"], 0 if enabled else 1)
 
     # ── Soft-limit-checked move ───────────────────────────────────────
     def move_to_mm(self, x_mm: float | None = None,
@@ -159,21 +159,21 @@ class MotionPlanner:
     def _set_dir(self, axis: str, value: int) -> None:
         if self._gpio is None:
             return
-        self._gpio.output(_PINS[f"{axis}_dir"], 1 if value else 0)
+        self._gpio.output(self.pins[f"{axis}_dir"], 1 if value else 0)
         if self.dual_y and axis == "y":
-            self._gpio.output(_PINS["y2_dir"], 1 if value else 0)
+            self._gpio.output(self.pins["y2_dir"], 1 if value else 0)
 
     def _pulse(self, axis: str, half_period_s: float) -> None:
         if self._gpio is None:
             return
-        pin = _PINS[f"{axis}_step"]
+        pin = self.pins[f"{axis}_step"]
         self._gpio.output(pin, 1)
         if self.dual_y and axis == "y":
-            self._gpio.output(_PINS["y2_step"], 1)
+            self._gpio.output(self.pins["y2_step"], 1)
         time.sleep(half_period_s)
         self._gpio.output(pin, 0)
         if self.dual_y and axis == "y":
-            self._gpio.output(_PINS["y2_step"], 0)
+            self._gpio.output(self.pins["y2_step"], 0)
         time.sleep(half_period_s)
 
     def cleanup(self) -> None:

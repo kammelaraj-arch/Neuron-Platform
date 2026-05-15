@@ -36,7 +36,9 @@ class SafetyState:
 
 
 class SafetyMonitor:
-    def __init__(self, settings, on_fault: Callable[[SafetyState], None] | None = None):
+    def __init__(self, settings,
+                 on_fault: Callable[[SafetyState], None] | None = None,
+                 pin_map: dict[str, int] | None = None):
         self.s = settings
         self.state = SafetyState()
         self._on_fault = on_fault or (lambda _: None)
@@ -44,22 +46,33 @@ class SafetyMonitor:
         self._thread: threading.Thread | None = None
         self._gpio = None
 
+        # Resolve pin map from brain.json + env + defaults. Falls back
+        # to the legacy Settings.* fields if the resolved map doesn't
+        # carry a given pin (covers operators who only set env vars).
+        if pin_map is None:
+            from .pins import resolve as _resolve
+            pin_map = _resolve(self.s.bundle_dir)
+        self.pins = pin_map
+        self._estop = self.pins.get("estop",   self.s.estop_bcm)
+        self._lim_x = self.pins.get("limit_x", self.s.limit_x_bcm)
+        self._lim_y = self.pins.get("limit_y", self.s.limit_y_bcm)
+        self._lim_z = self.pins.get("limit_z", self.s.limit_z_bcm)
+
         try:
             import RPi.GPIO as GPIO
             self._gpio = GPIO
             GPIO.setmode(GPIO.BCM)
             GPIO.setwarnings(False)
-            for pin in (self.s.estop_bcm, self.s.limit_x_bcm,
-                        self.s.limit_y_bcm, self.s.limit_z_bcm):
+            for pin in (self._estop, self._lim_x, self._lim_y, self._lim_z):
                 # NC contacts: idle HIGH (pulled up), pressed/triggered LOW.
-                GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                if isinstance(pin, int) and 0 <= pin <= 53:
+                    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             # E-stop on interrupt — bouncetime so a noisy contact doesn't
             # spam events.
-            GPIO.add_event_detect(self.s.estop_bcm, GPIO.FALLING,
+            GPIO.add_event_detect(self._estop, GPIO.FALLING,
                                   callback=self._on_estop_irq, bouncetime=50)
             log.info("safety: GPIO initialised (estop=BCM%d, limits=%d/%d/%d)",
-                     self.s.estop_bcm, self.s.limit_x_bcm,
-                     self.s.limit_y_bcm, self.s.limit_z_bcm)
+                     self._estop, self._lim_x, self._lim_y, self._lim_z)
         except Exception as e:
             log.warning("safety: GPIO unavailable (%s) — running in dry mode "
                         "(safety checks pass; this is NOT acceptable for "
@@ -77,7 +90,7 @@ class SafetyMonitor:
             self._thread.join(timeout=2.0)
         if self._gpio:
             try:
-                self._gpio.remove_event_detect(self.s.estop_bcm)
+                self._gpio.remove_event_detect(self._estop)
             except Exception:
                 pass
 
@@ -142,9 +155,9 @@ class SafetyMonitor:
         while not self._stop.is_set():
             try:
                 if self._gpio:
-                    self.state.limit_x_hit = self._gpio.input(self.s.limit_x_bcm) == 0
-                    self.state.limit_y_hit = self._gpio.input(self.s.limit_y_bcm) == 0
-                    self.state.limit_z_hit = self._gpio.input(self.s.limit_z_bcm) == 0
+                    self.state.limit_x_hit = self._gpio.input(self._lim_x) == 0
+                    self.state.limit_y_hit = self._gpio.input(self._lim_y) == 0
+                    self.state.limit_z_hit = self._gpio.input(self._lim_z) == 0
                 # Parent-link watchdog
                 if time.monotonic() - self.state.last_parent_heartbeat_s > self.s.parent_grace_s:
                     if not self.state.parent_link_lost:

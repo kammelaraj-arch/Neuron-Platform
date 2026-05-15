@@ -65,6 +65,50 @@ Shield V3 + 4× DRV8825 setup. The master:
    `docker compose up -d` from `/opt/smartplotter/compose.yml`.
 4. Verifies the container is `healthy` against `/healthz`.
 
+## Pin mapping — flexible, three sources
+
+The motor / limit / E-stop pins are NOT hardcoded. They resolve at
+startup from (in priority order):
+
+1. **Env vars** — `SMARTPLOTTER_PIN_<LOGICAL>` overrides everything
+   else. One pin at a time:
+   ```
+   SMARTPLOTTER_PIN_X_STEP=17     SMARTPLOTTER_PIN_X_DIR=27
+   SMARTPLOTTER_PIN_Y_STEP=22     SMARTPLOTTER_PIN_Y_DIR=23
+   SMARTPLOTTER_PIN_Y2_STEP=24    SMARTPLOTTER_PIN_Y2_DIR=25
+   SMARTPLOTTER_PIN_Z_STEP=5      SMARTPLOTTER_PIN_Z_DIR=6
+   SMARTPLOTTER_PIN_ENABLE=12
+   SMARTPLOTTER_PIN_LIMIT_X=16    SMARTPLOTTER_PIN_LIMIT_Y=20
+   SMARTPLOTTER_PIN_LIMIT_Z=21    SMARTPLOTTER_PIN_ESTOP=26
+   ```
+   Drop them into `/opt/smartplotter/env` and `systemctl restart`.
+
+2. **`/boot/neuron/brain.json`'s `pinmap` array** — the Neuron
+   Platform's wizard step 5 (Pin map) ships this in every firmware
+   bundle. Pin entries with these `signal_name` values are picked
+   up automatically:
+   ```
+   X-STEP, X-DIR, Y-STEP, Y-DIR, Y2-STEP, Y2-DIR,
+   Z-STEP, Z-DIR, EN (or enable / driver-en),
+   X+ (or X-MIN / LIMIT-X), Y+, Z+,
+   E-STOP (or emergency-stop)
+   ```
+   Case-insensitive, hyphen / underscore interchangeable. This is
+   the preferred path — change pins in the wizard, rebuild bundle,
+   redeploy, no env edit required.
+
+3. **Defaults** — the CNC Shield V3 / Pi convention listed at the
+   top. Used for any pin neither (1) nor (2) covers.
+
+Verify the resolved map on a live device:
+```
+curl -H "Authorization: Bearer $SMARTPLOTTER_API_KEY" \
+     http://<pi>:5000/api/pinmap
+```
+Or check the **Pin map (resolved)** panel on the index page — every
+row carries the source (env / brain.json / default) so it's
+obvious where the value came from.
+
 ## Configuration (env vars on the device)
 
 ```

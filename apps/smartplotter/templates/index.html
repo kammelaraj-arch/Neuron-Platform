@@ -65,6 +65,10 @@
 
     <h2>Live progress</h2>
     <pre id="progress"></pre>
+
+    <h2>Pin map (resolved)</h2>
+    <p class="hint">Source priority: <code>env</code> &gt; <code>brain.json</code> (Neuron firmware bundle) &gt; <code>default</code>. Click <a href="/api/pinmap">/api/pinmap</a> for the raw JSON.</p>
+    <table id="pinmap"><thead><tr><th>Signal</th><th>BCM</th><th>Source</th><th>Default</th></tr></thead><tbody></tbody></table>
   </main>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -83,6 +87,19 @@
       const d = await r.json();
       prog.textContent = d.ok ? `Started run ${d.run_id} (${d.total} points)` : `❌ ${d.reason}`;
     }
+    (async () => {
+      const r = await fetch('/api/pinmap');
+      if (!r.ok) return;
+      const d = await r.json();
+      const tbody = document.querySelector('#pinmap tbody');
+      const srcColor = {env: '#fbbf24', 'brain.json': '#10b981', default: '#64748b'};
+      tbody.innerHTML = (d.pins || []).map(p =>
+        `<tr><td><code>${p.logical}</code></td>` +
+        `<td>${p.bcm != null ? 'BCM' + p.bcm : '—'}</td>` +
+        `<td style="color:${srcColor[p.source] || '#999'}">${p.source}</td>` +
+        `<td>BCM${p.default_bcm ?? '—'}</td></tr>`
+      ).join('');
+    })();
     async function resetSafety() {
       const r = await fetch('/api/safety/reset', {method: 'POST'});
       const d = await r.json();

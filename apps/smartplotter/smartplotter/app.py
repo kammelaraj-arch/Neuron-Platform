@@ -205,6 +205,33 @@ def _build_app(settings):
         safety.reset_after_human_check()
         return {"ok": safety.state.is_safe, "fault": safety.state.fault}
 
+    @app.route("/api/pinmap")
+    @require_api_key(app)
+    def api_pinmap():
+        """Return the resolved pin map + the source per pin so the
+        operator can verify what's wired without docker exec'ing."""
+        from .pins import (
+            DEFAULT_PIN_MAP, _load_from_brain_json, _load_from_env,
+        )
+        from_brain = _load_from_brain_json(settings.bundle_dir)
+        from_env   = _load_from_env()
+        rows = []
+        for key in sorted(set(DEFAULT_PIN_MAP) | set(from_brain) | set(from_env)):
+            if   key in from_env:   src = "env"
+            elif key in from_brain: src = "brain.json"
+            else:                   src = "default"
+            rows.append({
+                "logical":     key,
+                "bcm":         planner.pins.get(key),
+                "source":      src,
+                "default_bcm": DEFAULT_PIN_MAP.get(key),
+            })
+        return {
+            "device_dna": settings.device_dna,
+            "bundle_dir": str(settings.bundle_dir),
+            "pins": rows,
+        }
+
     @app.route("/api/state")
     @require_api_key(app)
     def api_state():
