@@ -203,6 +203,33 @@ class EdgeCert(Base):
     notes: Mapped[str | None] = mapped_column(Text)
 
 
+USER_TIERS = ("admin", "operator", "readonly")
+USER_STATUSES = ("active", "disabled")
+
+
+class User(Base):
+    """Human operator account — username + password auth for the UI,
+    distinct from APIKey which is for machine-to-machine integration.
+
+    Both end up in the same session table (different keys); routes
+    behind ui_require_login accept either. routes behind ui_require_admin
+    check tier == "admin" on either kind of principal.
+    """
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    username: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)  # Argon2id
+    email: Mapped[str | None] = mapped_column(String(200))
+    full_name: Mapped[str | None] = mapped_column(String(200))
+    tier: Mapped[str] = mapped_column(String(20), default="operator", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column()
+    must_change_password: Mapped[bool] = mapped_column(default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 class APIKey(Base):
     __tablename__ = "api_keys"
 

@@ -39,6 +39,7 @@ from .routers import (
     systems,
     twin_push,
     ui,
+    users_ui,
     vendor_accounts_ui,
     wifi_ui,
 )
@@ -320,6 +321,51 @@ async def _bootstrap_admin_key_if_needed() -> None:
         )
 
 
+async def _bootstrap_admin_user_if_needed() -> None:
+    """Seed an `admin` user with a random one-time password on first
+    boot if no admin user exists. Password written to
+    data/bootstrap_admin_password.txt (chmod 0600); operator pastes it
+    on /login, gets routed to /change-password, sets their own."""
+    from .models import User
+    async with SessionLocal() as session:
+        existing = await session.scalar(select(User).where(User.tier == "admin"))
+        if existing is not None:
+            return
+        import secrets as _secrets
+        from argon2 import PasswordHasher
+        password = _secrets.token_urlsafe(12)
+        user = User(
+            username="admin",
+            password_hash=PasswordHasher().hash(password),
+            full_name="Bootstrap administrator",
+            tier="admin",
+            must_change_password=True,
+        )
+        session.add(user)
+        await session.commit()
+
+        out = Path("data") / "bootstrap_admin_password.txt"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
+            "Neuron Master — first-boot admin password\n"
+            "==========================================\n\n"
+            f"username: admin\n"
+            f"password: {password}\n\n"
+            "Sign in at /login → you'll be redirected to /change-password\n"
+            "to set your own. After that, DELETE THIS FILE.\n"
+        )
+        try:
+            out.chmod(0o600)
+        except OSError:
+            pass
+        _log.warning(
+            "BOOTSTRAP ADMIN USER 'admin' created. Initial password "
+            "written to %s (chmod 0600). Sign in at /login, then "
+            "change it, then delete the file.",
+            out.resolve(),
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Path(settings.build_artifacts_dir).mkdir(parents=True, exist_ok=True)
@@ -327,6 +373,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     load_catalog(force=True)
     await _bootstrap_admin_key_if_needed()
+    await _bootstrap_admin_user_if_needed()
     await _seed_feature_requests_if_empty()
     await _seed_independent_apps_if_empty()
 
@@ -389,6 +436,7 @@ app.include_router(functions_ui.router)
 app.include_router(wifi_ui.router)
 app.include_router(vendor_accounts_ui.router)
 app.include_router(apps_ui.router)
+app.include_router(users_ui.router)
 
 # JSON API routers
 app.include_router(library.router)

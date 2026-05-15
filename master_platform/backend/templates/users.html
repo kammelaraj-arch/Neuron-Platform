@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">User accounts</h1>
+      <p class="text-slate-400 text-sm">
+        Human operator accounts — username + password sign-in to the UI.
+        Machine integrations should use <a href="/ui/secrets" class="underline text-emerald-300">API keys</a> instead.
+        Tiers: <code>admin</code> (everything), <code>operator</code> (wizard + deploy + apps),
+        <code>readonly</code> (view-only).
+      </p>
+    </div>
+    <a href="#new-user" class="rounded-lg bg-emerald-500 px-4 py-2 font-medium text-slate-950 hover:bg-emerald-400">+ New user</a>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200 break-all">{{ flash.msg }}</div>
+  {% endif %}
+
+  <section class="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+        <tr>
+          <th class="px-4 py-3">Username</th>
+          <th class="px-4 py-3">Full name</th>
+          <th class="px-4 py-3">Email</th>
+          <th class="px-4 py-3">Tier</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Last login</th>
+          <th class="px-4 py-3">Created</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/70">
+        {% for u in users %}
+          <tr class="hover:bg-slate-900/40">
+            <td class="px-4 py-3 font-medium text-slate-200">
+              {{ u.username }}
+              {% if u.must_change_password %}
+                <span class="ml-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] px-1.5 py-0.5">must change pw</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-slate-300">{{ u.full_name or '—' }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-400">{{ u.email or '—' }}</td>
+            <td class="px-4 py-3">
+              <form method="post" action="/ui/users/{{ u.id }}/tier" class="inline">
+                <select name="tier" onchange="this.form.submit()"
+                        class="rounded-md bg-slate-800 text-slate-200 text-[11px] px-2 py-1">
+                  {% for t in tiers %}<option value="{{ t }}" {% if u.tier == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+                </select>
+              </form>
+            </td>
+            <td class="px-4 py-3">
+              <form method="post" action="/ui/users/{{ u.id }}/status" class="inline">
+                <select name="status" onchange="this.form.submit()"
+                        class="rounded-md bg-slate-800 text-slate-200 text-[11px] px-2 py-1">
+                  {% for s in statuses %}<option value="{{ s }}" {% if u.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                </select>
+              </form>
+            </td>
+            <td class="px-4 py-3 text-slate-500 text-[11px] font-mono">{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else '—' }}</td>
+            <td class="px-4 py-3 text-slate-500 text-[11px] font-mono">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+            <td class="px-4 py-3 text-right space-x-1">
+              <form method="post" action="/ui/users/{{ u.id }}/reset-password" class="inline"
+                    onsubmit="return confirm('Reset {{ u.username }}\\'s password? A new temporary one will be shown ONCE on the next page.');">
+                <button class="rounded-md border border-cyan-700 px-2 py-1 text-[11px] text-cyan-300 hover:bg-cyan-500/10">🔄 Reset pw</button>
+              </form>
+              <form method="post" action="/ui/users/{{ u.id }}/delete" class="inline"
+                    onsubmit="return confirm('Delete user {{ u.username }}? This is permanent.');">
+                <button class="rounded-md border border-red-700 px-2 py-1 text-[11px] text-red-300 hover:bg-red-500/10">✕ Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="px-4 py-6 text-sm text-slate-500 italic text-center">No users yet — add the first one below.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section id="new-user" class="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5">
+    <h2 class="text-base font-semibold text-emerald-300">+ New user</h2>
+    <form method="post" action="/ui/users/new" class="mt-3 grid gap-3 sm:grid-cols-2 text-sm">
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Username *</label>
+        <input name="username" required maxlength="120"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Initial password (min 8) *</label>
+        <input name="password" type="password" minlength="8" required autocomplete="new-password"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Full name</label>
+        <input name="full_name" maxlength="200"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Email</label>
+        <input name="email" type="email" maxlength="200"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Tier</label>
+        <select name="tier" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+          {% for t in tiers %}<option value="{{ t }}" {% if t == 'operator' %}selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="flex items-center gap-2 mt-6">
+        <input type="checkbox" id="mcp" name="must_change_password" value="true" checked>
+        <label for="mcp" class="text-xs text-slate-300">Require password change on first login</label>
+      </div>
+      <div class="sm:col-span-2 flex items-center gap-3">
+        <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">Create user</button>
+        <span class="text-[10px] text-slate-500">Audited as <code>user.create</code> (no password material in the audit log).</span>
+      </div>
+    </form>
+  </section>
+{% endblock %}

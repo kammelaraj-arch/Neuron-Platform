@@ -7,29 +7,78 @@
         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 text-slate-950 font-black">N</span>
         <div>
           <h1 class="text-xl font-semibold tracking-tight">Neuron Master</h1>
-          <p class="text-xs text-slate-400">Paste your API key to continue</p>
+          <p class="text-xs text-slate-400">Sign in with username + password, or an API key</p>
         </div>
       </div>
+
       {% if error %}
         <div class="mb-4 rounded-lg border border-red-700/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{{ error }}</div>
       {% endif %}
-      <form method="post" action="/login" class="space-y-4">
-        <label class="block text-xs uppercase tracking-widest text-slate-400">API key</label>
-        <input
-          type="password"
-          name="secret"
-          autocomplete="off"
-          autofocus
-          required
-          spellcheck="false"
-          placeholder="neu_xxxxxxxxxxxxxxxxxxxxxxxx"
-          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm focus:border-emerald-400 focus:outline-none" />
+
+      <!-- ── Tabs ─────────────────────────────────────────────────── -->
+      <div class="flex gap-2 text-xs mb-4">
+        <button type="button" id="tab-user" onclick="showTab('user')"
+                class="rounded-md border border-emerald-500/60 bg-emerald-500/10 px-3 py-1.5 text-emerald-300">
+          👤 Username + password
+        </button>
+        <button type="button" id="tab-key" onclick="showTab('key')"
+                class="rounded-md border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800">
+          🔑 API key
+        </button>
+      </div>
+
+      <!-- ── User-password form ───────────────────────────────────── -->
+      <form id="pane-user" method="post" action="/login" class="space-y-4">
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-400">Username</label>
+          <input
+            type="text" name="username" autocomplete="username" autofocus
+            class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-400">Password</label>
+          <input
+            type="password" name="password" autocomplete="current-password"
+            class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none" />
+        </div>
         <button type="submit" class="w-full rounded-lg bg-emerald-500 px-4 py-2 font-medium text-slate-950 hover:bg-emerald-400 transition">Sign in</button>
       </form>
+
+      <!-- ── API key form ─────────────────────────────────────────── -->
+      <form id="pane-key" method="post" action="/login" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs uppercase tracking-widest text-slate-400">API key</label>
+          <input
+            type="password" name="secret" autocomplete="off" spellcheck="false"
+            placeholder="neu_xxxxxxxxxxxxxxxxxxxxxxxx"
+            class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm focus:border-emerald-400 focus:outline-none" />
+        </div>
+        <button type="submit" class="w-full rounded-lg bg-emerald-500 px-4 py-2 font-medium text-slate-950 hover:bg-emerald-400 transition">Sign in</button>
+      </form>
+
       <p class="mt-6 text-xs text-slate-500">
-        First-time setup? After the Master starts, copy the key from
-        <code class="rounded bg-slate-800 px-1.5 py-0.5">data/bootstrap_admin.txt</code> and delete the file.
+        First-time setup? The Master seeds an <code class="rounded bg-slate-800 px-1.5 py-0.5">admin</code> user on first boot. Initial password is in
+        <code class="rounded bg-slate-800 px-1.5 py-0.5">data/bootstrap_admin_password.txt</code> — sign in then change it.
+        Operators with an existing API key can use the API-key tab.
       </p>
     </div>
   </div>
+
+  <script>
+    function showTab(which) {
+      document.getElementById('pane-user').classList.toggle('hidden', which !== 'user');
+      document.getElementById('pane-key').classList.toggle('hidden', which !== 'key');
+      const u = document.getElementById('tab-user'), k = document.getElementById('tab-key');
+      const active = ['border-emerald-500/60','bg-emerald-500/10','text-emerald-300'];
+      const idle   = ['border-slate-700','text-slate-300','hover:bg-slate-800'];
+      [u, k].forEach(b => {
+        active.forEach(c => b.classList.remove(c));
+        idle.forEach(c => b.classList.remove(c));
+      });
+      const on = which === 'user' ? u : k;
+      const off = which === 'user' ? k : u;
+      active.forEach(c => on.classList.add(c));
+      idle.forEach(c => off.classList.add(c));
+    }
+  </script>
 {% endblock %}
