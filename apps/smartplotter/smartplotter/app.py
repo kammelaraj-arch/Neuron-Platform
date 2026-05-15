@@ -50,7 +50,21 @@ def _build_app(settings):
     safety = SafetyMonitor(settings, on_fault=lambda s: socketio.emit(
         "safety", {"is_safe": s.is_safe, "fault": s.fault}))
     safety.start()
-    planner = MotionPlanner(settings, safety)
+
+    # Digital-twin live-position broadcaster. Motion planner calls this
+    # at ~40 Hz during a run; we throttle further on the client side if
+    # needed. Includes pen state so the canvas can draw pen-down trace
+    # vs pen-up jumps differently.
+    def _emit_position(x_mm: float, y_mm: float, z_mm: float, pen_down: bool):
+        socketio.emit("position", {
+            "x_mm": round(x_mm, 3),
+            "y_mm": round(y_mm, 3),
+            "z_mm": round(z_mm, 3),
+            "pen_down": bool(pen_down),
+            "ts": time.time(),
+        })
+
+    planner = MotionPlanner(settings, safety, position_callback=_emit_position)
 
     from .mqtt_bridge import MqttBridge
     bridge = MqttBridge(settings, safety)

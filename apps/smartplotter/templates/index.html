@@ -63,6 +63,20 @@
       </tbody>
     </table>
 
+    <h2>Live digital twin</h2>
+    <div class="twin-wrap">
+      <canvas id="twin" width="700" height="700"
+              data-max-x="{{ settings.max_x_mm }}" data-max-y="{{ settings.max_y_mm }}"></canvas>
+      <div class="twin-readout">
+        <div>X <span id="pos-x">0.0</span> mm</div>
+        <div>Y <span id="pos-y">0.0</span> mm</div>
+        <div>Z <span id="pos-z">0.0</span> mm</div>
+        <div>Pen: <span id="pos-pen">up</span></div>
+        <div class="hint">Updated ~40 Hz from the motion planner. Emerald = pen-down trace, slate = pen-up travel, amber = head.</div>
+        <button onclick="clearTrace()">🧹 Clear trace</button>
+      </div>
+    </div>
+
     <h2>Live progress</h2>
     <pre id="progress"></pre>
 
@@ -82,6 +96,132 @@
     sock.on("safety", d => {
       if (!d.is_safe) prog.textContent = `🛑 SAFETY: ${d.fault}`;
     });
+
+    // ── Digital twin canvas ────────────────────────────────────────────
+    const twin = document.getElementById('twin');
+    const tctx = twin.getContext('2d');
+    const maxX = parseFloat(twin.dataset.maxX) || 300;
+    const maxY = parseFloat(twin.dataset.maxY) || 300;
+    const margin = 30;
+    let trace = [];        // [{x_mm, y_mm, pen_down}]
+    let head = {x_mm: 0, y_mm: 0, z_mm: 0, pen_down: false};
+    let lastDrawTs = 0;
+
+    function mmToCanvas(x_mm, y_mm) {
+      const w = twin.width - 2 * margin;
+      const h = twin.height - 2 * margin;
+      const sx = margin + (x_mm / maxX) * w;
+      // Y inverted: canvas Y grows downward, plotter Y grows away from origin.
+      const sy = margin + h - (y_mm / maxY) * h;
+      return [sx, sy];
+    }
+
+    function drawBed() {
+      tctx.fillStyle = '#020617';
+      tctx.fillRect(0, 0, twin.width, twin.height);
+      // Bed envelope
+      tctx.strokeStyle = '#334155';
+      tctx.lineWidth = 1;
+      tctx.strokeRect(margin, margin, twin.width - 2 * margin, twin.height - 2 * margin);
+      // 25 mm grid
+      tctx.strokeStyle = '#1e293b';
+      tctx.beginPath();
+      for (let x = 0; x <= maxX; x += 25) {
+        const [sx, sy1] = mmToCanvas(x, 0);
+        const [_,  sy2] = mmToCanvas(x, maxY);
+        tctx.moveTo(sx, sy1); tctx.lineTo(sx, sy2);
+      }
+      for (let y = 0; y <= maxY; y += 25) {
+        const [sx1, sy] = mmToCanvas(0, y);
+        const [sx2, _]  = mmToCanvas(maxX, y);
+        tctx.moveTo(sx1, sy); tctx.lineTo(sx2, sy);
+      }
+      tctx.stroke();
+      // Origin label
+      tctx.fillStyle = '#64748b';
+      tctx.font = '10px ui-monospace';
+      const [ox, oy] = mmToCanvas(0, 0);
+      tctx.fillText('0,0', ox + 4, oy - 4);
+      tctx.fillText(`X→ ${maxX}mm`, twin.width - 80, twin.height - 12);
+      tctx.save();
+      tctx.translate(12, margin + 30);
+      tctx.rotate(-Math.PI / 2);
+      tctx.fillText(`Y→ ${maxY}mm`, 0, 0);
+      tctx.restore();
+    }
+
+    function drawTrace() {
+      tctx.lineWidth = 1.5;
+      tctx.lineCap = 'round';
+      for (let i = 1; i < trace.length; i++) {
+        const a = trace[i - 1], b = trace[i];
+        // Emerald for pen-down, slate dashed for pen-up jumps
+        if (b.pen_down) {
+          tctx.strokeStyle = '#10b981';
+          tctx.setLineDash([]);
+        } else {
+          tctx.strokeStyle = '#475569';
+          tctx.setLineDash([3, 3]);
+        }
+        tctx.beginPath();
+        const [ax, ay] = mmToCanvas(a.x_mm, a.y_mm);
+        const [bx, by] = mmToCanvas(b.x_mm, b.y_mm);
+        tctx.moveTo(ax, ay); tctx.lineTo(bx, by);
+        tctx.stroke();
+      }
+      tctx.setLineDash([]);
+    }
+
+    function drawHead() {
+      const [hx, hy] = mmToCanvas(head.x_mm, head.y_mm);
+      // Outer halo (amber for pen-up, emerald for pen-down)
+      const col = head.pen_down ? '#10b981' : '#fbbf24';
+      tctx.strokeStyle = col;
+      tctx.fillStyle = col + '40';   // 25% alpha hex
+      tctx.lineWidth = 2;
+      tctx.beginPath();
+      tctx.arc(hx, hy, 9, 0, Math.PI * 2);
+      tctx.fill(); tctx.stroke();
+      // Inner dot
+      tctx.fillStyle = col;
+      tctx.beginPath();
+      tctx.arc(hx, hy, 3, 0, Math.PI * 2);
+      tctx.fill();
+      // Crosshair
+      tctx.strokeStyle = col + '80';
+      tctx.lineWidth = 1;
+      tctx.beginPath();
+      tctx.moveTo(hx - 14, hy); tctx.lineTo(hx + 14, hy);
+      tctx.moveTo(hx, hy - 14); tctx.lineTo(hx, hy + 14);
+      tctx.stroke();
+    }
+
+    function redraw() {
+      drawBed();
+      drawTrace();
+      drawHead();
+    }
+    function clearTrace() { trace = []; redraw(); }
+
+    sock.on('position', d => {
+      head = d;
+      // Append to trace (cap at 50k points so a 4-hour plot doesn't OOM the browser).
+      trace.push({x_mm: d.x_mm, y_mm: d.y_mm, pen_down: d.pen_down});
+      if (trace.length > 50000) trace.shift();
+      document.getElementById('pos-x').textContent = d.x_mm.toFixed(1);
+      document.getElementById('pos-y').textContent = d.y_mm.toFixed(1);
+      document.getElementById('pos-z').textContent = d.z_mm.toFixed(1);
+      document.getElementById('pos-pen').textContent = d.pen_down ? 'DOWN' : 'up';
+      // Throttle redraws to 30 fps regardless of how fast position events arrive.
+      const now = performance.now();
+      if (now - lastDrawTs > 33) {
+        lastDrawTs = now;
+        requestAnimationFrame(redraw);
+      }
+    });
+
+    // Paint the empty bed on first load.
+    redraw();
     async function runProfile(pid) {
       const r = await fetch(`/api/profile/${pid}/run`, {method: 'POST'});
       const d = await r.json();

@@ -26,7 +26,8 @@ log = logging.getLogger("smartplotter.motion")
 
 class MotionPlanner:
     def __init__(self, settings, safety: SafetyMonitor, dual_y: bool = True,
-                 pin_map: dict[str, int] | None = None):
+                 pin_map: dict[str, int] | None = None,
+                 position_callback=None):
         self.s = settings
         self.safety = safety
         self.dual_y = dual_y
@@ -37,6 +38,12 @@ class MotionPlanner:
         self.x = 0
         self.y = 0
         self.z = 0
+        # Live-position publisher — called every ~25 ms (40 Hz) during
+        # motion with (x_mm, y_mm, z_mm, pen_down). Used by the web UI's
+        # digital-twin canvas. Decoupled via callback so motion.py
+        # doesn't import socketio.
+        self.position_callback = position_callback
+        self._last_pos_emit_s = 0.0
         self._gpio = None
         try:
             import RPi.GPIO as GPIO
@@ -151,9 +158,32 @@ class MotionPlanner:
                     cur_z += 1
                 ey -= adx
 
+            # Live position pulse to the web UI — throttled to ~40 Hz.
+            if self.position_callback is not None:
+                now = time.monotonic()
+                if now - self._last_pos_emit_s >= 0.025:
+                    cx = (self.x + (cur_x if x_dir else -cur_x)) / self.s.steps_per_mm
+                    cy = (self.y + (cur_y if y_dir else -cur_y)) / self.s.steps_per_mm
+                    cz = (self.z + (cur_z if z_dir else -cur_z)) / self.s.steps_per_mm
+                    try:
+                        self.position_callback(cx, cy, cz,
+                                               pen_down=(cz <= 0.5))
+                    except Exception:
+                        pass
+                    self._last_pos_emit_s = now
+
         self.x = tx
         self.y = ty
         self.z = tz
+        # Final position emit so the twin always lands exactly on the target.
+        if self.position_callback is not None:
+            try:
+                self.position_callback(self.x / self.s.steps_per_mm,
+                                       self.y / self.s.steps_per_mm,
+                                       self.z / self.s.steps_per_mm,
+                                       pen_down=(self.z / self.s.steps_per_mm <= 0.5))
+            except Exception:
+                pass
 
     # ── Pulse / dir helpers ───────────────────────────────────────────
     def _set_dir(self, axis: str, value: int) -> None:
