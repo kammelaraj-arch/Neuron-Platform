@@ -540,7 +540,70 @@ class BoardInstance(Base):
 # safety_class with the operator's per-install judgement (a heater wired
 # next to flammable material is a different risk class from the same
 # heater wired into a temperature-controlled water bath).
-DEVICE_ROLES = ("master", "node", "edge", "gateway")
+APP_TYPES = ("pi", "windows", "macos", "android", "ios", "web", "docker", "linux")
+APP_STATUSES = ("draft", "published", "deprecated")
+AUTOSTART_METHODS = ("systemd", "launchd", "startup_folder", "cron", "docker_compose", "none")
+
+
+class IndependentApp(Base):
+    """Standalone app the platform can publish to operators + deploy to
+    devices (Pi units, Windows boxes, Android phones, etc.).
+
+    Distinct from the device-runtime / firmware-bundle path: apps are
+    full applications that ship via git + install_command, registered
+    via systemd / launchd for autostart on the target. The master
+    catalogues them and (for Pi targets bound to an EdgeGroup) can
+    push them over the existing SSH channel + verify autostart.
+    """
+    __tablename__ = "independent_apps"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    short_id: Mapped[str] = mapped_column(String(16), unique=True, nullable=False, index=True)  # APP-0001
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    app_type: Mapped[str] = mapped_column(String(20), nullable=False, default="pi")
+    version: Mapped[str] = mapped_column(String(40), default="1.0.0", nullable=False)
+    vendor: Mapped[str | None] = mapped_column(String(120))
+    icon_url: Mapped[str | None] = mapped_column(String(400))
+    # Install: where to get it + what to run.
+    repo_url: Mapped[str | None] = mapped_column(String(400))         # git URL
+    download_url: Mapped[str | None] = mapped_column(String(400))     # release / zip URL
+    install_command: Mapped[str | None] = mapped_column(Text)         # shell
+    start_command: Mapped[str | None] = mapped_column(Text)           # shell
+    autostart_method: Mapped[str] = mapped_column(String(20), default="systemd", nullable=False)
+    autostart_unit_template: Mapped[str | None] = mapped_column(Text) # systemd unit / equiv
+    # Per-target compute compatibility — pulled from compute_stable_id
+    # values (rpi4 / rpi5 / pico2w / …). Empty list = any target.
+    compatible_compute_json: Mapped[list] = mapped_column(JSON, default=list)
+    tags_json: Mapped[list] = mapped_column(JSON, default=list)
+    size_bytes: Mapped[int | None] = mapped_column()                   # download size (info)
+    status: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class IndependentAppDeploy(Base):
+    """Audit row per push of an IndependentApp to an EdgeGroup. Tracks
+    the SSH deploy result + autostart status so the operator can see
+    which devices have which app at which version."""
+    __tablename__ = "independent_app_deploys"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    app_id: Mapped[str] = mapped_column(
+        ForeignKey("independent_apps.id"), nullable=False, index=True
+    )
+    group_id: Mapped[str] = mapped_column(
+        ForeignKey("edge_groups.id"), nullable=False, index=True
+    )
+    version: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    # ok | failed | rolled_back
+    detail: Mapped[str | None] = mapped_column(Text)
+    deployed_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+
 PROTOCOL_KEYS = ("mqtt", "opcua", "modbus", "can")
 # Vendor cloud-account providers managed at the Master level. Each
 # ComponentInstance that's a smart-home gadget (Tapo plug, Hue bulb,

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>sjweb — Manual</title>
+  <link rel="stylesheet" href="/static/sjweb.css">
+</head>
+<body>
+  <header>
+    <h1>🎮 Manual jog</h1>
+    <nav><a href="/">← Back</a></nav>
+  </header>
+  <main>
+    <p>Distance (mm) <input id="dist" value="10" type="number"></p>
+    <p>Speed (1-10) <input id="speed" value="5" type="number" min="1" max="10"></p>
+    <div class="pad">
+      <button data-dir="up">↑</button><br>
+      <button data-dir="left">←</button>
+      <button data-dir="right">→</button><br>
+      <button data-dir="down">↓</button>
+      <p>Z: <button data-dir="zup">⬆ Z up</button>
+             <button data-dir="zdown">⬇ Z down</button></p>
+    </div>
+    <pre id="log"></pre>
+  </main>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const sock = io();
+    const logEl = document.getElementById("log");
+    sock.on("log", d => { logEl.textContent += d.msg + "\n"; logEl.scrollTop = logEl.scrollHeight; });
+    document.querySelectorAll(".pad button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        sock.emit("manual_control", {
+          dir: btn.dataset.dir,
+          distance: parseFloat(document.getElementById("dist").value),
+          speed: parseInt(document.getElementById("speed").value),
+        });
+      });
+    });
+  </script>
+</body>
+</html>

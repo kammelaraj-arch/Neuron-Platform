@@ -20,6 +20,7 @@ from .models import APIKey, FeatureRequest
 from .routers import (
     ai_agent,
     apikeys,
+    apps_ui,
     audit,
     auth_ui,
     device_wizard_ui,
@@ -157,6 +158,77 @@ async def _seed_feature_requests_if_empty() -> None:
         _log.warning("Seeded %d initial feature requests.", len(seed))
 
 
+async def _seed_independent_apps_if_empty() -> None:
+    """Ship the platform with one ready-to-use reference app — a
+    DRV8825 × 4 XYZ plotter for Pi 4 / Pi 5. Auto-starts via systemd
+    on the target device."""
+    from sqlalchemy import func as sa_func
+    from .models import IndependentApp
+    async with SessionLocal() as session:
+        existing = await session.scalar(select(sa_func.count()).select_from(IndependentApp))
+        if existing:
+            return
+        plotter = IndependentApp(
+            short_id="APP-0001",
+            title="Stepper XYZ Plotter (sjweb)",
+            description=(
+                "Flask-SocketIO web app for a 4× DRV8825 dual-Y XYZ plotter. "
+                "Upload an image (jalebi spiral, human silhouette, logo, anything) → "
+                "extracts the contours with OpenCV → executes the contour as motor "
+                "steps with smooth interpolation. Manual jog + Z-up/Z-down controls "
+                "via the web UI on port 5000. Per-profile DB so the operator can "
+                "save and re-run shapes."
+            ),
+            app_type="pi",
+            version="1.0.0",
+            vendor="Neuron Platform / community",
+            icon_url=None,
+            repo_url="https://github.com/kammelaraj-arch/Neuron-Platform/tree/main/apps/sjweb",
+            download_url=None,
+            install_command=(
+                "set -e; cd /opt && "
+                "([ -d sjweb ] || git clone https://github.com/kammelaraj-arch/Neuron-Platform.git /tmp/np); "
+                "[ -d /opt/sjweb ] || cp -r /tmp/np/apps/sjweb /opt/sjweb; "
+                "apt-get update -y && apt-get install -y python3-pip python3-opencv libatlas-base-dev; "
+                "pip3 install --break-system-packages flask flask-socketio eventlet RPi.GPIO numpy"
+            ),
+            start_command="/usr/bin/python3 /opt/sjweb/sjweb.py",
+            autostart_method="systemd",
+            autostart_unit_template=(
+                "[Unit]\n"
+                "Description=Stepper XYZ Plotter (sjweb)\n"
+                "After=network-online.target\n"
+                "Wants=network-online.target\n\n"
+                "[Service]\n"
+                "Type=simple\n"
+                "WorkingDirectory=/opt/sjweb\n"
+                "ExecStart=/usr/bin/python3 /opt/sjweb/sjweb.py\n"
+                "Environment=JWEB_DEBUG=0\n"
+                "Restart=on-failure\n"
+                "RestartSec=10\n"
+                "User=root\n"
+                "StandardOutput=journal\n"
+                "StandardError=journal\n\n"
+                "[Install]\n"
+                "WantedBy=multi-user.target\n"
+            ),
+            compatible_compute_json=["compute.rpi4", "compute.rpi5"],
+            tags_json=["plotter", "stepper", "cnc", "opencv", "jalebi",
+                       "drv8825", "image-to-gcode", "flask", "socketio"],
+            status="published",
+            notes=(
+                "Reference Pi app. Pairs with the catalogue's "
+                "board.cnc.cnc_shield_v3 + 4× board.stepper.drv8825. "
+                "Upload images and the plotter traces their outline; "
+                "great for spirographs, logos, and human-figure portraits. "
+                "Web UI on port 5000 once the systemd unit is up."
+            ),
+        )
+        session.add(plotter)
+        await session.commit()
+        _log.warning("Seeded reference app: %s (%s)", plotter.short_id, plotter.title)
+
+
 async def _bootstrap_admin_key_if_needed() -> None:
     async with SessionLocal() as session:
         existing = await session.scalar(select(APIKey).where(APIKey.tier == "admin"))
@@ -189,6 +261,7 @@ async def lifespan(app: FastAPI):
     load_catalog(force=True)
     await _bootstrap_admin_key_if_needed()
     await _seed_feature_requests_if_empty()
+    await _seed_independent_apps_if_empty()
 
     # Periodic audit retention prune so SQLite doesn't grow unbounded.
     from .security.audit_retention import retention_loop
@@ -248,6 +321,7 @@ app.include_router(features_ui.router)
 app.include_router(functions_ui.router)
 app.include_router(wifi_ui.router)
 app.include_router(vendor_accounts_ui.router)
+app.include_router(apps_ui.router)
 
 # JSON API routers
 app.include_router(library.router)

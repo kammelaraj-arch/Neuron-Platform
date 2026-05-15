@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>sjweb — Stepper XYZ Plotter</title>
+  <link rel="stylesheet" href="/static/sjweb.css">
+</head>
+<body>
+  <header>
+    <h1>🪡 sjweb — Stepper XYZ Plotter</h1>
+    <nav>
+      <a href="/upload">+ Upload</a>
+      <a href="/manual">🎮 Manual</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Saved profiles</h2>
+    {% if profiles %}
+      <table>
+        <thead><tr><th>Name</th><th>Scale</th><th>Smoothing</th><th>Steps</th><th></th></tr></thead>
+        <tbody>
+          {% for p in profiles %}
+            <tr>
+              <td>{{ p.name }}</td>
+              <td>{{ p.scale }}</td>
+              <td>{{ p.smoothing }}</td>
+              <td>{{ p.steps }}</td>
+              <td><button class="run" data-id="{{ p.id }}">▶ Run</button></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No profiles yet — <a href="/upload">upload an image</a> to get started.</p>
+    {% endif %}
+
+    <h2>Live log</h2>
+    <pre id="log"></pre>
+
+    <h2>Run progress</h2>
+    <div id="progress"></div>
+  </main>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const sock = io();
+    const logEl = document.getElementById("log");
+    const progEl = document.getElementById("progress");
+
+    sock.on("log", d => { logEl.textContent += d.msg + "\n"; logEl.scrollTop = logEl.scrollHeight; });
+    sock.on("progress", d => { progEl.textContent = `[${d.profile_id}] ${d.pct}% (${d.index}/${d.total})`; });
+    sock.on("done", d => { progEl.textContent = `Done profile ${d.profile_id}.`; });
+    sock.on("error", d => { progEl.textContent = "ERROR: " + d.msg; });
+
+    document.querySelectorAll(".run").forEach(btn => {
+      btn.addEventListener("click", () => {
+        sock.emit("run_profile", { profile_id: btn.dataset.id });
+      });
+    });
+  </script>
+</body>
+</html>

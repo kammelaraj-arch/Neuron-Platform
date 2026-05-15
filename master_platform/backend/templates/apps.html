@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Independent Apps{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Independent Apps</h1>
+      <p class="text-slate-400 text-sm">
+        Standalone applications the fleet can install + autostart. Pi targets deploy
+        over the existing SSH channel; Windows / macOS / Android / iOS / Web apps are
+        catalogued so operators have one inventory across the fleet.
+      </p>
+    </div>
+    <a href="#new-app" class="rounded-lg bg-emerald-500 px-4 py-2 font-medium text-slate-950 hover:bg-emerald-400">
+      + New app
+    </a>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  <!-- ── Catalogue ──────────────────────────────────────────────────── -->
+  {% set type_icon = {
+       'pi':      '🥧',
+       'linux':   '🐧',
+       'docker':  '🐳',
+       'windows': '🪟',
+       'macos':   '🍏',
+       'android': '🤖',
+       'ios':     '📱',
+       'web':     '🌐',
+     } %}
+  {% set status_color = {
+       'draft':       'bg-slate-700 text-slate-200',
+       'published':   'bg-emerald-500/20 text-emerald-300',
+       'deprecated':  'bg-amber-500/20 text-amber-300',
+     } %}
+  <section class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {% for a in apps %}
+      <article class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 flex flex-col gap-3">
+        <header class="flex items-start gap-3">
+          <div class="grid h-12 w-12 place-items-center rounded-lg bg-slate-800 text-2xl shrink-0">
+            {% if a.icon_url %}<img src="{{ a.icon_url }}" class="h-10 w-10 object-contain" alt="">
+            {% else %}{{ type_icon.get(a.app_type, '📦') }}{% endif %}
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-mono text-slate-500">{{ a.short_id }}</div>
+            <div class="text-sm font-semibold text-slate-200 truncate">{{ a.title }}</div>
+            <div class="text-[11px] text-slate-400">
+              v{{ a.version }}{% if a.vendor %} · {{ a.vendor }}{% endif %}
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 items-end shrink-0">
+            <span class="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider {{ status_color.get(a.status, 'bg-slate-700') }}">{{ a.status }}</span>
+            <span class="rounded-full bg-cyan-500/20 text-cyan-300 px-2 py-0.5 text-[10px] uppercase tracking-wider">{{ a.app_type }}</span>
+          </div>
+        </header>
+        {% if a.description %}
+          <p class="text-[11px] text-slate-400 line-clamp-3">{{ a.description }}</p>
+        {% endif %}
+        {% if a.tags_json %}
+          <div class="flex flex-wrap gap-1 text-[10px]">
+            {% for t in a.tags_json %}<span class="rounded-full bg-slate-800 px-2 py-0.5 text-slate-300">{{ t }}</span>{% endfor %}
+          </div>
+        {% endif %}
+        <div class="mt-auto flex flex-wrap gap-2 text-[11px]">
+          {% if a.download_url %}
+            <a href="{{ a.download_url }}" target="_blank" class="rounded border border-emerald-500/50 px-2 py-1 text-emerald-300 hover:bg-emerald-500/10">⬇ Download</a>
+          {% endif %}
+          {% if a.repo_url %}
+            <a href="{{ a.repo_url }}" target="_blank" class="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800">📦 Repo</a>
+          {% endif %}
+          {% if a.app_type in ('pi', 'linux', 'docker') %}
+            <button type="button" onclick="deployAppPrompt('{{ a.id }}', '{{ a.title|replace("'", "\\'") }}')"
+                    class="rounded border border-cyan-500/60 px-2 py-1 text-cyan-300 hover:bg-cyan-500/10">🚀 Deploy</button>
+          {% endif %}
+          <form method="post" action="/ui/apps/{{ a.id }}/status" class="inline">
+            <select name="status" onchange="this.form.submit()"
+                    class="rounded border border-slate-700 bg-slate-900 text-slate-300 text-[10px] px-1 py-0.5">
+              {% for s in app_statuses %}
+                <option value="{{ s }}" {% if a.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </form>
+          <form method="post" action="/ui/apps/{{ a.id }}/delete" class="inline ml-auto"
+                onsubmit="return confirm('Delete {{ a.short_id }} ({{ a.title }})?');">
+            <button class="rounded border border-red-700 px-2 py-1 text-red-300 hover:bg-red-500/10">✕</button>
+          </form>
+        </div>
+        {% if a.install_command or a.start_command %}
+          <details class="mt-1">
+            <summary class="cursor-pointer text-[10px] text-slate-500 hover:text-white">▾ Install / start commands</summary>
+            {% if a.install_command %}<pre class="mt-1 rounded bg-slate-950 p-2 text-[10px] text-cyan-200 whitespace-pre-wrap">install: {{ a.install_command }}</pre>{% endif %}
+            {% if a.start_command %}<pre class="mt-1 rounded bg-slate-950 p-2 text-[10px] text-emerald-200 whitespace-pre-wrap">start: {{ a.start_command }}</pre>{% endif %}
+          </details>
+        {% endif %}
+      </article>
+    {% else %}
+      <p class="col-span-full rounded-xl border border-slate-800 bg-slate-900/40 p-6 text-center text-sm text-slate-500 italic">
+        No apps yet. Add the first one below — Pi plotters, web dashboards, Windows tools, Android remote controls, anything.
+      </p>
+    {% endfor %}
+  </section>
+
+  <!-- ── New app form ──────────────────────────────────────────────── -->
+  <section id="new-app" class="mt-10 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] p-5">
+    <h2 class="text-base font-semibold text-emerald-300">+ Register new app</h2>
+    <form method="post" action="/ui/apps/new" class="mt-3 grid gap-3 sm:grid-cols-2 text-sm">
+      <div class="sm:col-span-2">
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Title *</label>
+        <input name="title" required maxlength="200"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-medium">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Description</label>
+        <textarea name="description" rows="2"
+                  class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2"></textarea>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">App type *</label>
+        <select name="app_type" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+          {% for t in app_types %}<option value="{{ t }}">{{ type_icon.get(t, '') }} {{ t }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Version</label>
+        <input name="version" value="1.0.0" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Vendor</label>
+        <input name="vendor" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Icon URL</label>
+        <input name="icon_url" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Repo URL (git)</label>
+        <input name="repo_url" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Download URL</label>
+        <input name="download_url" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Install command</label>
+        <textarea name="install_command" rows="3" placeholder="git clone ... && cd ... && pip install -r requirements.txt"
+                  class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs"></textarea>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Start command</label>
+        <input name="start_command" placeholder="/usr/bin/python3 /opt/myapp/main.py"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Autostart method</label>
+        <select name="autostart_method" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+          {% for m in autostart_methods %}<option value="{{ m }}" {% if m == 'systemd' %}selected{% endif %}>{{ m }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Compatible compute (CSV)</label>
+        <input name="compatible_compute" placeholder="compute.rpi4, compute.rpi5"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-xs">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Autostart unit template (systemd)</label>
+        <textarea name="autostart_unit_template" rows="6" placeholder="leave blank → auto-generated from start_command"
+                  class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 font-mono text-[11px]"></textarea>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Tags (CSV)</label>
+        <input name="tags" placeholder="plotter, opencv, cnc"
+               class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-wider text-slate-400">Status</label>
+        <select name="status" class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2">
+          {% for s in app_statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="sm:col-span-2 flex items-center gap-3">
+        <button class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">Register app</button>
+        <span class="text-[10px] text-slate-500">Audited as <code>app.create</code>.</span>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    async function deployAppPrompt(appId, title) {
+      const gid = prompt('EdgeGroup id to deploy "' + title + '" to:');
+      if (!gid) return;
+      const r = await fetch(`/ui/apps/${appId}/deploy/${gid}`,
+                            {method: 'POST', credentials: 'same-origin'});
+      const d = await r.json();
+      let msg = (d.ok ? '✓ ' : '✗ ') + (d.summary || 'no detail');
+      if (d.steps) {
+        msg += '\n' + d.steps.map(s =>
+          (s.ok ? '✓' : '✗') + ' ' + s.name + ' — ' + (s.detail || '').slice(0, 100)
+        ).join('\n');
+      }
+      alert(msg);
+      if (d.ok) location.reload();
+    }
+  </script>
+{% endblock %}

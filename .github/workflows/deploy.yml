@@ -38,6 +38,7 @@ on:
       - 'deployer/**'
       - 'nginx/**'
       - 'device_runtime/**'
+      - 'apps/**'
       - 'deploy.sh'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
