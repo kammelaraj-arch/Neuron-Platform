@@ -98,6 +98,25 @@ def _build_app(settings):
         return {"version": __version__, "app": "smartplotter",
                 "device_dna": settings.device_dna}
 
+    @app.route("/api/drivers")
+    def api_drivers():
+        from .pico_bridge import get_bridge
+        bridge = get_bridge()
+        return {
+            "connected": bridge.connected,
+            "device": bridge.device,
+            "drivers": bridge.info() if bridge.connected else [],
+            "last_error": bridge.last_error,
+        }
+
+    @app.route("/api/drivers/redetect", methods=["POST"])
+    def api_drivers_redetect():
+        from .pico_bridge import get_bridge
+        bridge = get_bridge()
+        if not bridge.connected:
+            bridge.open()
+        return {"drivers": bridge.redetect(), "connected": bridge.connected}
+
     @app.route("/")
     @require_api_key(app)
     def index():

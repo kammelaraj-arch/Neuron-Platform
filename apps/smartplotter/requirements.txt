@@ -5,4 +5,5 @@ paho-mqtt==2.1.0
 opencv-python-headless==4.10.0.84
 numpy==1.26.4
 werkzeug==3.0.4
+pyserial==3.5
 RPi.GPIO==0.7.1; platform_machine == "armv7l" or platform_machine == "aarch64"
