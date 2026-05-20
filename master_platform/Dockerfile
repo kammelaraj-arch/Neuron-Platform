@@ -17,6 +17,10 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY master_platform /app/master_platform
 COPY libraries /app/libraries
 COPY shared_schemas /app/shared_schemas
+# Pico baseline (Layer 1) + SmartPlotter Pico app firmware — both
+# bundled into per-Pico zips by /ui/devices/wizard/{gid}/pico-bundle.zip
+COPY apps/neuron-pico-baseline /app/apps/neuron-pico-baseline
+COPY apps/smartplotter/pico_firmware /app/apps/smartplotter/pico_firmware
 
 # Build-arg → env var so /healthz + /api/version can surface the running
 # commit. Defaults to "unknown" if the workflow didn't pass --build-arg.
