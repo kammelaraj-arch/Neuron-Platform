@@ -33,6 +33,7 @@ from .routers import (
     library_manage_ui,
     mtls,
     ota,
+    pico_provision_ui,
     processes,
     recipes,
     secrets_ui,
@@ -492,6 +493,7 @@ app.include_router(wifi_ui.router)
 app.include_router(vendor_accounts_ui.router)
 app.include_router(apps_ui.router)
 app.include_router(users_ui.router)
+app.include_router(pico_provision_ui.router)
 
 # JSON API routers
 app.include_router(library.router)

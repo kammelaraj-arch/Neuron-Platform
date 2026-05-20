@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Pico provisioning — {{ group.name }}{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Provision Pico 2 W</h1>
+      <p class="text-slate-400 text-sm">
+        Group <code class="font-mono text-emerald-300">{{ group.name }}</code> ·
+        DNA <code class="font-mono text-emerald-300">{{ dna }}</code>
+      </p>
+    </div>
+    <a href="/ui/devices/wizard/{{ group.id }}/review"
+       class="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800">← Back to wizard</a>
+  </header>
+
+  <section class="mt-6 grid gap-4 lg:grid-cols-3">
+    <article class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <div class="text-emerald-400 font-mono text-xs">STEP 1</div>
+      <h2 class="mt-1 text-lg font-semibold">Flash MicroPython</h2>
+      <p class="mt-2 text-sm text-slate-300">
+        One-off per Pico — installs the runtime our firmware needs.
+      </p>
+      <ol class="mt-3 space-y-2 text-[13px] text-slate-300 list-decimal pl-5">
+        <li>Unplug the Pico from USB.</li>
+        <li>Hold the <strong>BOOTSEL</strong> button (white, on the Pico).</li>
+        <li>While holding, plug it back into your laptop. A USB drive named <code>RP2350</code> appears.</li>
+        <li>Release BOOTSEL.</li>
+        <li>Drag the file you'll download below onto the drive.</li>
+        <li>The Pico reboots automatically and the drive disappears — that's normal.</li>
+      </ol>
+      <a href="{{ micropython_url }}" target="_blank"
+         class="mt-4 inline-block rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+        ⬇ MicroPython {{ micropython_version }}
+      </a>
+      <p class="mt-2 text-[10px] text-slate-500">
+        Pinned to a tested version. Direct from micropython.org.
+      </p>
+    </article>
+
+    <article class="rounded-2xl border border-emerald-500/40 bg-emerald-500/[0.04] p-5">
+      <div class="text-emerald-400 font-mono text-xs">STEP 2</div>
+      <h2 class="mt-1 text-lg font-semibold">Download bundle for this group</h2>
+      <p class="mt-2 text-sm text-slate-300">
+        Per-Pico zip with WiFi + DNA + brain shell + comms channels + the
+        SmartPlotter firmware — built fresh from this group's config every time.
+      </p>
+      <a href="/ui/devices/wizard/{{ group.id }}/pico-bundle.zip"
+         class="mt-4 inline-block rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400">
+        ⬇ pico-bundle-{{ dna }}.zip
+      </a>
+      <ul class="mt-3 text-[11px] text-slate-400 space-y-1">
+        <li><span class="text-emerald-300">✓</span> WiFi:
+          {% if wifi %}<code>{{ wifi.ssid }}</code>{% else %}<span class="text-amber-300">none configured — set on step 3 of the wizard first</span>{% endif %}
+        </li>
+        <li><span class="text-emerald-300">✓</span> Brain shell (axes, limits, safety)</li>
+        <li><span class="text-emerald-300">✓</span> Three comms channels: control · emergency · OTA</li>
+        <li><span class="text-emerald-300">✓</span> UART link config for Pi 5 parent</li>
+      </ul>
+    </article>
+
+    <article class="rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+      <div class="text-emerald-400 font-mono text-xs">STEP 3</div>
+      <h2 class="mt-1 text-lg font-semibold">Push the bundle to the Pico</h2>
+      <p class="mt-2 text-sm text-slate-300">
+        On your laptop, with the Pico still on USB:
+      </p>
+      <pre class="mt-3 rounded-lg bg-slate-950 p-3 text-[11px] text-emerald-200 whitespace-pre-wrap leading-relaxed">pip install --user mpremote
+unzip pico-bundle-{{ dna }}.zip
+cd pico-bundle-{{ dna }}
+mpremote connect auto cp boot.py main.py tmc.py config.json :
+mpremote connect auto reset</pre>
+      <p class="mt-3 text-[11px] text-slate-400">
+        After reset, the Pico:
+      </p>
+      <ul class="mt-1 text-[11px] text-slate-400 list-disc pl-5">
+        <li>connects to <code>{{ wifi.ssid if wifi else '—' }}</code></li>
+        <li>scans the TMC bus, autodetects each driver chip</li>
+        <li>announces itself on UART (GP0/GP1) to the Pi 5</li>
+        <li>keeps motors disabled until the Pi 5 sends <code>release</code></li>
+      </ul>
+    </article>
+  </section>
+
+  <!-- ── Comms channels visualisation ────────────────────────────── -->
+  <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+    <h2 class="text-base font-semibold">Communication channels baked into the bundle</h2>
+    <p class="text-sm text-slate-400">
+      Every Pico bundle ships with all four channels by default — CLAUDE.md "firmware default-channel contract".
+      No operator opt-in needed; they exist from the moment the Pico boots.
+    </p>
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.04] p-3">
+        <div class="text-[10px] uppercase tracking-wider text-emerald-300">Channel 1</div>
+        <div class="text-sm font-semibold mt-1">Control (C2)</div>
+        <div class="text-[11px] text-slate-400 mt-1">mTLS · port 8883 · recipe commands, parameter updates, telemetry uploads</div>
+      </div>
+      <div class="rounded-lg border border-red-500/30 bg-red-500/[0.04] p-3">
+        <div class="text-[10px] uppercase tracking-wider text-red-300">Channel 2</div>
+        <div class="text-sm font-semibold mt-1">Emergency</div>
+        <div class="text-[11px] text-slate-400 mt-1">mTLS · port 8884 · separate cert · only <code>safe_stop</code>, <code>safe_shutdown</code>, <code>status</code></div>
+      </div>
+      <div class="rounded-lg border border-cyan-500/30 bg-cyan-500/[0.04] p-3">
+        <div class="text-[10px] uppercase tracking-wider text-cyan-300">Channel 3</div>
+        <div class="text-sm font-semibold mt-1">OTA</div>
+        <div class="text-[11px] text-slate-400 mt-1">HTTPS poll · hourly · base-version gated</div>
+      </div>
+      <div class="rounded-lg border border-amber-500/30 bg-amber-500/[0.04] p-3">
+        <div class="text-[10px] uppercase tracking-wider text-amber-300">Channel 4</div>
+        <div class="text-sm font-semibold mt-1">UART (local)</div>
+        <div class="text-[11px] text-slate-400 mt-1">GP0/GP1 · 115200 · parent Pi 5 link · always-on regardless of WiFi</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── First-layer info ───────────────────────────────────────── -->
+  <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+    <h2 class="text-base font-semibold">First-layer payload</h2>
+    <p class="text-sm text-slate-400">What's in <code>config.json</code> on the Pico:</p>
+    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+      <div class="rounded-lg bg-slate-950 p-3">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500">Device DNA</div>
+        <div class="font-mono text-emerald-300 mt-1 break-all">{{ dna }}</div>
+      </div>
+      <div class="rounded-lg bg-slate-950 p-3">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500">WiFi SSID</div>
+        <div class="font-mono text-slate-200 mt-1">
+          {{ wifi.ssid if wifi else '—' }}
+        </div>
+      </div>
+      <div class="rounded-lg bg-slate-950 p-3">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500">WiFi security</div>
+        <div class="font-mono text-slate-200 mt-1">{{ wifi.security if wifi else '—' }}</div>
+      </div>
+      <div class="rounded-lg bg-slate-950 p-3">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500">Brain version</div>
+        <div class="font-mono text-slate-200 mt-1">{{ group.app_bundle_version }}</div>
+      </div>
+    </div>
+
+    {% if not wifi %}
+      <div class="mt-4 rounded-md border border-amber-500/30 bg-amber-500/[0.06] p-3 text-sm text-amber-200">
+        ⚠ No WiFi network is assigned to this group yet.
+        <a href="/ui/devices/wizard/{{ group.id }}/wifi" class="underline">Set one on step 3</a> before downloading the bundle, otherwise the Pico will boot in UART-only mode (still works, just no cloud channels).
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- ── Troubleshooting ────────────────────────────────────────── -->
+  <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-5">
+    <h2 class="text-base font-semibold">Troubleshooting</h2>
+    <dl class="mt-3 grid gap-3 sm:grid-cols-2 text-[12px] text-slate-300">
+      <div>
+        <dt class="font-semibold text-slate-200">mpremote: "no device found"</dt>
+        <dd class="text-slate-400">USB cable might be charge-only. Try a different cable (data-capable). On Linux you may need to add yourself to the <code>dialout</code> group.</dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-slate-200">"RP2350" drive never appears</dt>
+        <dd class="text-slate-400">You released BOOTSEL too soon. Unplug, hold BOOTSEL, plug in, keep holding for 2 sec, then release.</dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-slate-200">WiFi never comes up</dt>
+        <dd class="text-slate-400">Check the country code in config.json — Pico 2 W enforces regulatory limits. UK is "GB", US is "US".</dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-slate-200">TMC bus shows all "absent"</dt>
+        <dd class="text-slate-400">Wiring fault on GP4 (shared TMC UART). Check the half-duplex connection to all 3 drivers' PDN_UART pads.</dd>
+      </div>
+    </dl>
+  </section>
+{% endblock %}
