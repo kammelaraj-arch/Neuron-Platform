@@ -33,7 +33,6 @@ from .routers import (
     library_manage_ui,
     mtls,
     ota,
-    pico_api,
     pico_provision_ui,
     processes,
     recipes,
@@ -507,7 +506,6 @@ app.include_router(ota.router)
 app.include_router(recipes.router)
 app.include_router(ai_agent.router)
 app.include_router(diag.router)
-app.include_router(pico_api.router)
 app.include_router(twin_push.router)
 app.include_router(fabric.router)
 app.include_router(mtls.router)

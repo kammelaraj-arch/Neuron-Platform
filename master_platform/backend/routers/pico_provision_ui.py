@@ -18,11 +18,8 @@ step — the operator's laptop is the conduit, USB-cabled to the Pico.
 """
 from __future__ import annotations
 
-import hashlib
 import io
 import json
-import socket
-import ssl
 import secrets as _secrets
 import zipfile
 from datetime import datetime, timezone
@@ -31,13 +28,10 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
 from ..models import APIKey, EdgeGroup, WiFiNetwork
-from ..security.audit import record
-from ..security.keys import issue_payload
 from ..security.secret_crypto import decrypt_secret
 from ..security.ui_auth import ui_require_login
 
@@ -45,63 +39,8 @@ from ..security.ui_auth import ui_require_login
 _BASE = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(_BASE / "templates"))
 _PICO_FW_DIR = _BASE.parent.parent / "apps" / "smartplotter" / "pico_firmware"
-_BASELINE_DIR = _BASE.parent.parent / "apps" / "neuron-pico-baseline"
 
 router = APIRouter(tags=["ui-pico-provision"])
-
-
-# Configurable via env. Default matches CLAUDE.md.
-import os
-NEURON_HOST = os.environ.get("NEURON_PUBLIC_HOST", "neuron.shital.org.uk")
-NEURON_HTTPS_PORT = int(os.environ.get("NEURON_PUBLIC_PORT", "443"))
-
-
-def _fetch_server_cert_sha256(host: str, port: int) -> str:
-    """Return the SHA-256 fingerprint of the host's TLS server cert.
-
-    Used to pin the cert into every Pico bundle so a rogue CA / MITM
-    can't impersonate the master."""
-    ctx = ssl.create_default_context()
-    with socket.create_connection((host, port), timeout=5) as raw:
-        with ctx.wrap_socket(raw, server_hostname=host) as tls:
-            der = tls.getpeercert(binary_form=True)
-    return hashlib.sha256(der).hexdigest()
-
-
-async def _issue_pico_api_key(
-    session: AsyncSession, group: EdgeGroup, dna: str, actor_id: str,
-) -> str:
-    """Mint a fresh per-Pico API key (tier=pico) and return the plaintext.
-
-    Revokes any prior pico key bound to the same DNA so re-provisioning
-    is safe (no key proliferation in the DB)."""
-    # Revoke any prior key for this DNA so re-flashing rotates cleanly.
-    prior = (await session.execute(
-        select(APIKey).where(APIKey.owner == f"pico:{dna}",
-                             APIKey.status == "active")
-    )).scalars().all()
-    for k in prior:
-        k.status = "revoked"
-
-    secret, kw = issue_payload(
-        label=f"pico {group.name} ({dna})",
-        owner=f"pico:{dna}",
-        tier="pico",
-        scopes=[],
-        rate_per_minute=300,
-        rate_burst=60,
-        ttl_days=None,
-    )
-    new_key = APIKey(**kw)
-    session.add(new_key)
-    await session.flush()
-    await record(
-        session, actor=actor_id, actor_kind="ui_session",
-        action="apikey.issue_pico", target_kind="apikey",
-        target_id=new_key.id,
-        detail={"dna": dna, "group_id": group.id, "tier": "pico"},
-    )
-    return secret
 
 
 # Latest MicroPython release for Pico 2 W. Pinned for reproducible
@@ -254,70 +193,37 @@ async def pico_bundle_zip(
     brain = _build_brain_shell(group)
     channels = _build_channels(group, dna)
 
-    # Per-Pico API key with tier=pico (narrowly scoped) — owner encodes DNA.
-    api_secret = await _issue_pico_api_key(session, group, dna, actor.id)
-
-    # Pin the master's TLS cert into the bundle so the Pico refuses to
-    # speak to any TLS server with a different fingerprint.
-    try:
-        cert_fp = _fetch_server_cert_sha256(NEURON_HOST, NEURON_HTTPS_PORT)
-    except Exception as e:
-        # Don't block provisioning if cert fetch fails; pin is empty and
-        # the Pico will refuse all HTTPS until re-provisioned. Operator
-        # can still test UART + emergency local control.
-        cert_fp = ""
-
-    # Read app layer (Layer 2) — SmartPlotter Pico firmware.
-    app_main = (_PICO_FW_DIR / "main.py").read_text(encoding="utf-8")
-    app_tmc  = (_PICO_FW_DIR / "tmc.py").read_text(encoding="utf-8")
-    # Read baseline (Layer 1) — Neuron platform primitives.
-    baseline_files = {
-        "boot.py":              (_BASELINE_DIR / "boot.py").read_text(encoding="utf-8"),
-        "neuron/__init__.py":   (_BASELINE_DIR / "neuron" / "__init__.py").read_text(encoding="utf-8"),
-        "neuron/config.py":     (_BASELINE_DIR / "neuron" / "config.py").read_text(encoding="utf-8"),
-        "neuron/identity.py":   (_BASELINE_DIR / "neuron" / "identity.py").read_text(encoding="utf-8"),
-        "neuron/security.py":   (_BASELINE_DIR / "neuron" / "security.py").read_text(encoding="utf-8"),
-        "neuron/api.py":        (_BASELINE_DIR / "neuron" / "api.py").read_text(encoding="utf-8"),
-        "neuron/channels.py":   (_BASELINE_DIR / "neuron" / "channels.py").read_text(encoding="utf-8"),
-        "neuron/watchdog.py":   (_BASELINE_DIR / "neuron" / "watchdog.py").read_text(encoding="utf-8"),
-        "neuron/failsafe.py":   (_BASELINE_DIR / "neuron" / "failsafe.py").read_text(encoding="utf-8"),
-    }
+    # Read the firmware source files from the repo.
+    main_py = (_PICO_FW_DIR / "main.py").read_text(encoding="utf-8")
+    tmc_py = (_PICO_FW_DIR / "tmc.py").read_text(encoding="utf-8")
 
     config = {
-        "schema_version":     "1",
-        "device_dna":         dna,
-        "group_id":           group.id,
-        "group_name":         group.name,
-        "compute":            group.compute_stable_id,
-        "hardware_revision":  group.hardware_revision,
+        "device_dna": dna,
+        "group_id": group.id,
+        "group_name": group.name,
+        "compute": group.compute_stable_id,
+        "hardware_revision": group.hardware_revision,
         "base_firmware_version": group.base_firmware_version,
-        "api_key":            api_secret,
-        "allowed_hosts":      [NEURON_HOST],
-        "tls_cert_sha256":    cert_fp,
-        "wifi":               wifi,
-        "brain":              brain,
-        "channels":           channels,
-        "generated_at":       datetime.now(timezone.utc).isoformat(),
+        "wifi": wifi,
+        "brain": brain,
+        "channels": channels,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+    # boot.py — runs on every reset, connects WiFi, then chains main.py.
+    boot_py = _BOOT_PY_TEMPLATE
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        # Layer 1 — baseline
-        for path, content in baseline_files.items():
-            z.writestr(path, content)
-        # Layer 2 — app
-        z.writestr("app/__init__.py", "")
-        z.writestr("app/main.py", app_main)
-        z.writestr("app/tmc.py",  app_tmc)
-        # Per-Pico config
+        z.writestr("boot.py", boot_py)
+        z.writestr("main.py", main_py)
+        z.writestr("tmc.py", tmc_py)
         z.writestr("config.json", json.dumps(config, indent=2))
         z.writestr("README.txt", _BUNDLE_README.format(
             dna=dna, group_name=group.name,
             wifi=wifi["ssid"] if wifi else "(none configured)",
-            cert_fp=cert_fp[:16] + "…" if cert_fp else "(NOT PINNED — re-provision once VPS reachable)",
         ))
     buf.seek(0)
-    await session.commit()
     return Response(
         content=buf.getvalue(),
         media_type="application/zip",
@@ -372,41 +278,31 @@ else:
 # main.py takes over from here.
 """
 
-_BUNDLE_README = """Pico 2 W bundle — {group_name}
+_BUNDLE_README = """Pico 2 W bundle for group: {group_name}
 Device DNA: {dna}
-WiFi:       {wifi}
-Cert pin:   SHA-256 {cert_fp}
+WiFi: {wifi}
 
-Layered firmware:
-
-  Layer 0  MicroPython runtime           (you flash this once via BOOTSEL)
-  Layer 1  Neuron baseline               (boot.py + neuron/*.py)
-  Layer 2  SmartPlotter app              (app/main.py + app/tmc.py)
-  Config   Per-Pico identity + creds     (config.json)
-
-Layer 1 enforces (for ALL apps, not just SmartPlotter):
-  - host allow-list — only talks to the master, refuses anywhere else
-  - TLS cert pinning — refuses any server cert with a different SHA-256
-  - per-Pico API key — narrow tier=pico scope, revocable from master
-  - parent-Pi watchdog — autonomous failsafe on link loss
-  - 4 comms channels: control, emergency, OTA, UART (local)
+Files in this zip:
+  boot.py       — connects WiFi at boot, reads config.json
+  main.py       — SmartPlotter firmware entry point (UART ↔ Pi, TMC bus)
+  tmc.py        — TMC2208/2209/2226 driver class
+  config.json   — device DNA + WiFi + brain + comms channels
 
 To flash (laptop USB-cabled to the Pico):
-
   1. Make sure MicroPython is already on the Pico
-     (hold BOOTSEL, plug USB, drag the .uf2 from micropython.org)
+     (hold BOOTSEL, plug USB, drag the .uf2 file)
   2. pip install --user mpremote
-  3. cd into the unzipped directory
-  4. mpremote connect auto fs cp -r . :
+  3. cd into this unzipped directory
+  4. mpremote connect auto cp boot.py main.py tmc.py config.json :
   5. mpremote connect auto reset
 
 After reset the Pico will:
-  - Validate config.json (refuses to boot if missing or malformed)
-  - Bring up WiFi
-  - Construct identity + allow-list + cert-pinner + API client
-  - Hand off to app.main()
-  - Hold motors disabled until parent issues 'release' over UART
+  - bring up WiFi from config.json
+  - scan the TMC bus + autodetect drivers
+  - announce itself to the Pi on GP0/GP1 (UART)
+  - hold motors disabled until parent releases EN
 
-Re-provision any time WiFi password, brain, or pin map changes — this
-also rotates the API key (old one is revoked server-side).
+Bundle generated by Neuron Master. Regenerate any time the WiFi
+password, brain, or pin map changes — the file name includes the
+device DNA so multiple Picos don't get cross-pollinated.
 """

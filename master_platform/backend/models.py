@@ -203,7 +203,7 @@ class EdgeCert(Base):
     notes: Mapped[str | None] = mapped_column(Text)
 
 
-USER_TIERS = ("superadmin", "admin", "operator", "readonly")
+USER_TIERS = ("admin", "operator", "readonly")
 USER_STATUSES = ("active", "disabled")
 DEVICE_ROLES = ("master", "node", "edge", "gateway")
 
