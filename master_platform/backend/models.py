@@ -205,6 +205,7 @@ class EdgeCert(Base):
 
 USER_TIERS = ("admin", "operator", "readonly")
 USER_STATUSES = ("active", "disabled")
+DEVICE_ROLES = ("master", "node", "edge", "gateway")
 
 
 class User(Base):
