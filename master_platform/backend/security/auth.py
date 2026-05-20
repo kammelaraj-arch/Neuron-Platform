@@ -10,12 +10,29 @@ from .rate_limit import limiter
 
 
 SCOPE_HIERARCHY = {
+    # superadmin: everything admin can do, plus protected ops like
+    # tier elevation, key impersonation, audit purge. Used sparingly.
+    "superadmin": {"superadmin", "admin",
+                   "library:read", "library:write",
+                   "systems:read", "systems:write",
+                   "devices:read", "devices:write",
+                   "processes:read", "processes:write",
+                   "apikeys:read", "apikeys:write",
+                   "users:read", "users:write",
+                   "audit:read", "audit:write"},
     "admin": {"admin", "library:read", "library:write", "systems:read", "systems:write",
               "devices:read", "devices:write", "processes:read", "processes:write",
               "apikeys:read", "apikeys:write", "audit:read"},
     "integration": {"library:read", "systems:read", "systems:write",
                     "devices:read", "devices:write", "processes:read", "processes:write"},
     "device": {"devices:read", "devices:write", "library:read"},
+    # pico: narrowly-scoped tier for a single Pico 2 W. Lets the device
+    # publish telemetry, post heartbeats, fetch OTA bundles, and post
+    # to its own emergency channel — but NOT read other devices, manage
+    # users, or change config. The Master-side endpoints additionally
+    # restrict by device DNA (encoded in api_key.owner).
+    "pico": {"pico", "telemetry:write", "ota:read", "emergency:write",
+             "heartbeat:write"},
     "readonly": {"library:read", "systems:read", "devices:read", "processes:read"},
 }
 
