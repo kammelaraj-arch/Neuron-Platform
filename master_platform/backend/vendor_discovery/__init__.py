@@ -346,6 +346,73 @@ async def _discover_google_home(account: VendorAccount) -> list[dict]:
     return []
 
 
+async def _discover_tado(account: VendorAccount) -> list[dict]:
+    """Tado (legacy V3+) climate discovery.
+
+    Lists every zone across every home on the account and returns one
+    VendorDevice per zone. Tado's controllable unit is the *zone*
+    (a room / heating circuit / hot-water), not the physical valve, so
+    we model zones as devices — that's what the operator actually sets
+    a temperature on.
+
+    Auth uses the stored refresh token (device-code login is done once
+    via /ui/tado). If the account has no refresh token yet, this raises
+    a clear instruction to connect first.
+
+    The vendor_device_id is "<home_id>:<zone_id>" so the control router
+    can address a zone unambiguously without a second lookup.
+    """
+    from ..integrations.tado import TadoClient, TadoError
+    from ..security.secret_crypto import decrypt_secret
+
+    if not account.refresh_token_encrypted:
+        raise DiscoveryError(
+            "Tado is not connected yet. Open /ui/tado and click 'Connect "
+            "Tado' to do the one-time device-code login (Tado retired "
+            "password login in 2025)."
+        )
+    refresh_token = decrypt_secret(account.refresh_token_encrypted)
+    extra = dict(account.extra_json or {})
+
+    client = TadoClient(
+        refresh_token=refresh_token,
+        client_id=extra.get("client_id"),
+        api_base=account.base_url or None,
+    )
+
+    out: list[dict] = []
+    try:
+        homes = await client.list_homes()
+        for home in homes:
+            home_id = home.get("id")
+            home_name = home.get("name") or str(home_id)
+            zones = await client.list_zones(home_id)
+            for z in zones:
+                zone_id = z.get("id")
+                devices = z.get("devices") or []
+                serials = [d.get("serialNo") for d in devices if d.get("serialNo")]
+                models = sorted({d.get("deviceType") for d in devices if d.get("deviceType")})
+                out.append({
+                    "vendor_device_id": f"{home_id}:{zone_id}",
+                    "name": f"{home_name} / {z.get('name') or zone_id}",
+                    "model": ", ".join(models) or None,
+                    "device_type": (z.get("type") or "HEATING").lower(),  # heating / hot_water
+                    "firmware_version": None,
+                    "metadata": {
+                        "home_id": home_id,
+                        "home_name": home_name,
+                        "zone_id": zone_id,
+                        "zone_name": z.get("name"),
+                        "zone_type": z.get("type"),
+                        "device_serials": serials,
+                        "supports_dazzle": (z.get("dazzleEnabled")),
+                    },
+                })
+    except TadoError as e:
+        raise DiscoveryError(str(e))
+    return out
+
+
 async def _discover_stub(account: VendorAccount) -> list[dict]:
     """Placeholder for providers we haven't wired discovery for yet.
     Returns an empty list so the operator gets a clear "no devices
@@ -388,7 +455,7 @@ _PROVIDERS = {
     "nest":              _discover_stub,
     "ecobee":            _discover_stub,
     "honeywell":         _discover_stub,
-    "tado":              _discover_stub,
+    "tado":              _discover_tado,
     "sensi":             _discover_stub,
     "drayton_wiser":     _discover_stub,
     # ── Cameras / doorbells / security ──────────────────────────────────
