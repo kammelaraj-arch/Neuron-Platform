@@ -404,25 +404,78 @@ async def _bootstrap_admin_user_if_needed() -> None:
 async def lifespan(app: FastAPI):
     Path(settings.build_artifacts_dir).mkdir(parents=True, exist_ok=True)
     Path("data").mkdir(parents=True, exist_ok=True)
-    await init_db()
-    load_catalog(force=True)
-    await _bootstrap_admin_key_if_needed()
-    await _bootstrap_admin_user_if_needed()
-    await _seed_feature_requests_if_empty()
-    await _seed_independent_apps_if_empty()
+
+    # Tolerant startup: a failure in any one step (e.g. a corrupt SQLite
+    # WAL from a prior crash, a malformed seed row, a hung init_db) must
+    # NOT keep uvicorn from serving /healthz. Without /healthz we can't
+    # see what's wrong from the outside — the deploy pipeline just
+    # times out at 504. Each step gets a hard timeout + its traceback
+    # is appended to data/logs/errors.log, which /api/admin/last-error
+    # exposes so the operator can see what stranded the boot.
+    async def _step(name: str, coro_or_call, *, timeout: float = 60.0,
+                    is_async: bool = True) -> None:
+        import traceback
+        from datetime import datetime, timezone
+        try:
+            if is_async:
+                await asyncio.wait_for(coro_or_call, timeout=timeout)
+            else:
+                coro_or_call()
+        except asyncio.TimeoutError:
+            err = f"timed out after {timeout:.0f}s"
+            _log.error("startup step %s %s — continuing", name, err)
+            _record_startup_error(name, err)
+        except Exception:
+            tb = traceback.format_exc()
+            _log.exception("startup step %s failed — continuing", name)
+            _record_startup_error(name, tb)
+
+    await _step("init_db", init_db(), timeout=45.0)
+    await _step("load_catalog", lambda: load_catalog(force=True), is_async=False)
+    await _step("bootstrap_admin_key", _bootstrap_admin_key_if_needed())
+    await _step("bootstrap_admin_user", _bootstrap_admin_user_if_needed())
+    await _step("seed_feature_requests", _seed_feature_requests_if_empty())
+    await _step("seed_independent_apps", _seed_independent_apps_if_empty())
 
     # Periodic audit retention prune so SQLite doesn't grow unbounded.
-    from .security.audit_retention import retention_loop
+    # Also tolerant — if it can't start, the rest of the app still runs.
     stop_event = asyncio.Event()
-    retention_task = asyncio.create_task(retention_loop(stop_event))
+    retention_task = None
+    try:
+        from .security.audit_retention import retention_loop
+        retention_task = asyncio.create_task(retention_loop(stop_event))
+    except Exception:
+        import traceback
+        _log.exception("retention_loop failed to start — continuing")
+        _record_startup_error("retention_loop", traceback.format_exc())
     try:
         yield
     finally:
         stop_event.set()
-        try:
-            await asyncio.wait_for(retention_task, timeout=2.0)
-        except asyncio.TimeoutError:
-            retention_task.cancel()
+        if retention_task is not None:
+            try:
+                await asyncio.wait_for(retention_task, timeout=2.0)
+            except asyncio.TimeoutError:
+                retention_task.cancel()
+
+
+def _record_startup_error(step: str, detail: str) -> None:
+    """Append a startup-time exception to errors.log so the existing
+    /api/admin/last-error endpoint surfaces it. Best-effort — never
+    raises, never blocks boot."""
+    try:
+        from datetime import datetime, timezone
+        log_dir = Path("data/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(timezone.utc).isoformat()
+        with (log_dir / "errors.log").open("a", encoding="utf-8") as f:
+            f.write(f"=== {ts}  STARTUP STEP: {step} ===\n")
+            f.write(detail)
+            if not detail.endswith("\n"):
+                f.write("\n")
+            f.write("\n")
+    except Exception:
+        pass
 
 
 app = FastAPI(
