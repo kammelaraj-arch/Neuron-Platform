@@ -415,12 +415,15 @@ async def lifespan(app: FastAPI):
     async def _step(name: str, coro_or_call, *, timeout: float = 60.0,
                     is_async: bool = True) -> None:
         import traceback
-        from datetime import datetime, timezone
         try:
             if is_async:
                 await asyncio.wait_for(coro_or_call, timeout=timeout)
             else:
-                coro_or_call()
+                # Run sync work in a thread so a hung file lock /
+                # blocking C call can't pin the event loop. wait_for
+                # still applies the deadline.
+                await asyncio.wait_for(asyncio.to_thread(coro_or_call),
+                                       timeout=timeout)
         except asyncio.TimeoutError:
             err = f"timed out after {timeout:.0f}s"
             _log.error("startup step %s %s — continuing", name, err)
@@ -431,7 +434,8 @@ async def lifespan(app: FastAPI):
             _record_startup_error(name, tb)
 
     await _step("init_db", init_db(), timeout=45.0)
-    await _step("load_catalog", lambda: load_catalog(force=True), is_async=False)
+    await _step("load_catalog", lambda: load_catalog(force=True),
+                is_async=False, timeout=30.0)
     await _step("bootstrap_admin_key", _bootstrap_admin_key_if_needed())
     await _step("bootstrap_admin_user", _bootstrap_admin_user_if_needed())
     await _step("seed_feature_requests", _seed_feature_requests_if_empty())
@@ -568,13 +572,41 @@ app.include_router(mtls.router)
 
 @app.get("/healthz", tags=["meta"])
 async def healthz() -> dict:
-    catalog = load_catalog()
+    """LIVENESS probe — process is up and the event loop is responsive.
+    Touches no DB, no disk, no global cache. The deploy pipeline keys off
+    this; if it ever depends on the catalog/DB again, a stranded SQLite
+    lock will take down the deploy along with the service. For depth
+    checks (catalog loaded, DB reachable) see /readyz."""
     import os
     return {
         "status": "ok",
-        "library_items": len(catalog.by_id),
         "version": app.version,
         "git_sha": os.environ.get("NEURON_GIT_SHA", "unknown"),
+    }
+
+
+@app.get("/readyz", tags=["meta"])
+async def readyz() -> dict:
+    """READINESS probe — every dependency the app needs to serve real
+    traffic. Use this in load balancers; use /healthz for liveness."""
+    import os
+    status = "ok"
+    library_items = 0
+    errors: list[str] = []
+    try:
+        catalog = await asyncio.wait_for(
+            asyncio.to_thread(load_catalog), timeout=5.0
+        )
+        library_items = len(catalog.by_id)
+    except Exception as e:
+        status = "degraded"
+        errors.append(f"catalog: {type(e).__name__}: {str(e)[:120]}")
+    return {
+        "status": status,
+        "library_items": library_items,
+        "version": app.version,
+        "git_sha": os.environ.get("NEURON_GIT_SHA", "unknown"),
+        "errors": errors,
     }
 
 
