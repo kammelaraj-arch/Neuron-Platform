@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Alexa Smart Home Skill{% endblock %}
+{% block content %}
+  <header>
+    <h1 class="text-2xl font-semibold tracking-tight">Alexa · Smart Home Skill (custom)</h1>
+    <p class="mt-1 max-w-2xl text-sm text-slate-400">
+      Voice control INTO Neuron. Say <em>“Alexa, set bedroom to 21 degrees”</em> and
+      Alexa calls a webhook on this Master, which then drives Tado / Ring on your
+      behalf. Amazon does not expose a public consumer API, so this is the only
+      legitimate path — you create your own private skill in your
+      <strong>{{ default_email }}</strong> developer account once,
+      and it shows up only in your Alexa app.
+    </p>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  {% if one_time_secret %}
+    <section class="mt-4 rounded-2xl border border-amber-700/40 bg-amber-500/10 p-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-amber-200">Client secret — shown once</h2>
+      <p class="mt-1 text-xs text-slate-300">Copy this NOW. It will not be displayed again. If you lose it, click "Regenerate" below.</p>
+      <pre class="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs text-emerald-300">{{ one_time_secret }}</pre>
+    </section>
+  {% endif %}
+
+  <!-- ── Bootstrap / regenerate credentials ─────────────────────────── -->
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">
+      {% if provisioned %}Skill credentials{% else %}Step 0 · generate credentials{% endif %}
+    </h2>
+    <p class="mt-1 text-xs text-slate-400">
+      Each bootstrap creates a fresh client_id + client_secret pair. The secret is
+      argon2-hashed at rest — regenerating <strong>invalidates the previous one</strong>,
+      and you'll need to paste the new pair into Amazon Developer Console.
+    </p>
+    <form method="post" action="/ui/alexa/bootstrap" class="mt-3 flex flex-wrap items-end gap-3">
+      <label class="flex flex-col text-xs text-slate-400">
+        Your Alexa account email
+        <input type="email" name="alexa_account_email" value="{{ default_email }}"
+               class="mt-1 w-72 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+      </label>
+      <button class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">
+        {% if provisioned %}Regenerate{% else %}Bootstrap skill{% endif %}
+      </button>
+    </form>
+  </section>
+
+  {% if provisioned %}
+  <!-- ── Paste-friendly URLs to drop into Amazon Developer Console ─── -->
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Step 1 · values for Account Linking</h2>
+    <p class="mt-1 text-xs text-slate-400">In Amazon Developer Console → your skill → <em>Account Linking</em>, paste these exact values:</p>
+    <dl class="mt-3 grid grid-cols-1 gap-2 text-sm md:grid-cols-[200px_1fr]">
+      <dt class="text-slate-400">Auth grant type</dt><dd class="font-mono text-slate-100">Auth Code Grant</dd>
+      <dt class="text-slate-400">Authorization URI</dt><dd class="overflow-x-auto rounded bg-slate-950 px-2 py-1 font-mono text-xs text-emerald-300">{{ public_base }}/api/alexa/oauth/authorize</dd>
+      <dt class="text-slate-400">Access Token URI</dt><dd class="overflow-x-auto rounded bg-slate-950 px-2 py-1 font-mono text-xs text-emerald-300">{{ public_base }}/api/alexa/oauth/token</dd>
+      <dt class="text-slate-400">Client ID</dt><dd class="overflow-x-auto rounded bg-slate-950 px-2 py-1 font-mono text-xs text-emerald-300">{{ skill.client_id }}</dd>
+      <dt class="text-slate-400">Client Secret</dt><dd class="text-xs text-slate-500">(only shown immediately after Bootstrap above)</dd>
+      <dt class="text-slate-400">Client Authentication Scheme</dt><dd class="font-mono text-slate-100">HTTP Basic (Recommended) <em class="text-slate-500">— or Credentials in request body</em></dd>
+      <dt class="text-slate-400">Scope</dt><dd class="font-mono text-slate-100">smart_home</dd>
+      <dt class="text-slate-400">Default Access Token Expiration</dt><dd class="font-mono text-slate-100">3600 seconds</dd>
+    </dl>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Step 2 · Smart Home Skill endpoint</h2>
+    <p class="mt-1 text-xs text-slate-400">
+      Alexa Smart Home Skills <strong>require AWS Lambda</strong> as the directive endpoint —
+      they don't POST to arbitrary URLs directly. Create a tiny Lambda (Node.js or Python)
+      in the same AWS account that's signed in as <strong>{{ default_email }}</strong>, paste
+      the snippet below as its handler, and put the Lambda ARN into the skill's
+      <em>Endpoint</em> field.
+    </p>
+    <p class="mt-2 text-xs text-slate-400">The Lambda's only job is to forward the directive envelope to:</p>
+    <pre class="mt-1 overflow-x-auto rounded bg-slate-950 px-2 py-1 font-mono text-xs text-emerald-300">{{ public_base }}/api/alexa/directive</pre>
+    <details class="mt-3">
+      <summary class="cursor-pointer text-xs text-slate-300 hover:text-emerald-300">Show Lambda handler (Python 3.11)</summary>
+      <pre class="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-200">import json, os, urllib.request
+
+NEURON_URL = "{{ public_base }}/api/alexa/directive"
+
+def lambda_handler(event, context):
+    req = urllib.request.Request(
+        NEURON_URL,
+        data=json.dumps(event).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=8) as r:
+        return json.loads(r.read())</pre>
+    </details>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Step 3 · what voice commands you'll get</h2>
+    <p class="mt-1 text-xs text-slate-400">Once linked, Alexa will discover every Tado zone and Ring device Neuron knows about. Examples:</p>
+    <ul class="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-300">
+      <li>“Alexa, set <em>&lt;zone-name&gt;</em> to 21 degrees” → Tado setpoint</li>
+      <li>“Alexa, turn off <em>&lt;zone-name&gt;</em>” → Tado zone OFF (frost protection)</li>
+      <li>“Alexa, turn on <em>&lt;camera-name&gt;</em>” → Ring floodlight ON</li>
+      <li>“Alexa, arm <em>&lt;alarm-name&gt;</em> in away mode” → Ring alarm hub AWAY</li>
+      <li>“Alexa, disarm <em>&lt;alarm-name&gt;</em>” → Ring alarm hub disarm</li>
+    </ul>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Step 4 · record the Skill ID (optional)</h2>
+    <p class="mt-1 text-xs text-slate-400">Once Amazon issues you a <code>amzn1.ask.skill.…</code> ID, paste it here so the audit log knows which skill is calling.</p>
+    <form method="post" action="/ui/alexa/skill-id" class="mt-3 flex flex-wrap items-end gap-3">
+      <input type="text" name="skill_id" value="{{ skill.skill_id or '' }}" placeholder="amzn1.ask.skill.xxxxxxxx"
+             class="w-96 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+      <button class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Save</button>
+    </form>
+  </section>
+  {% endif %}
+{% endblock %}

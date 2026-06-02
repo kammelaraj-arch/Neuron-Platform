@@ -19,6 +19,7 @@ from .library_loader import load_catalog
 from .models import APIKey, FeatureRequest
 from .routers import (
     ai_agent,
+    alexa_ui,
     apikeys,
     apps_ui,
     audit,
@@ -552,6 +553,7 @@ app.include_router(wifi_ui.router)
 app.include_router(vendor_accounts_ui.router)
 app.include_router(tado_ui.router)
 app.include_router(ring_ui.router)
+app.include_router(alexa_ui.router)
 app.include_router(apps_ui.router)
 app.include_router(users_ui.router)
 app.include_router(pico_provision_ui.router)
