@@ -31,7 +31,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..models import APIKey, EdgeGroup, WiFiNetwork
+from ..models import APIKey, EdgeGroup, WifiNetwork
 from ..security.secret_crypto import decrypt_secret
 from ..security.ui_auth import ui_require_login
 
@@ -64,7 +64,7 @@ async def _resolve_wifi(session: AsyncSession,
                         wifi_id: str | None) -> dict | None:
     if not wifi_id:
         return None
-    w = await session.get(WiFiNetwork, wifi_id)
+    w = await session.get(WifiNetwork, wifi_id)
     if w is None:
         return None
     pw = decrypt_secret(w.password_encrypted) if w.password_encrypted else None
