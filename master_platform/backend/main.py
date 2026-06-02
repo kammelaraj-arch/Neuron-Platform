@@ -36,6 +36,7 @@ from .routers import (
     pico_provision_ui,
     processes,
     recipes,
+    ring_ui,
     secrets_ui,
     sysops_ui,
     systems,
@@ -550,6 +551,7 @@ app.include_router(functions_ui.router)
 app.include_router(wifi_ui.router)
 app.include_router(vendor_accounts_ui.router)
 app.include_router(tado_ui.router)
+app.include_router(ring_ui.router)
 app.include_router(apps_ui.router)
 app.include_router(users_ui.router)
 app.include_router(pico_provision_ui.router)

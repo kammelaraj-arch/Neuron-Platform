@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Ring (Amazon) doorbells + cameras{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Ring · doorbells + cameras + alarm</h1>
+      <p class="mt-1 max-w-2xl text-sm text-slate-400">
+        Control every Ring device across all connected accounts. Add accounts on the
+        <a href="/ui/vendor-accounts" class="text-cyan-400 hover:underline">Vendor accounts</a>
+        page (provider <code class="rounded bg-slate-800 px-1">ring</code>) with a refresh token
+        from <code class="rounded bg-slate-800 px-1">ring-doorbell auth-token --username &lt;email&gt;</code>,
+        then return here. Cloud integration — advisory control only, never a safety interlock.
+      </p>
+    </div>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  {% if not accounts %}
+    <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-400">
+      No Ring accounts yet. Add one on
+      <a href="/ui/vendor-accounts" class="text-cyan-400 hover:underline">Vendor accounts</a>
+      with provider <code class="rounded bg-slate-800 px-1">ring</code>, then click Discover here.
+    </div>
+  {% else %}
+
+  <!-- ── Bulk: every account ────────────────────────────────────────── -->
+  <section class="mt-6 rounded-2xl border border-amber-700/40 bg-amber-500/5 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-amber-300">Every device · every account</h2>
+    <div id="ring-all-result" class="mt-2 text-xs text-slate-300"></div>
+    <div class="mt-3 flex flex-wrap items-center gap-2">
+      <button onclick="ringAll('lights-off')"   class="rounded-md bg-sky-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500">All floodlights OFF</button>
+      <button onclick="ringAll('sirens-off')"   class="rounded-md bg-sky-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500">All sirens OFF</button>
+      <button onclick="ringAll('alarm-away')"   class="rounded-md bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500">Arm AWAY</button>
+      <button onclick="ringAll('alarm-home')"   class="rounded-md bg-amber-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500">Arm HOME</button>
+      <button onclick="ringAll('alarm-disarm')" class="rounded-md bg-emerald-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">Disarm</button>
+    </div>
+  </section>
+
+  {% for a in accounts %}
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+        <div>
+          <span class="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[11px] uppercase tracking-wider text-cyan-300">ring</span>
+          <span class="ml-2 font-medium text-slate-200">{{ a.label }}</span>
+          {% if connected[a.id] %}
+            <span class="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">connected</span>
+          {% else %}
+            <span class="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-300">no refresh token</span>
+          {% endif %}
+        </div>
+        <div>
+          <form method="post" action="/ui/vendor-accounts/{{ a.id }}/discover"
+                hx-post="/ui/vendor-accounts/{{ a.id }}/discover" hx-swap="none"
+                onsubmit="setTimeout(()=>location.reload(), 800)">
+            <button class="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800">Discover devices</button>
+          </form>
+        </div>
+      </div>
+
+      {% set devices = devices_by_account.get(a.id, []) %}
+      {% if devices %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+              <tr>
+                <th class="px-4 py-2">Device</th>
+                <th class="px-4 py-2">Type</th>
+                <th class="px-4 py-2">Model</th>
+                <th class="px-4 py-2 text-right">Control</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70">
+              {% for d in devices %}
+                {% set dt = (d.device_type or '')|lower %}
+                <tr class="hover:bg-slate-900/40">
+                  <td class="px-4 py-3 font-medium text-slate-200">{{ d.name }}</td>
+                  <td class="px-4 py-3 text-slate-400">{{ d.device_type or '—' }}</td>
+                  <td class="px-4 py-3 text-xs text-slate-500">{{ d.model or '—' }}</td>
+                  <td class="px-4 py-3">
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                      {% if dt in ('camera', 'doorbell', 'doorbell_shared') %}
+                        <a href="/ui/ring/device/{{ d.id }}/snapshot" target="_blank"
+                           class="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800">Snapshot</a>
+                        <form method="post" action="/ui/ring/device/{{ d.id }}/floodlight/on">
+                          <button class="rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-slate-950 hover:bg-emerald-400">Light on</button>
+                        </form>
+                        <form method="post" action="/ui/ring/device/{{ d.id }}/floodlight/off">
+                          <button class="rounded-md bg-slate-700 px-2 py-1 text-xs text-slate-100 hover:bg-slate-600">Light off</button>
+                        </form>
+                        <form method="post" action="/ui/ring/device/{{ d.id }}/siren/on" class="flex items-center gap-1">
+                          <input type="number" name="duration_s" min="5" max="300" value="30"
+                                 class="w-16 rounded bg-slate-800 px-2 py-1 text-xs text-slate-100">
+                          <button class="rounded-md bg-red-500/90 px-2 py-1 text-xs font-medium text-white hover:bg-red-500">Siren</button>
+                        </form>
+                        <form method="post" action="/ui/ring/device/{{ d.id }}/siren/off">
+                          <button class="rounded-md bg-sky-500/90 px-2 py-1 text-xs font-medium text-white hover:bg-sky-500">Stop</button>
+                        </form>
+                      {% elif dt == 'chime' %}
+                        <form method="post" action="/ui/ring/chime/{{ d.id }}/play">
+                          <input type="hidden" name="kind" value="ding">
+                          <button class="rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-slate-950 hover:bg-emerald-400">Test ding</button>
+                        </form>
+                        <form method="post" action="/ui/ring/chime/{{ d.id }}/play">
+                          <input type="hidden" name="kind" value="motion">
+                          <button class="rounded-md bg-amber-500/90 px-2 py-1 text-xs font-medium text-white hover:bg-amber-500">Test motion</button>
+                        </form>
+                      {% elif dt == 'alarm_hub' %}
+                        <form method="post" action="/ui/ring/{{ a.id }}/alarm" class="flex flex-wrap items-center gap-1">
+                          <input type="hidden" name="location_id" value="{{ (d.metadata_json or {}).get('location_id', '') }}">
+                          {% for m, cls, label in [('all','red','AWAY'), ('home','amber','HOME'), ('none','emerald','DISARM')] %}
+                            <button type="submit" name="mode" value="{{ m }}"
+                                    class="rounded-md bg-{{ cls }}-500/90 px-2 py-1 text-xs font-medium text-white hover:bg-{{ cls }}-500">{{ label }}</button>
+                          {% endfor %}
+                        </form>
+                      {% else %}
+                        <span class="text-xs text-slate-600">—</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="px-4 py-4 text-sm text-slate-500">
+          No devices discovered yet — click <strong>Discover devices</strong> above.
+        </div>
+      {% endif %}
+    </section>
+  {% endfor %}
+  {% endif %}
+
+  <script>
+    async function ringAll(action) {
+      const out = document.getElementById('ring-all-result');
+      out.textContent = 'Working…';
+      try {
+        const r = await fetch(`/ui/ring/all/${action}`, {method: 'POST'});
+        const j = await r.json();
+        out.innerHTML = `Done — ${j.devices_ok} ok, ${j.devices_failed} failed across ${j.accounts} account(s).`
+          + (j.errors && j.errors.length ? '<br><span class="text-amber-300">' + j.errors.join('<br>') + '</span>' : '');
+      } catch (e) {
+        out.innerHTML = '<span class="text-red-300">Failed: ' + e + '</span>';
+      }
+    }
+  </script>
+{% endblock %}
