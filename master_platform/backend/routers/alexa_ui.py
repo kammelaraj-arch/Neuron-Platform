@@ -40,6 +40,19 @@ _store = AlexaStore()
 _DEFAULT_ALEXA_EMAIL = "rajusreee@msn.com"
 
 
+def _redirect_allowed(candidate: str, registered: list) -> bool:
+    """Alexa's account-linking redirect_uri carries the skill vendor id
+    appended to the path (e.g. https://layla.amazon.com/api/skill/link/
+    M3F0WLEN2OPF4D), so the registered values are prefixes — we accept
+    any redirect URI that starts with one of them. Prefixes are pinned
+    to Amazon-owned hosts on https, so this can't be an open redirect."""
+    if not candidate:
+        return False
+    if not candidate.startswith("https://"):
+        return False
+    return any(candidate.startswith(prefix) for prefix in registered)
+
+
 def _public_base(request: Request) -> str:
     # Prefer the X-Forwarded-Proto/Host nginx sets so we generate
     # https://neuron.shital.org.uk URLs even when uvicorn sees http.
@@ -142,7 +155,7 @@ async def alexa_oauth_authorize_get(
     st = await _store.get_state()
     if not st.skill or st.skill.get("client_id") != client_id:
         return PlainTextResponse("unknown client", status_code=400)
-    if redirect_uri not in (st.skill.get("redirect_uris") or []):
+    if not _redirect_allowed(redirect_uri, st.skill.get("redirect_uris") or []):
         return PlainTextResponse(
             f"redirect_uri not registered: {redirect_uri}", status_code=400)
 
@@ -182,7 +195,7 @@ async def alexa_oauth_authorize_post(
     st = await _store.get_state()
     if not st.skill or st.skill.get("client_id") != client_id:
         raise HTTPException(400, "unknown client")
-    if redirect_uri not in (st.skill.get("redirect_uris") or []):
+    if not _redirect_allowed(redirect_uri, st.skill.get("redirect_uris") or []):
         raise HTTPException(400, "redirect_uri not registered")
     code = await _store.issue_auth_code(user_id, redirect_uri)
     await record(
