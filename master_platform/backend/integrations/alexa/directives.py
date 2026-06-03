@@ -30,7 +30,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...models import VendorAccount, VendorDevice
+from ...models import PlotterScene, VendorAccount, VendorDevice
 from ...security.secret_crypto import decrypt_secret, encrypt_secret
 
 
@@ -174,6 +174,28 @@ async def _build_endpoints(session: AsyncSession) -> list[dict]:
                         {"type": "AlexaInterface", "interface": "Alexa", "version": "3"},
                     ],
                 })
+
+    # SmartPlotter scenes — each becomes a single Alexa scene endpoint
+    # so the operator can say "Alexa, activate jalebi".
+    scenes = (await session.execute(select(PlotterScene))).scalars().all()
+    for sc in scenes:
+        endpoints.append({
+            "endpointId": f"plotter-scene:{sc.id}",
+            "manufacturerName": "Neuron Platform",
+            "friendlyName": sc.name,
+            "description": sc.description or f"SmartPlotter scene · {sc.name}",
+            "displayCategories": ["SCENE_TRIGGER"],
+            "capabilities": [
+                {
+                    "type": "AlexaInterface",
+                    "interface": "Alexa.SceneController",
+                    "version": "3",
+                    "supportsDeactivation": False,
+                    "proactivelyReported": False,
+                },
+                {"type": "AlexaInterface", "interface": "Alexa", "version": "3"},
+            ],
+        })
 
     return endpoints
 
@@ -358,8 +380,40 @@ async def handle_directive(directive: dict, session: AsyncSession) -> dict:
         return _err(directive, "INVALID_DIRECTIVE",
                     f"Unsupported directive {namespace}/{name} for Ring alarm")
 
+    # ── SmartPlotter scene ──────────────────────────────────────────
+    if endpoint_id.startswith("plotter-scene:"):
+        scene_id = endpoint_id[len("plotter-scene:"):]
+        if namespace == "Alexa.SceneController" and name == "Activate":
+            from ...routers.plotter_ui import activate_scene
+            try:
+                await activate_scene(session, scene_id)
+            except Exception as e:
+                return _err(directive, "ENDPOINT_UNREACHABLE",
+                            f"Plotter activate failed: {str(e)[:160]}")
+            await session.commit()
+            return _ack_scene(directive, scene_id)
+        return _err(directive, "INVALID_DIRECTIVE",
+                    f"Unsupported directive {namespace}/{name} for plotter scene")
+
     return _err(directive, "NO_SUCH_ENDPOINT",
                 f"Unknown endpointId {endpoint_id}")
+
+
+def _ack_scene(directive: dict, scene_id: str) -> dict:
+    h = directive.get("header", {})
+    return {
+        "context": {"properties": []},
+        "event": {
+            "header": _hdr("ActivationStarted",
+                           namespace="Alexa.SceneController",
+                           correlation_token=h.get("correlationToken")),
+            "endpoint": directive.get("endpoint", {}),
+            "payload": {
+                "cause": {"type": "VOICE_INTERACTION"},
+                "timestamp": _iso_now(),
+            },
+        }
+    }
 
 
 # ── Response builders ────────────────────────────────────────────────

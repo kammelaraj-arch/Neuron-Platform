@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}SmartPlotter · devices + scenes{% endblock %}
+{% block content %}
+  <header>
+    <h1 class="text-2xl font-semibold tracking-tight">SmartPlotter · devices + scenes</h1>
+    <p class="mt-1 max-w-2xl text-sm text-slate-400">
+      Register each Pi running SmartPlotter (APP-0002) and map Alexa-friendly scene
+      names to profile IDs on that Pi. Each scene becomes a voice command:
+      <em>"Alexa, activate jalebi"</em> → Neuron calls the Pi → motors trace the profile.
+    </p>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  <!-- ── Register a new device ────────────────────────────────────── -->
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Register a SmartPlotter Pi</h2>
+    <form method="post" action="/ui/plotter/devices/new" class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+      <label class="flex flex-col text-xs text-slate-400">
+        Label
+        <input name="label" required placeholder="Garage plotter"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+      </label>
+      <label class="flex flex-col text-xs text-slate-400">
+        Base URL (Pi http endpoint)
+        <input name="base_url" required placeholder="http://192.168.1.50:5000"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+      </label>
+      <label class="flex flex-col text-xs text-slate-400">
+        API key (bearer token the Pi enforces)
+        <input name="api_key" type="password"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+      </label>
+      <div class="flex items-end">
+        <button class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Add device</button>
+      </div>
+    </form>
+  </section>
+
+  {% for d in devices %}
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+        <div>
+          <span class="font-medium text-slate-200">{{ d.label }}</span>
+          <span class="ml-2 text-xs text-slate-500 font-mono">{{ d.base_url }}</span>
+          {% if d.api_key_encrypted %}
+            <span class="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">api-key set</span>
+          {% else %}
+            <span class="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-300">no api-key</span>
+          {% endif %}
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="ping('{{ d.id }}')"
+                  class="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800">Ping /healthz</button>
+          <form method="post" action="/ui/plotter/devices/{{ d.id }}/delete"
+                onsubmit="return confirm('Delete this device and all its scenes?')">
+            <button class="rounded-md bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500">Delete</button>
+          </form>
+        </div>
+      </div>
+      <div id="ping-{{ d.id }}" class="hidden border-b border-slate-800 bg-slate-950/60 px-4 py-2 text-xs"></div>
+
+      {% set scenes = scenes_by_device.get(d.id, []) %}
+      {% if scenes %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+              <tr>
+                <th class="px-4 py-2">Scene name (Alexa says this)</th>
+                <th class="px-4 py-2">Pi profile id</th>
+                <th class="px-4 py-2">Description</th>
+                <th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70">
+              {% for s in scenes %}
+                <tr class="hover:bg-slate-900/40">
+                  <td class="px-4 py-3 font-medium text-emerald-300">{{ s.name }}</td>
+                  <td class="px-4 py-3 font-mono text-slate-300">{{ s.pi_profile_id }}</td>
+                  <td class="px-4 py-3 text-slate-400">{{ s.description or '—' }}</td>
+                  <td class="px-4 py-3">
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                      <form method="post" action="/ui/plotter/scenes/{{ s.id }}/activate">
+                        <button class="rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-slate-950 hover:bg-emerald-400">Run now</button>
+                      </form>
+                      <form method="post" action="/ui/plotter/scenes/{{ s.id }}/delete"
+                            onsubmit="return confirm('Delete scene {{ s.name }}?')">
+                        <button class="rounded-md bg-red-500/90 px-2 py-1 text-xs font-medium text-white hover:bg-red-500">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="px-4 py-4 text-sm text-slate-500">
+          No scenes mapped yet. Add one below to make a profile voice-triggerable.
+        </div>
+      {% endif %}
+
+      <form method="post" action="/ui/plotter/devices/{{ d.id }}/scenes/new"
+            class="border-t border-slate-800 px-4 py-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+        <label class="flex flex-col text-xs text-slate-400">
+          Scene name (lowercase)
+          <input name="name" required placeholder="jalebi"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+        </label>
+        <label class="flex flex-col text-xs text-slate-400">
+          Pi profile id (integer)
+          <input name="pi_profile_id" type="number" min="1" required placeholder="1"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+        </label>
+        <label class="flex flex-col text-xs text-slate-400">
+          Description (optional)
+          <input name="description" placeholder="Jalebi spiral"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+        </label>
+        <div class="flex items-end">
+          <button class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Add scene</button>
+        </div>
+      </form>
+    </section>
+  {% endfor %}
+
+  {% if not devices %}
+    <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-400">
+      No plotters registered yet. Add one above. To make a plotter Alexa-controllable, install
+      <strong>APP-0002 (SmartPlotter)</strong> on a Pi via <a href="/ui/apps" class="text-cyan-400 hover:underline">/ui/apps</a>,
+      then register the Pi's URL + API key here and map your saved profiles to Alexa scene names.
+    </div>
+  {% endif %}
+
+  <script>
+    async function ping(id) {
+      const box = document.getElementById('ping-' + id);
+      box.classList.remove('hidden');
+      box.innerHTML = '<span class="text-slate-300">Pinging…</span>';
+      try {
+        const r = await fetch(`/ui/plotter/devices/${id}/ping`, {method: 'POST'});
+        const j = await r.json();
+        const color = j.ok ? 'emerald' : 'red';
+        box.innerHTML = `<span class="text-${color}-300">${j.ok ? '✓ healthy' : '✗ ' + (j.error || 'HTTP ' + j.http_status + ': ' + j.body)}</span>`;
+      } catch (e) {
+        box.innerHTML = `<span class="text-red-300">Failed: ${e}</span>`;
+      }
+    }
+  </script>
+{% endblock %}

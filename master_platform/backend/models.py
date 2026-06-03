@@ -888,3 +888,41 @@ class CodeFunction(Base):
     example: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class PlotterDevice(Base):
+    """One Pi running the SmartPlotter app (APP-0002). Neuron talks to
+    it over HTTP at `base_url` with the API key (Fernet-encrypted) on
+    every request. Many PlotterScene rows can point at one device."""
+    __tablename__ = "plotter_devices"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(400), nullable=False)  # http://192.168.1.50:5000
+    api_key_encrypted: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)
+    last_seen_at: Mapped[datetime | None] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class PlotterScene(Base):
+    """Alexa-friendly name (e.g. "jalebi", "usa") mapped to one specific
+    profile_id on one PlotterDevice. Each row becomes an
+    Alexa.SceneController endpoint at discovery time."""
+    __tablename__ = "plotter_scenes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    device_id: Mapped[str] = mapped_column(
+        ForeignKey("plotter_devices.id"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    # The profile_id on the Pi-side SmartPlotter app.
+    pi_profile_id: Mapped[int] = mapped_column(nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+    __table_args__ = (
+        UniqueConstraint("device_id", "name", name="uq_plotter_scene_name_per_device"),
+    )

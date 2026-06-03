@@ -35,6 +35,7 @@ from .routers import (
     mtls,
     ota,
     pico_provision_ui,
+    plotter_ui,
     processes,
     recipes,
     ring_ui,
@@ -554,6 +555,7 @@ app.include_router(vendor_accounts_ui.router)
 app.include_router(tado_ui.router)
 app.include_router(ring_ui.router)
 app.include_router(alexa_ui.router)
+app.include_router(plotter_ui.router)
 app.include_router(apps_ui.router)
 app.include_router(users_ui.router)
 app.include_router(pico_provision_ui.router)
