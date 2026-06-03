@@ -269,10 +269,15 @@ async def alexa_directive(
     if not directive:
         raise HTTPException(400, "missing directive")
 
-    # Extract the Alexa-issued bearer token. Discovery puts it on
-    # payload.scope.token; control directives put it on endpoint.scope.token.
+    # Extract the Alexa-issued bearer token. It can live in three
+    # places depending on directive type:
+    #   Discovery                         → payload.scope.token
+    #   Control (PowerController, etc.)   → endpoint.scope.token
+    #   AcceptGrant (post-link handshake) → payload.grantee.token
+    payload = directive.get("payload") or {}
     scope = (directive.get("endpoint") or {}).get("scope") \
-            or (directive.get("payload") or {}).get("scope") \
+            or payload.get("scope") \
+            or payload.get("grantee") \
             or {}
     token = scope.get("token") if isinstance(scope, dict) else None
     if not token:

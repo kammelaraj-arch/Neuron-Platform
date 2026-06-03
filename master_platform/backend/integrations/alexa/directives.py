@@ -252,6 +252,20 @@ async def handle_directive(directive: dict, session: AsyncSession) -> dict:
     if namespace == "Alexa.Discovery" and name == "Discover":
         return await handle_discovery(directive, session)
 
+    # Post-link handshake. Alexa fires this once right after account
+    # linking succeeds, handing the skill an OAuth grant code so the
+    # skill can later push proactive state updates back to Alexa. We
+    # ack with a Response — Neuron doesn't yet do proactive events,
+    # so we just acknowledge and don't store the code.
+    if namespace == "Alexa.Authorization" and name == "AcceptGrant":
+        return {
+            "event": {
+                "header": _hdr("AcceptGrant.Response",
+                               namespace="Alexa.Authorization"),
+                "payload": {},
+            }
+        }
+
     # ── Tado ────────────────────────────────────────────────────────
     if endpoint_id.startswith("tado:"):
         vendor_device_id = endpoint_id[len("tado:"):]
