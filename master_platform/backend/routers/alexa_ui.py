@@ -213,13 +213,29 @@ async def alexa_oauth_authorize_post(
 
 @router.post("/api/alexa/oauth/token", response_class=JSONResponse)
 async def alexa_oauth_token(
+    request: Request,
     grant_type: str = Form(...),
-    client_id: str = Form(...),
-    client_secret: str = Form(...),
+    client_id: str = Form(""),
+    client_secret: str = Form(""),
     code: str = Form(""),
     refresh_token: str = Form(""),
     redirect_uri: str = Form(""),
 ):
+    # RFC 6749 §2.3.1: server MUST accept HTTP Basic; MAY accept form
+    # body. Alexa Account Linking defaults to HTTP Basic, so support
+    # both — Basic header wins if present.
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("basic "):
+        import base64
+        try:
+            raw = base64.b64decode(auth[6:].strip()).decode("utf-8")
+            basic_id, _, basic_secret = raw.partition(":")
+            if basic_id:
+                client_id, client_secret = basic_id, basic_secret
+        except Exception:
+            raise HTTPException(400, "invalid basic auth header")
+    if not client_id or not client_secret:
+        raise HTTPException(400, "missing client credentials")
     if not await _store.verify_client(client_id, client_secret):
         raise HTTPException(401, "invalid_client")
     if grant_type == "authorization_code":
