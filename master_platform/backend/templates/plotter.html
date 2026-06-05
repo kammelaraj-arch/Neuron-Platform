@@ -14,6 +14,27 @@
     <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
   {% endif %}
 
+  {% if one_time_agent_token %}
+    <section class="mt-4 rounded-2xl border border-amber-700/40 bg-amber-500/10 p-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-amber-200">Pi-side install — shown once</h2>
+      <p class="mt-1 text-xs text-slate-300">
+        Run this on the Pi to install the pull-agent. The token below is the only auth material — copy this whole block <strong>now</strong>.
+      </p>
+      <pre class="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-300">cd /tmp && \
+git clone --depth 1 https://github.com/kammelaraj-arch/Neuron-Platform.git neuron-tmp && \
+sudo bash neuron-tmp/apps/neuron-agent/install.sh && \
+sudo tee /etc/default/neuron-agent &gt;/dev/null &lt;&lt;'ENV'
+NEURON_MASTER_URL={{ public_base }}
+NEURON_DEVICE_ID={{ one_time_agent_token.device_id }}
+NEURON_AGENT_TOKEN={{ one_time_agent_token.token }}
+NEURON_LOCAL_BASE=http://127.0.0.1:5001
+ENV
+sudo systemctl restart neuron-agent
+sudo journalctl -u neuron-agent -f</pre>
+      <p class="mt-2 text-[11px] text-slate-400">Once the agent connects (you'll see <code>neuron-agent online</code> in the journal), it polls every few seconds. Voice → Alexa scene → queued command → next poll picks it up.</p>
+    </section>
+  {% endif %}
+
   <!-- ── Register a new device ────────────────────────────────────── -->
   <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
     <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Register a SmartPlotter Pi</h2>
@@ -52,8 +73,17 @@
           {% endif %}
         </div>
         <div class="flex flex-wrap gap-2">
+          {% if d.agent_token %}
+            <span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300 self-center">pull-agent</span>
+          {% endif %}
           <button onclick="ping('{{ d.id }}')"
                   class="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800">Ping /healthz</button>
+          <form method="post" action="/ui/plotter/devices/{{ d.id }}/enable-agent">
+            <button class="rounded-md border border-amber-700/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/20"
+                    title="Generate a bearer token for the Pi-side neuron-agent (NAT-friendly poll model). Use this when Master can't reach the Pi directly.">
+              {% if d.agent_token %}Rotate agent token{% else %}Enable pull-agent{% endif %}
+            </button>
+          </form>
           <form method="post" action="/ui/plotter/devices/{{ d.id }}/delete"
                 onsubmit="return confirm('Delete this device and all its scenes?')">
             <button class="rounded-md bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500">Delete</button>

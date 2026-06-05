@@ -18,6 +18,7 @@ from .db import SessionLocal, init_db
 from .library_loader import load_catalog
 from .models import APIKey, FeatureRequest
 from .routers import (
+    agent,
     ai_agent,
     alexa_ui,
     apikeys,
@@ -403,6 +404,40 @@ async def _bootstrap_admin_user_if_needed() -> None:
         )
 
 
+async def _seed_demo_plotter_if_empty() -> None:
+    """Pre-populate one demo plotter + three scenes so that voice
+    Discovery (Alexa / future Google) returns at least a few endpoints
+    on a fresh install. Real hardware is wired by switching base_url
+    to the operator's Pi and clicking Enable pull-agent — no need to
+    delete these rows. Idempotent: only runs when both tables empty."""
+    from .models import PlotterDevice, PlotterScene
+    async with SessionLocal() as session:
+        devices = await session.scalar(select(sa_func.count()).select_from(PlotterDevice)) \
+            if False else None
+        from sqlalchemy import func as _f
+        dcount = await session.scalar(select(_f.count()).select_from(PlotterDevice))
+        if dcount and dcount > 0:
+            return
+        demo = PlotterDevice(
+            label="Demo plotter (replace with your Pi)",
+            base_url="http://127.0.0.1:5001",
+            api_key_encrypted=None,
+            agent_token=None,
+        )
+        session.add(demo)
+        await session.flush()
+        for name, pid, desc in [
+            ("jalebi", 1, "Jalebi spiral — the Indian-sweet motion you wanted to plot first."),
+            ("usa",    2, "USA outline — country-map contour."),
+            ("square", 3, "Square calibration — useful first run to verify axes."),
+        ]:
+            session.add(PlotterScene(
+                device_id=demo.id, name=name, pi_profile_id=pid, description=desc,
+            ))
+        await session.commit()
+        _log.warning("Seeded demo PlotterDevice + 3 scenes (jalebi / usa / square).")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Path(settings.build_artifacts_dir).mkdir(parents=True, exist_ok=True)
@@ -443,6 +478,7 @@ async def lifespan(app: FastAPI):
     await _step("bootstrap_admin_user", _bootstrap_admin_user_if_needed())
     await _step("seed_feature_requests", _seed_feature_requests_if_empty())
     await _step("seed_independent_apps", _seed_independent_apps_if_empty())
+    await _step("seed_demo_plotter", _seed_demo_plotter_if_empty())
 
     # Periodic audit retention prune so SQLite doesn't grow unbounded.
     # Also tolerant — if it can't start, the rest of the app still runs.
@@ -574,6 +610,7 @@ app.include_router(diag.router)
 app.include_router(twin_push.router)
 app.include_router(fabric.router)
 app.include_router(mtls.router)
+app.include_router(agent.router)
 
 
 @app.get("/healthz", tags=["meta"])

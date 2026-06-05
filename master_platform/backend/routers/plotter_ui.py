@@ -31,14 +31,35 @@ router = APIRouter(tags=["ui-plotter"])
 
 # ── helpers exposed to Alexa directive handler ──────────────────────
 async def activate_scene(session: AsyncSession, scene_id: str) -> dict:
-    """Resolve scene → device, then call the Pi's run endpoint. Used
-    by both the UI button and the Alexa SceneController dispatcher."""
+    """Resolve scene → device, then run it via the pull-agent (queued
+    for the Pi's next poll) if the device has an agent_token, or
+    direct HTTP if the operator configured a reachable base_url.
+    Used by both the UI button and the Alexa SceneController
+    dispatcher so voice and click paths share one code path + audit
+    trail."""
     scene = await session.get(PlotterScene, scene_id)
     if scene is None:
         raise HTTPException(404, f"scene {scene_id} not found")
     device = await session.get(PlotterDevice, scene.device_id)
     if device is None or device.status != "active":
         raise HTTPException(404, "plotter device not found or inactive")
+
+    # Pull-agent path — Master never originates a connection to the Pi.
+    if device.agent_token:
+        from .agent import enqueue
+        cmd = await enqueue(
+            session,
+            device_id=device.id,
+            device_kind="plotter",
+            kind="plotter.run",
+            payload={"profile_id": scene.pi_profile_id},
+        )
+        return {"ok": True, "scene": scene.name, "device": device.label,
+                "mode": "queued", "command_id": cmd.id}
+
+    # Direct-HTTP path — only works when Master and device share a
+    # network path. Kept for parity with the original v1 design and
+    # for cases where Master + Pi are on the same LAN (no NAT).
     headers = {}
     if device.api_key_encrypted:
         headers["Authorization"] = f"Bearer {decrypt_secret(device.api_key_encrypted)}"
@@ -51,7 +72,7 @@ async def activate_scene(session: AsyncSession, scene_id: str) -> dict:
     if r.status_code >= 400:
         raise HTTPException(502, f"plotter rejected run: HTTP {r.status_code} {r.text[:160]}")
     return {"ok": True, "scene": scene.name, "device": device.label,
-            "pi_status": r.status_code}
+            "mode": "direct", "pi_status": r.status_code}
 
 
 # ── page ─────────────────────────────────────────────────────────────
@@ -74,6 +95,12 @@ async def ui_plotter(
         for s in scenes:
             scenes_by_device.setdefault(s.device_id, []).append(s)
     flash = request.session.pop("plotter_flash", None)
+    one_time_agent_token = request.session.pop("plotter_agent_token", None)
+    public_base = (request.headers.get("x-forwarded-proto", request.url.scheme)
+                   + "://"
+                   + (request.headers.get("x-forwarded-host")
+                      or request.headers.get("host")
+                      or request.url.netloc))
     return templates.TemplateResponse(
         "plotter.html",
         {
@@ -82,6 +109,8 @@ async def ui_plotter(
             "devices": devices,
             "scenes_by_device": scenes_by_device,
             "flash": flash,
+            "one_time_agent_token": one_time_agent_token,
+            "public_base": public_base.rstrip("/"),
         },
     )
 
@@ -116,6 +145,34 @@ async def ui_plotter_new_device(
     await session.commit()
     request.session["plotter_flash"] = {"kind": "emerald",
         "msg": f"Registered plotter '{row.label}' at {row.base_url}."}
+    return RedirectResponse("/ui/plotter", status_code=303)
+
+
+@router.post("/ui/plotter/devices/{device_id}/enable-agent")
+async def ui_plotter_enable_agent(
+    device_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    """Generate (or rotate) the bearer token the Pi-side neuron-agent
+    uses to poll. The plaintext is stashed in the session so the next
+    page render shows it ONCE for copy/paste into the Pi's env file."""
+    import secrets
+    device = await session.get(PlotterDevice, device_id)
+    if device is None:
+        raise HTTPException(404, "device not found")
+    token = secrets.token_urlsafe(36)
+    device.agent_token = token
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="plotter.device.agent_token_rotate",
+        target_kind="plotter_device", target_id=device.id,
+    )
+    await session.commit()
+    request.session["plotter_agent_token"] = {"device_id": device.id, "token": token}
+    request.session["plotter_flash"] = {"kind": "emerald",
+        "msg": "Agent token generated — paste into the Pi's /etc/default/neuron-agent now (shown once)."}
     return RedirectResponse("/ui/plotter", status_code=303)
 
 

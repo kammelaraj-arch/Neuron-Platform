@@ -900,10 +900,50 @@ class PlotterDevice(Base):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     base_url: Mapped[str] = mapped_column(String(400), nullable=False)  # http://192.168.1.50:5000
     api_key_encrypted: Mapped[str | None] = mapped_column(Text)
+    # When set, this device uses the pull-agent: the Pi polls
+    # /api/agent/{id}/poll for queued commands and reports results back.
+    # Activate calls then enqueue rather than HTTP-direct so the Pi
+    # works from any NAT'd network without inbound exposure. The token
+    # is what the Pi presents on every poll/report; we store the
+    # plaintext here because the Pi-side script needs it verbatim, and
+    # it's already the device's only auth material (one bearer per Pi).
+    agent_token: Mapped[str | None] = mapped_column(String(80), unique=True, index=True)
+    agent_poll_interval_s: Mapped[int] = mapped_column(default=3, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)
     last_seen_at: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class DeviceCommand(Base):
+    """Generic command queue for the pull-agent. Each row is one
+    instruction Master enqueued for a remote device to execute on its
+    next poll. Aligned with the OTA pattern (child polls parent for
+    work) rather than push-tunnel — works through any NAT, no
+    persistent connection.
+
+    kind names a handler the agent knows: 'plotter.run', 'plotter.abort',
+    'plotter.home', 'shell.exec' (future), 'ota.fetch' (future), etc.
+
+    State machine:
+        pending  → returned to the agent on poll; transitions to running.
+        running  → agent is executing; report() moves to done or failed.
+        done / failed — terminal; visible in audit + UI for ~24h then GC'd.
+    """
+    __tablename__ = "device_commands"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    device_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    # Polymorphic — could be plotter_devices.id or future device tables.
+    device_kind: Mapped[str] = mapped_column(String(40), default="plotter", nullable=False)
+    kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    payload_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)
+    result_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    started_at: Mapped[datetime | None] = mapped_column()
+    completed_at: Mapped[datetime | None] = mapped_column()
 
 
 class PlotterScene(Base):
