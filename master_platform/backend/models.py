@@ -1006,3 +1006,55 @@ class DeviceGroupMembership(Base):
         primary_key=True,
     )
     created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class DeviceAsset(Base):
+    """Asset-register companion table — every fabric device (regardless
+    of source kind: native / vendor / plotter / biometric / media) can
+    have one row here holding the common asset-management fields
+    operators actually care about: where it is, when it was installed,
+    when the warranty expires, what category it slots into.
+
+    Sits *next to* the source-of-truth tables, keyed by the unified
+    fabric_id, so no migration to existing typed tables is required.
+    The fabric adapter joins this in when serialising FabricDevice."""
+    __tablename__ = "device_assets"
+
+    fabric_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    # Operator-curated taxonomy (free-form strings, suggestions in UI).
+    category: Mapped[str | None] = mapped_column(String(60), index=True)
+    sub_category: Mapped[str | None] = mapped_column(String(60))
+    # Where it physically lives.
+    location: Mapped[str | None] = mapped_column(String(120))  # "Living room"
+    address: Mapped[str | None] = mapped_column(String(300))   # "12 Mill Lane, …"
+    gps_lat: Mapped[float | None] = mapped_column()
+    gps_lon: Mapped[float | None] = mapped_column()
+    # Lifecycle / warranty.
+    install_date: Mapped[datetime | None] = mapped_column()
+    warranty_expires_at: Mapped[datetime | None] = mapped_column(index=True)
+    vendor: Mapped[str | None] = mapped_column(String(120))    # manufacturer / supplier
+    purchase_ref: Mapped[str | None] = mapped_column(String(120))  # invoice / order id
+    purchase_price: Mapped[float | None] = mapped_column()
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class SystemDeployment(Base):
+    """Per-system deployment metadata (Master / Node / Edge). Captures
+    whether the system runs on physical hardware, a VPS, or a container,
+    so the topology page can truthfully show "this Node is a cloud
+    VPS in Frankfurt" alongside "this Edge is a Pi in the garage".
+
+    Keyed by target_id = "<system_kind>:<system_id>", same pattern as
+    fabric_id, so the table is polymorphic without an FK fan-out."""
+    __tablename__ = "system_deployments"
+
+    target_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    # physical | vps | container | k8s
+    deployment_type: Mapped[str] = mapped_column(String(20), default="physical", nullable=False)
+    host_ref: Mapped[str | None] = mapped_column(String(200))   # IP / DNS / cluster ref
+    region: Mapped[str | None] = mapped_column(String(60))      # eu-west-1 / on-prem
+    provider: Mapped[str | None] = mapped_column(String(60))    # vultr / aws / on-prem / …
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)

@@ -81,6 +81,17 @@
                   {% else %}bg-red-500/15 text-red-300{% endif %}">{{ d.status }}</span>
               </div>
 
+              {% if d.location or d.warranty_expires_at %}
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                  {% if d.location %}
+                    <span class="text-slate-400">📍 {{ d.location }}</span>
+                  {% endif %}
+                  {% if d.warranty_expires_at %}
+                    <span class="rounded bg-amber-500/15 px-1.5 py-0.5 text-amber-300">warranty → {{ d.warranty_expires_at }}</span>
+                  {% endif %}
+                </div>
+              {% endif %}
+
               {% if d.capabilities %}
                 <div class="mt-2 flex flex-wrap gap-1">
                   {% for c in d.capabilities %}
@@ -88,6 +99,12 @@
                   {% endfor %}
                 </div>
               {% endif %}
+
+              <div class="mt-2 border-t border-slate-800 pt-2 text-[11px]">
+                {% set parts = d.fabric_id.split(':', 1) %}
+                <a href="/ui/fabric/{{ parts[0] }}/{{ parts[1] }}/asset"
+                   class="text-cyan-400 hover:text-emerald-300">Edit asset details →</a>
+              </div>
 
               <div class="mt-2 border-t border-slate-800 pt-2">
                 <div class="text-[10px] uppercase tracking-wider text-slate-500">Groups</div>

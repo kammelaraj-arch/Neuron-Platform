@@ -24,11 +24,33 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datetime import datetime
+
 from ..db import get_session
 from ..fabric import FabricDevice, get_device, list_devices
-from ..models import APIKey, DeviceGroup, DeviceGroupMembership
+from ..models import APIKey, DeviceAsset, DeviceGroup, DeviceGroupMembership
 from ..security.audit import record
 from ..security.ui_auth import ui_require_admin
+
+
+def _parse_date(s: str | None) -> datetime | None:
+    s = (s or "").strip()
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def _parse_float(s: str | None) -> float | None:
+    s = (s or "").strip()
+    if not s:
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
 
 _BASE = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(_BASE / "templates"))
@@ -79,6 +101,85 @@ async def ui_fabric(
             "flash": flash,
         },
     )
+
+
+# ── asset register edit ─────────────────────────────────────────────
+@router.get("/ui/fabric/{fabric_id_kind}/{fabric_id_pk}/asset", response_class=HTMLResponse)
+async def ui_fabric_asset_edit(
+    fabric_id_kind: str,
+    fabric_id_pk: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    fabric_id = f"{fabric_id_kind}:{fabric_id_pk}"
+    device = await get_device(session, fabric_id)
+    if device is None:
+        raise HTTPException(404, f"device {fabric_id} not found")
+    asset = await session.get(DeviceAsset, fabric_id)
+    flash = request.session.pop("fabric_flash", None)
+    return templates.TemplateResponse(
+        "fabric_asset.html",
+        {
+            "request": request, "signed_in": True,
+            "device": device, "asset": asset,
+            "flash": flash,
+        },
+    )
+
+
+@router.post("/ui/fabric/{fabric_id_kind}/{fabric_id_pk}/asset")
+async def ui_fabric_asset_save(
+    fabric_id_kind: str,
+    fabric_id_pk: str,
+    request: Request,
+    category: str = Form(""),
+    sub_category: str = Form(""),
+    location: str = Form(""),
+    address: str = Form(""),
+    gps_lat: str = Form(""),
+    gps_lon: str = Form(""),
+    install_date: str = Form(""),
+    warranty_expires_at: str = Form(""),
+    vendor: str = Form(""),
+    purchase_ref: str = Form(""),
+    purchase_price: str = Form(""),
+    notes: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    fabric_id = f"{fabric_id_kind}:{fabric_id_pk}"
+    if await get_device(session, fabric_id) is None:
+        raise HTTPException(404, f"device {fabric_id} not found")
+    row = await session.get(DeviceAsset, fabric_id)
+    if row is None:
+        row = DeviceAsset(fabric_id=fabric_id)
+        session.add(row)
+    row.category = category.strip() or None
+    row.sub_category = sub_category.strip() or None
+    row.location = location.strip() or None
+    row.address = address.strip() or None
+    row.gps_lat = _parse_float(gps_lat)
+    row.gps_lon = _parse_float(gps_lon)
+    row.install_date = _parse_date(install_date)
+    row.warranty_expires_at = _parse_date(warranty_expires_at)
+    row.vendor = vendor.strip() or None
+    row.purchase_ref = purchase_ref.strip() or None
+    row.purchase_price = _parse_float(purchase_price)
+    row.notes = notes.strip() or None
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="fabric.asset.save", target_kind="device_asset",
+        target_id=fabric_id,
+        detail={"location": row.location, "category": row.category,
+                "warranty_expires_at": warranty_expires_at,
+                "purchase_price": row.purchase_price},
+    )
+    await session.commit()
+    request.session["fabric_flash"] = {"kind": "emerald",
+        "msg": f"Asset details saved for {fabric_id}."}
+    return RedirectResponse(f"/ui/fabric/{fabric_id_kind}/{fabric_id_pk}/asset",
+                            status_code=303)
 
 
 # ── capability-driven picker + bulk assign ─────────────────────────

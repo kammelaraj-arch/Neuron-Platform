@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import (
     Device,
+    DeviceAsset,
     DeviceGroupMembership,
     PlotterDevice,
     PlotterScene,
@@ -34,6 +35,19 @@ class FabricDevice:
     capabilities: list[str] = field(default_factory=list)
     groups: list[str] = field(default_factory=list)
     detail_url: str = ""      # deep link to the integration's own page
+    # ── Asset register (joined from DeviceAsset; nullable) ─────────
+    sub_category: str | None = None
+    location: str | None = None       # "Living room"
+    address: str | None = None
+    gps_lat: float | None = None
+    gps_lon: float | None = None
+    install_date: str | None = None        # ISO-8601 date
+    warranty_expires_at: str | None = None # ISO-8601 date
+    vendor_name: str | None = None
+    purchase_ref: str | None = None
+    purchase_price: float | None = None
+    notes: str | None = None
+    # Free-form per-kind metadata that doesn't deserve a column.
     extras: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> dict:
@@ -206,6 +220,29 @@ async def list_devices(session: AsyncSession, *,
         groups_by_fabric.setdefault(m.fabric_id, []).append(m.group_name)
     for d in devices:
         d.groups = sorted(groups_by_fabric.get(d.fabric_id, []))
+
+    # Attach asset-register fields in one query, same shape.
+    assets = (await session.execute(select(DeviceAsset))).scalars().all()
+    assets_by_fabric = {a.fabric_id: a for a in assets}
+    for d in devices:
+        a = assets_by_fabric.get(d.fabric_id)
+        if a is None:
+            continue
+        # Asset.category, if set, overrides the source-derived category
+        # so the operator's taxonomy wins.
+        if a.category:
+            d.category = a.category
+        d.sub_category = a.sub_category
+        d.location = a.location
+        d.address = a.address
+        d.gps_lat = a.gps_lat
+        d.gps_lon = a.gps_lon
+        d.install_date = a.install_date.isoformat()[:10] if a.install_date else None
+        d.warranty_expires_at = a.warranty_expires_at.isoformat()[:10] if a.warranty_expires_at else None
+        d.vendor_name = a.vendor
+        d.purchase_ref = a.purchase_ref
+        d.purchase_price = a.purchase_price
+        d.notes = a.notes
 
     # Filters (simple — substring + exact).
     if kind:

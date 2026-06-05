@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Asset · {{ device.label }}{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <div class="text-xs text-slate-400">
+        <a href="/ui/fabric" class="hover:text-emerald-300">Fabric</a> ·
+        <span class="font-mono">{{ device.fabric_id }}</span>
+      </div>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ device.label }}</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        {{ device.kind }} · {{ device.provider or 'neuron' }} · {{ device.category }} · status: <span class="text-emerald-300">{{ device.status }}</span>
+      </p>
+    </div>
+    <a href="{{ device.detail_url }}" class="text-xs text-slate-400 hover:text-emerald-300">Integration page ↗</a>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  <form method="post" class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+
+    <!-- ── Classification ────────────────────────────────────────── -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 md:col-span-2">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Classification</h2>
+      <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <label class="flex flex-col text-xs text-slate-400">
+          Category <span class="text-slate-600">(overrides the auto-derived one)</span>
+          <input name="category" value="{{ asset.category if asset else '' }}"
+                 list="cat-suggestions" placeholder="{{ device.category }}"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          <datalist id="cat-suggestions">
+            <option value="thermostat"><option value="camera"><option value="alarm-hub">
+            <option value="scene-trigger"><option value="plotter"><option value="sensor">
+            <option value="biometric"><option value="display"><option value="actuator">
+            <option value="lighting"><option value="speaker"><option value="hub">
+          </datalist>
+        </label>
+        <label class="flex flex-col text-xs text-slate-400">
+          Sub-category
+          <input name="sub_category" value="{{ asset.sub_category if asset else '' }}"
+                 placeholder="e.g. ssd1306-oled / drv8825 / spo2-ble"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+        </label>
+      </div>
+    </section>
+
+    <!-- ── Where it lives ─────────────────────────────────────────── -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Location</h2>
+      <div class="mt-3 space-y-3">
+        <label class="flex flex-col text-xs text-slate-400">
+          Room / location
+          <input name="location" value="{{ asset.location if asset else '' }}"
+                 placeholder="Living room"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+        </label>
+        <label class="flex flex-col text-xs text-slate-400">
+          Address
+          <input name="address" value="{{ asset.address if asset else '' }}"
+                 placeholder="12 Mill Lane, …"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex flex-col text-xs text-slate-400">
+            GPS lat
+            <input name="gps_lat" type="number" step="0.000001"
+                   value="{{ asset.gps_lat if asset and asset.gps_lat is not none else '' }}"
+                   class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+          </label>
+          <label class="flex flex-col text-xs text-slate-400">
+            GPS lon
+            <input name="gps_lon" type="number" step="0.000001"
+                   value="{{ asset.gps_lon if asset and asset.gps_lon is not none else '' }}"
+                   class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Lifecycle / warranty ──────────────────────────────────── -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Lifecycle</h2>
+      <div class="mt-3 space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex flex-col text-xs text-slate-400">
+            Install date
+            <input name="install_date" type="date"
+                   value="{{ asset.install_date.strftime('%Y-%m-%d') if asset and asset.install_date else '' }}"
+                   class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          </label>
+          <label class="flex flex-col text-xs text-slate-400">
+            Warranty expires
+            <input name="warranty_expires_at" type="date"
+                   value="{{ asset.warranty_expires_at.strftime('%Y-%m-%d') if asset and asset.warranty_expires_at else '' }}"
+                   class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          </label>
+        </div>
+        <label class="flex flex-col text-xs text-slate-400">
+          Vendor / manufacturer
+          <input name="vendor" value="{{ asset.vendor if asset else '' }}"
+                 placeholder="e.g. A&D Medical"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex flex-col text-xs text-slate-400">
+            Purchase ref / invoice
+            <input name="purchase_ref" value="{{ asset.purchase_ref if asset else '' }}"
+                   placeholder="amazon order #"
+                   class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          </label>
+          <label class="flex flex-col text-xs text-slate-400">
+            Purchase price (£)
+            <input name="purchase_price" type="number" step="0.01"
+                   value="{{ asset.purchase_price if asset and asset.purchase_price is not none else '' }}"
+                   class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 md:col-span-2">
+      <label class="flex flex-col text-xs text-slate-400">
+        Notes
+        <textarea name="notes" rows="3"
+                  class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">{{ asset.notes if asset else '' }}</textarea>
+      </label>
+    </section>
+
+    <div class="md:col-span-2 flex justify-end gap-2">
+      <a href="/ui/fabric" class="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">Cancel</a>
+      <button class="rounded-md bg-emerald-500 px-4 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Save asset details</button>
+    </div>
+  </form>
+{% endblock %}
