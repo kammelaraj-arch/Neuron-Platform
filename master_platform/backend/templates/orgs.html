@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Organisations{% endblock %}
+{% block content %}
+  <header>
+    <h1 class="text-2xl font-semibold tracking-tight">Organisations</h1>
+    <p class="mt-1 text-sm text-slate-400">
+      Multi-tenant boundary. Members of an org browse devices owned by that org read-only by default; <strong>control requires an explicit grant</strong>.
+    </p>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-900/80 text-left text-xs uppercase tracking-wider text-slate-400">
+          <tr><th class="px-4 py-2">Label</th><th class="px-4 py-2">Slug</th><th class="px-4 py-2">Members</th><th class="px-4 py-2 text-right"></th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/70">
+          {% for o in orgs %}
+            <tr class="hover:bg-slate-900/40">
+              <td class="px-4 py-2 font-medium text-slate-100">{{ o.label }}</td>
+              <td class="px-4 py-2 font-mono text-xs text-slate-400">{{ o.name }}</td>
+              <td class="px-4 py-2 text-slate-300">{{ member_counts.get(o.name, 0) }}</td>
+              <td class="px-4 py-2 text-right">
+                <a href="/ui/orgs/{{ o.name }}" class="text-cyan-400 hover:text-emerald-300 text-xs">Manage →</a>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">No orgs yet — create the first one below.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">New organisation</h2>
+    <form method="post" action="/ui/orgs/new" class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_2fr_auto]">
+      <label class="flex flex-col text-xs text-slate-400">
+        Slug
+        <input name="name" required pattern="[a-z0-9-]+" placeholder="acme-london"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+      </label>
+      <label class="flex flex-col text-xs text-slate-400">
+        Label
+        <input name="label" required placeholder="Acme London"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+      </label>
+      <label class="flex flex-col text-xs text-slate-400">
+        Description
+        <input name="description" placeholder="What this org owns"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+      </label>
+      <div class="flex items-end">
+        <button class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Add</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

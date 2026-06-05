@@ -128,6 +128,88 @@
       </label>
     </section>
 
+    <!-- ── Safety / risk (per CLAUDE.md failsafe contract) ─────── -->
+    <section class="rounded-2xl border border-red-700/40 bg-red-500/5 p-4 md:col-span-2">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-red-300">Safety + risk</h2>
+      <p class="mt-1 text-[11px] text-slate-400">The local brain on the child device enforces this without network connectivity. Sensors should default to <code>alarm_only</code>; mains-switched actuators to <code>off</code> or <code>fail_closed</code>.</p>
+      <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <label class="flex flex-col text-xs text-slate-400">
+          Risk level
+          <select name="risk_level" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+            {% for lvl in risk_levels %}
+              <option value="{{ lvl }}" {% if safety and safety.risk_level == lvl %}selected{% elif not safety and lvl == 'nominal' %}selected{% endif %}>{{ lvl }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="flex flex-col text-xs text-slate-400">
+          Failsafe action
+          <select name="failsafe_action" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+            {% for act in failsafe_actions %}
+              <option value="{{ act }}" {% if safety and safety.failsafe_action == act %}selected{% elif not safety and act == 'alarm_only' %}selected{% endif %}>{{ act }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <fieldset class="md:col-span-2">
+          <legend class="text-xs text-slate-400 mb-1">Risk types (what it can hurt)</legend>
+          <div class="grid grid-cols-2 gap-1 md:grid-cols-4">
+            {% set current_types = (safety.risk_types_json if safety else []) or [] %}
+            {% for t in risk_types %}
+              <label class="flex items-center gap-1 text-[11px] text-slate-300">
+                <input type="checkbox" name="risk_types" value="{{ t }}"
+                       {% if t in current_types %}checked{% endif %}
+                       class="rounded bg-slate-800">
+                {{ t }}
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <label class="flex flex-col text-xs text-slate-400 md:col-span-2">
+          Failsafe value (JSON, only when action = go_to_safe_value)
+          <input name="failsafe_value" value="{{ safety.failsafe_value_json|tojson if safety and safety.failsafe_value_json else '' }}"
+                 placeholder='{"setpoint_c": 0}'
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+        </label>
+        <label class="flex flex-col text-xs text-slate-400">
+          Disconnect grace (seconds)
+          <input name="disconnect_grace_seconds" type="number" min="1" max="86400"
+                 value="{{ safety.disconnect_grace_seconds if safety else 30 }}"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+        </label>
+        <label class="flex flex-col text-xs text-slate-400">
+          Watchdog (ms between commands)
+          <input name="watchdog_ms" type="number" min="50" max="600000"
+                 value="{{ safety.watchdog_ms if safety else 1000 }}"
+                 class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+        </label>
+        <label class="flex flex-col text-xs text-slate-400 md:col-span-2">
+          Hazard notes
+          <textarea name="hazard_notes" rows="2"
+                    placeholder="Anything the next operator needs to know about this device's hazards."
+                    class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">{{ safety.hazard_notes if safety else '' }}</textarea>
+        </label>
+        {% if safety and safety.last_reviewed_at %}
+          <div class="md:col-span-2 text-[10px] text-slate-500">
+            Last reviewed {{ safety.last_reviewed_at.isoformat()[:19] }} by {{ safety.last_reviewed_by or 'unknown' }}
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- ── Org assignment ────────────────────────────────────────── -->
+    <section class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 md:col-span-2">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Organisation</h2>
+      <p class="mt-1 text-[11px] text-slate-400">Owning organisation. Members of that org browse this device read-only by default; control requires an explicit grant.</p>
+      <label class="mt-3 flex flex-col text-xs text-slate-400 md:max-w-sm">
+        Owner org
+        <select name="org_name" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          <option value="">— default org —</option>
+          {% for org in orgs %}
+            <option value="{{ org.name }}" {% if device.org_name == org.name %}selected{% endif %}>{{ org.label }} ({{ org.name }})</option>
+          {% endfor %}
+        </select>
+      </label>
+    </section>
+
     <div class="md:col-span-2 flex justify-end gap-2">
       <a href="/ui/fabric" class="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">Cancel</a>
       <button class="rounded-md bg-emerald-500 px-4 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Save asset details</button>

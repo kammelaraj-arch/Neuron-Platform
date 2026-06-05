@@ -28,7 +28,11 @@ from datetime import datetime
 
 from ..db import get_session
 from ..fabric import FabricDevice, get_device, list_devices
-from ..models import APIKey, DeviceAsset, DeviceGroup, DeviceGroupMembership
+from ..models import (
+    APIKey, DeviceAsset, DeviceGrant, DeviceGroup, DeviceGroupMembership,
+    DeviceOrgAssignment, DeviceSafety, FAILSAFE_ACTIONS, OrgMembership,
+    Organization, RISK_LEVELS, RISK_TYPES, User,
+)
 from ..security.audit import record
 from ..security.ui_auth import ui_require_admin
 
@@ -117,12 +121,17 @@ async def ui_fabric_asset_edit(
     if device is None:
         raise HTTPException(404, f"device {fabric_id} not found")
     asset = await session.get(DeviceAsset, fabric_id)
+    safety = await session.get(DeviceSafety, fabric_id)
+    orgs = (await session.execute(select(Organization).order_by(Organization.label))).scalars().all()
     flash = request.session.pop("fabric_flash", None)
     return templates.TemplateResponse(
         "fabric_asset.html",
         {
             "request": request, "signed_in": True,
-            "device": device, "asset": asset,
+            "device": device, "asset": asset, "safety": safety,
+            "orgs": orgs,
+            "risk_levels": RISK_LEVELS, "risk_types": RISK_TYPES,
+            "failsafe_actions": FAILSAFE_ACTIONS,
             "flash": flash,
         },
     )
@@ -145,6 +154,16 @@ async def ui_fabric_asset_save(
     purchase_ref: str = Form(""),
     purchase_price: str = Form(""),
     notes: str = Form(""),
+    # Safety fields.
+    risk_level: str = Form("nominal"),
+    risk_types: list[str] | None = Form(None),
+    failsafe_action: str = Form("alarm_only"),
+    failsafe_value: str = Form(""),
+    disconnect_grace_seconds: int = Form(30),
+    watchdog_ms: int = Form(1000),
+    hazard_notes: str = Form(""),
+    # Org assignment.
+    org_name: str = Form(""),
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_admin),
 ):
@@ -167,13 +186,57 @@ async def ui_fabric_asset_save(
     row.purchase_ref = purchase_ref.strip() or None
     row.purchase_price = _parse_float(purchase_price)
     row.notes = notes.strip() or None
+
+    # ── Safety / risk ────────────────────────────────────────────
+    safety = await session.get(DeviceSafety, fabric_id)
+    if safety is None:
+        safety = DeviceSafety(fabric_id=fabric_id)
+        session.add(safety)
+    if risk_level and risk_level in RISK_LEVELS:
+        safety.risk_level = risk_level
+    safety.risk_types_json = [t for t in (risk_types or []) if t in RISK_TYPES]
+    if failsafe_action and failsafe_action in FAILSAFE_ACTIONS:
+        safety.failsafe_action = failsafe_action
+    if failsafe_value.strip():
+        import json as _json
+        try:
+            safety.failsafe_value_json = _json.loads(failsafe_value)
+        except Exception:
+            safety.failsafe_value_json = {"raw": failsafe_value.strip()}
+    else:
+        safety.failsafe_value_json = None
+    safety.disconnect_grace_seconds = max(1, min(86400, int(disconnect_grace_seconds)))
+    safety.watchdog_ms = max(50, min(600000, int(watchdog_ms)))
+    safety.hazard_notes = hazard_notes.strip() or None
+    safety.last_reviewed_at = datetime.now()
+    safety.last_reviewed_by = actor.id
+
+    # ── Org assignment ───────────────────────────────────────────
+    if org_name.strip():
+        if await session.get(Organization, org_name.strip()) is None:
+            raise HTTPException(400, f"unknown org '{org_name}'")
+        existing = await session.get(DeviceOrgAssignment, fabric_id)
+        if existing is None:
+            session.add(DeviceOrgAssignment(
+                fabric_id=fabric_id, org_name=org_name.strip(),
+                assigned_by=actor.id,
+            ))
+        else:
+            existing.org_name = org_name.strip()
+            existing.assigned_by = actor.id
+
     await record(
         session, actor=actor.id, actor_kind="ui_session",
         action="fabric.asset.save", target_kind="device_asset",
         target_id=fabric_id,
-        detail={"location": row.location, "category": row.category,
-                "warranty_expires_at": warranty_expires_at,
-                "purchase_price": row.purchase_price},
+        detail={
+            "location": row.location, "category": row.category,
+            "warranty_expires_at": warranty_expires_at,
+            "purchase_price": row.purchase_price,
+            "risk_level": safety.risk_level,
+            "failsafe_action": safety.failsafe_action,
+            "org_name": org_name.strip() or None,
+        },
     )
     await session.commit()
     request.session["fabric_flash"] = {"kind": "emerald",

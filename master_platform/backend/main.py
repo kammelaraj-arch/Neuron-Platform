@@ -35,6 +35,7 @@ from .routers import (
     library,
     library_manage_ui,
     mtls,
+    orgs_ui,
     ota,
     pico_provision_ui,
     plotter_ui,
@@ -405,6 +406,34 @@ async def _bootstrap_admin_user_if_needed() -> None:
         )
 
 
+async def _seed_default_org_if_empty() -> None:
+    """Ensure a default 'personal' org exists and the admin user is
+    a member. Idempotent — only seeds when no orgs exist."""
+    from sqlalchemy import func as _f
+    from .models import Organization, OrgMembership, User
+    async with SessionLocal() as session:
+        existing = await session.scalar(select(_f.count()).select_from(Organization))
+        if existing and existing > 0:
+            return
+        default = Organization(
+            name="personal", label="Personal",
+            description="Default tenant — all existing devices belong here unless reassigned.",
+        )
+        session.add(default)
+        await session.flush()
+        # Add the bootstrap admin (if seeded) as an org admin.
+        admin = (await session.execute(
+            select(User).where(User.username == "admin")
+        )).scalar_one_or_none()
+        if admin is not None:
+            session.add(OrgMembership(
+                org_name="personal", user_id=admin.id, role="admin",
+            ))
+        await session.commit()
+        _log.warning("Seeded default 'personal' org%s.",
+                     " + admin membership" if admin else "")
+
+
 async def _seed_default_device_groups_if_empty() -> None:
     """Seed a starting set of groups so /ui/fabric isn't empty.
     Idempotent — only runs when the table has no rows."""
@@ -508,6 +537,7 @@ async def lifespan(app: FastAPI):
     await _step("bootstrap_admin_user", _bootstrap_admin_user_if_needed())
     await _step("seed_feature_requests", _seed_feature_requests_if_empty())
     await _step("seed_independent_apps", _seed_independent_apps_if_empty())
+    await _step("seed_default_org", _seed_default_org_if_empty())
     await _step("seed_default_device_groups", _seed_default_device_groups_if_empty())
     await _step("seed_demo_plotter", _seed_demo_plotter_if_empty())
 
@@ -624,6 +654,7 @@ app.include_router(ring_ui.router)
 app.include_router(alexa_ui.router)
 app.include_router(plotter_ui.router)
 app.include_router(fabric_ui.router)
+app.include_router(orgs_ui.router)
 app.include_router(apps_ui.router)
 app.include_router(users_ui.router)
 app.include_router(pico_provision_ui.router)

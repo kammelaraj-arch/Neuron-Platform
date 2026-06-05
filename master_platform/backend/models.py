@@ -1040,6 +1040,134 @@ class DeviceAsset(Base):
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
 
+class Organization(Base):
+    """Multi-tenant boundary. One Master serves N organizations; every
+    device, group, grant, and app is scoped to exactly one org. Users
+    can belong to multiple orgs via OrgMembership.
+
+    Default-allow read for any member; control / write requires an
+    explicit DeviceGrant. See models docstrings + /ui/orgs."""
+    __tablename__ = "organizations"
+
+    name: Mapped[str] = mapped_column(String(60), primary_key=True)  # slug, e.g. "personal"
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class OrgMembership(Base):
+    """User × Org × Role. Admin = manage org, members, grants, devices.
+    Member = browse the fabric (read-only by default), drive devices
+    only via explicit DeviceGrant rows.
+
+    A single user can belong to many orgs (consultant pattern) but at
+    any moment their session has one *current* org_id."""
+    __tablename__ = "org_memberships"
+
+    org_name: Mapped[str] = mapped_column(
+        ForeignKey("organizations.name", ondelete="CASCADE"), primary_key=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True,
+    )
+    role: Mapped[str] = mapped_column(String(20), default="member", nullable=False)
+    # admin | member  (intentionally simple — read-only-default makes
+    # consumer/operator distinction unnecessary at the membership level;
+    # access shape is controlled by DeviceGrant)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+class DeviceOrgAssignment(Base):
+    """Polymorphic device → org assignment keyed by the unified
+    fabric_id, so we don't have to add an org_id column to every
+    existing typed device table. A device without an assignment row
+    is treated as belonging to the *default* org seeded at first
+    boot — protects against orphaned devices breaking the fabric."""
+    __tablename__ = "device_org_assignments"
+
+    fabric_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    org_name: Mapped[str] = mapped_column(
+        ForeignKey("organizations.name", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    assigned_at: Mapped[datetime] = mapped_column(default=_now)
+    assigned_by: Mapped[str | None] = mapped_column(String(40))
+
+
+class DeviceGrant(Base):
+    """Capability grant — the *only* path for any principal (user or
+    app) to **control** a device. Browse / read is allowed by org
+    membership alone.
+
+    target_kind 'group' grants capabilities across every device in the
+    DeviceGroup; 'device' grants on a single fabric_id (the per-capability
+    override the operator asked for: e.g. user has access to all
+    Kitchen group but ALSO needs siren on the hallway camera which
+    isn't in Kitchen).
+
+    Capabilities are the strings exposed by FabricDevice.capabilities
+    so the grant model and the integration plumbing share one
+    vocabulary."""
+    __tablename__ = "device_grants"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    org_name: Mapped[str] = mapped_column(
+        ForeignKey("organizations.name", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    principal_kind: Mapped[str] = mapped_column(String(20), nullable=False)  # user | app
+    principal_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    target_kind: Mapped[str] = mapped_column(String(20), nullable=False)  # group | device
+    target_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    capabilities_json: Mapped[list] = mapped_column(JSON, default=list)  # ["set_temp", "siren"]
+    granted_by: Mapped[str | None] = mapped_column(String(40))
+    granted_at: Mapped[datetime] = mapped_column(default=_now)
+    expires_at: Mapped[datetime | None] = mapped_column(index=True)
+
+
+class DeviceSafety(Base):
+    """Per-instance safety + risk profile, available to every fabric
+    device (regardless of source kind) so the local brain — and Master
+    audit — can reason about what the device can hurt and how to fail
+    safe. Matches the CLAUDE.md failsafe contract that was previously
+    only on ComponentInstance: now lifted to the fabric so cloud
+    devices (Tado heaters, Ring sirens) and native devices share the
+    same vocabulary.
+
+    Defaults err conservative: alarm_only failsafe (just notify, never
+    actuate) so a freshly-added device without an explicit risk
+    profile can't trigger an autonomous control action by accident.
+
+    Field semantics (re-using the constants at the top of this file):
+      risk_level:      RISK_LEVELS — nominal | advisory | critical | life_safety
+      risk_types_json: list of RISK_TYPES — fire / scald / shock / …
+      failsafe_action: FAILSAFE_ACTIONS — off | hold_last | go_to_safe_value |
+                                          alarm_only | stop | fail_open | fail_closed
+      failsafe_value_json: concrete value when failsafe_action='go_to_safe_value'
+                          (e.g. {"setpoint_c": 0} for a heater).
+      disconnect_grace_seconds: how long the brain tolerates link loss
+                                before enforcing failsafe (CLAUDE.md default 30s).
+      watchdog_ms:    max gap between commands before the link is
+                      considered dead (default 1000ms).
+    """
+    __tablename__ = "device_safety"
+
+    fabric_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    risk_level: Mapped[str] = mapped_column(String(20), default="nominal", nullable=False, index=True)
+    risk_types_json: Mapped[list] = mapped_column(JSON, default=list)
+    failsafe_action: Mapped[str] = mapped_column(String(30), default="alarm_only", nullable=False)
+    failsafe_value_json: Mapped[dict | None] = mapped_column(JSON)
+    disconnect_grace_seconds: Mapped[int] = mapped_column(default=30, nullable=False)
+    watchdog_ms: Mapped[int] = mapped_column(default=1000, nullable=False)
+    # Operator-set free text — useful for safety review / audit.
+    hazard_notes: Mapped[str | None] = mapped_column(Text)
+    last_reviewed_at: Mapped[datetime | None] = mapped_column()
+    last_reviewed_by: Mapped[str | None] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 class SystemDeployment(Base):
     """Per-system deployment metadata (Master / Node / Edge). Captures
     whether the system runs on physical hardware, a VPS, or a container,

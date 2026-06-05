@@ -16,6 +16,8 @@ from ..models import (
     Device,
     DeviceAsset,
     DeviceGroupMembership,
+    DeviceOrgAssignment,
+    DeviceSafety,
     PlotterDevice,
     PlotterScene,
     VendorAccount,
@@ -47,6 +49,16 @@ class FabricDevice:
     purchase_ref: str | None = None
     purchase_price: float | None = None
     notes: str | None = None
+    # ── Safety + risk (joined from DeviceSafety; nullable) ─────────
+    risk_level: str = "nominal"
+    risk_types: list[str] = field(default_factory=list)
+    failsafe_action: str = "alarm_only"
+    failsafe_value: dict[str, Any] | None = None
+    disconnect_grace_seconds: int = 30
+    watchdog_ms: int = 1000
+    hazard_notes: str | None = None
+    # ── Org assignment (joined from DeviceOrgAssignment) ───────────
+    org_name: str | None = None
     # Free-form per-kind metadata that doesn't deserve a column.
     extras: dict[str, Any] = field(default_factory=dict)
 
@@ -243,6 +255,27 @@ async def list_devices(session: AsyncSession, *,
         d.purchase_ref = a.purchase_ref
         d.purchase_price = a.purchase_price
         d.notes = a.notes
+
+    # Attach safety + risk profile (CLAUDE.md failsafe contract).
+    safety_rows = (await session.execute(select(DeviceSafety))).scalars().all()
+    safety_by_fabric = {s.fabric_id: s for s in safety_rows}
+    for d in devices:
+        s = safety_by_fabric.get(d.fabric_id)
+        if s is None:
+            continue
+        d.risk_level = s.risk_level or "nominal"
+        d.risk_types = s.risk_types_json or []
+        d.failsafe_action = s.failsafe_action or "alarm_only"
+        d.failsafe_value = s.failsafe_value_json
+        d.disconnect_grace_seconds = s.disconnect_grace_seconds
+        d.watchdog_ms = s.watchdog_ms
+        d.hazard_notes = s.hazard_notes
+
+    # Attach org assignment.
+    org_rows = (await session.execute(select(DeviceOrgAssignment))).scalars().all()
+    org_by_fabric = {r.fabric_id: r.org_name for r in org_rows}
+    for d in devices:
+        d.org_name = org_by_fabric.get(d.fabric_id)
 
     # Filters (simple — substring + exact).
     if kind:
