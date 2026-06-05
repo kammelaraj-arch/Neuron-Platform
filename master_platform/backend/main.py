@@ -29,6 +29,7 @@ from .routers import (
     devices,
     diag,
     fabric,
+    fabric_ui,
     features_ui,
     functions_ui,
     library,
@@ -404,6 +405,35 @@ async def _bootstrap_admin_user_if_needed() -> None:
         )
 
 
+async def _seed_default_device_groups_if_empty() -> None:
+    """Seed a starting set of groups so /ui/fabric isn't empty.
+    Idempotent — only runs when the table has no rows."""
+    from sqlalchemy import func as _f
+    from .models import DeviceGroup
+    async with SessionLocal() as session:
+        existing = await session.scalar(select(_f.count()).select_from(DeviceGroup))
+        if existing and existing > 0:
+            return
+        seed = [
+            # name,                label,                color,     room,         sort
+            ("voice-controllable", "Voice-controllable", "#a78bfa", None,         10),
+            ("critical",           "Critical",           "#ef4444", None,         20),
+            ("home",               "Home",               "#10b981", None,         30),
+            ("kitchen",            "Kitchen",            "#f59e0b", "Ground floor", 40),
+            ("bedroom",            "Bedroom",            "#06b6d4", "First floor",  50),
+            ("garage",             "Garage",             "#64748b", "Outbuilding",  60),
+            ("outdoor",            "Outdoor",            "#22d3ee", None,         70),
+            ("health-monitor",     "Health monitor",     "#f43f5e", None,         80),
+        ]
+        for name, label, color, room, sort_order in seed:
+            session.add(DeviceGroup(
+                name=name, label=label, color=color,
+                room=room, sort_order=sort_order,
+            ))
+        await session.commit()
+        _log.warning("Seeded %d default device groups.", len(seed))
+
+
 async def _seed_demo_plotter_if_empty() -> None:
     """Pre-populate one demo plotter + three scenes so that voice
     Discovery (Alexa / future Google) returns at least a few endpoints
@@ -478,6 +508,7 @@ async def lifespan(app: FastAPI):
     await _step("bootstrap_admin_user", _bootstrap_admin_user_if_needed())
     await _step("seed_feature_requests", _seed_feature_requests_if_empty())
     await _step("seed_independent_apps", _seed_independent_apps_if_empty())
+    await _step("seed_default_device_groups", _seed_default_device_groups_if_empty())
     await _step("seed_demo_plotter", _seed_demo_plotter_if_empty())
 
     # Periodic audit retention prune so SQLite doesn't grow unbounded.
@@ -592,6 +623,7 @@ app.include_router(tado_ui.router)
 app.include_router(ring_ui.router)
 app.include_router(alexa_ui.router)
 app.include_router(plotter_ui.router)
+app.include_router(fabric_ui.router)
 app.include_router(apps_ui.router)
 app.include_router(users_ui.router)
 app.include_router(pico_provision_ui.router)

@@ -90,7 +90,44 @@ def _request(method: str, url: str, *,
 
 
 def _master_headers() -> dict:
-    return {"Authorization": f"Bearer {AGENT_TOKEN}"}
+    h = {"Authorization": f"Bearer {AGENT_TOKEN}"}
+    hw = _read_hw_identity()
+    if hw:
+        h["X-Neuron-Hw-Kind"] = hw["kind"]
+        h["X-Neuron-Hw-Id"] = hw["id"]
+    return h
+
+
+def _read_hw_identity() -> dict | None:
+    """Best-effort: report the strongest available hardware id so the
+    Master can anchor identity. Tries CPU serial first (most stable on
+    Pi 4 / 5), falls back to first non-loopback MAC. Cached on first
+    call — the values don't change at runtime."""
+    cached = getattr(_read_hw_identity, "_cache", None)
+    if cached is not None:
+        return cached or None  # falsy sentinel = "we tried, nothing useful"
+    try:
+        with open("/proc/cpuinfo", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.lower().startswith("serial"):
+                    val = line.split(":", 1)[1].strip()
+                    if val and val.strip("0"):    # skip the all-zero stub VMs report
+                        _read_hw_identity._cache = {"kind": "cpu_serial", "id": val}
+                        return _read_hw_identity._cache
+    except Exception:
+        pass
+    try:
+        import uuid
+        mac = uuid.getnode()
+        if mac and mac != 0:
+            mac_hex = ":".join(f"{(mac >> 8*i) & 0xff:02x}"
+                               for i in reversed(range(6)))
+            _read_hw_identity._cache = {"kind": "eth_mac", "id": mac_hex}
+            return _read_hw_identity._cache
+    except Exception:
+        pass
+    _read_hw_identity._cache = {}
+    return None
 
 
 def _local_headers() -> dict:

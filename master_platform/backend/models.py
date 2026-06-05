@@ -909,6 +909,12 @@ class PlotterDevice(Base):
     # it's already the device's only auth material (one bearer per Pi).
     agent_token: Mapped[str | None] = mapped_column(String(80), unique=True, index=True)
     agent_poll_interval_s: Mapped[int] = mapped_column(default=3, nullable=False)
+    # Hardware identity — captured from the Pi-side agent on first poll so
+    # the fabric layer can anchor identity to actual silicon, not a random
+    # Neuron-side UUID. Without this, re-installing the agent against the
+    # same physical Pi would orphan the device row and lose group memberships.
+    hw_id: Mapped[str | None] = mapped_column(String(80), unique=True, index=True)
+    hw_kind: Mapped[str | None] = mapped_column(String(20))   # cpu_serial | eth_mac | wifi_mac
     status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)
     last_seen_at: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=_now)
@@ -966,3 +972,37 @@ class PlotterScene(Base):
     __table_args__ = (
         UniqueConstraint("device_id", "name", name="uq_plotter_scene_name_per_device"),
     )
+
+
+class DeviceGroup(Base):
+    """Operator-defined logical grouping (room, role, criticality).
+    Pure metadata — actual membership lives in DeviceGroupMembership,
+    keyed by the unified fabric_id string so a group can span every
+    integration kind (native Device, VendorDevice, PlotterDevice,
+    future Biometric / Media)."""
+    __tablename__ = "device_groups"
+
+    name: Mapped[str] = mapped_column(String(60), primary_key=True)   # "kitchen"
+    label: Mapped[str] = mapped_column(String(120), nullable=False)   # "Kitchen"
+    color: Mapped[str] = mapped_column(String(20), default="#10b981", nullable=False)
+    room: Mapped[str | None] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(default=100, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
+class DeviceGroupMembership(Base):
+    """One row per (device, group) pair. fabric_id is a string of the
+    form '<kind>:<source_pk>' (e.g. 'vendor:abc...', 'plotter:xyz...',
+    'native:DNA-MK7J-...') computed by the fabric adapter — durable
+    across re-discovery because the underlying source IDs are either
+    vendor-assigned hardware IDs or stable Neuron DNAs."""
+    __tablename__ = "device_group_memberships"
+
+    fabric_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    group_name: Mapped[str] = mapped_column(
+        ForeignKey("device_groups.name", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(default=_now)

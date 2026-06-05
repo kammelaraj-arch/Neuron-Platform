@@ -35,6 +35,28 @@ _log = logging.getLogger("neuron.agent")
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
 
+async def _stamp_hw_identity(device: PlotterDevice, hw_kind: str | None,
+                             hw_id: str | None) -> bool:
+    """Capture the Pi's CPU serial / MAC on first poll. If a different
+    physical Pi tries to reuse the same agent token, we refuse — the
+    operator should rotate the token rather than allow silent device
+    swapping (which would orphan group memberships)."""
+    if not (hw_kind and hw_id):
+        return False
+    if device.hw_id and device.hw_id == hw_id:
+        return False        # stable, no-op
+    if device.hw_id and device.hw_id != hw_id:
+        raise HTTPException(
+            409,
+            f"agent token already bound to a different physical device "
+            f"({device.hw_kind}:{device.hw_id[:12]}…). Rotate the token "
+            f"on /ui/plotter if this is intentional."
+        )
+    device.hw_id = hw_id
+    device.hw_kind = hw_kind
+    return True
+
+
 async def _resolve_device(session: AsyncSession, device_id: str,
                           authorization: str) -> PlotterDevice:
     """Validate bearer token belongs to this device. We look up by
@@ -60,9 +82,12 @@ async def agent_poll(
     device_id: str,
     request: Request,
     authorization: str = Header(""),
+    x_neuron_hw_kind: str = Header(""),
+    x_neuron_hw_id: str = Header(""),
     session: AsyncSession = Depends(get_session),
 ):
     device = await _resolve_device(session, device_id, authorization)
+    await _stamp_hw_identity(device, x_neuron_hw_kind or None, x_neuron_hw_id or None)
     now = datetime.now(timezone.utc)
     device.last_seen_at = now
 

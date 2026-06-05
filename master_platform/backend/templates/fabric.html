@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Device fabric{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Device fabric</h1>
+      <p class="mt-1 max-w-2xl text-sm text-slate-400">
+        Every device Neuron knows about, in one place. Native, vendor-cloud, plotter scenes, and (soon) biometric sensors all map into the same shape so they can be searched, grouped, and used by any composition surface.
+      </p>
+    </div>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr_280px]">
+
+    <!-- ── Left: filters ────────────────────────────────────────── -->
+    <aside class="rounded-2xl border border-slate-800 bg-slate-900/40 p-3">
+      <form method="get" action="/ui/fabric" class="space-y-3 text-sm">
+        <div>
+          <label class="block text-[11px] uppercase tracking-wider text-slate-500">Search</label>
+          <input type="text" name="q" value="{{ filters.q }}" placeholder="name, provider…"
+                 class="mt-1 w-full rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+        </div>
+        {% for facet_name, items in [('kind', facet_kinds), ('provider', facet_providers), ('category', facet_categories)] %}
+          {% if items %}
+          <div>
+            <label class="block text-[11px] uppercase tracking-wider text-slate-500">{{ facet_name|capitalize }}</label>
+            <select name="{{ facet_name }}" class="mt-1 w-full rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+              <option value="">— any —</option>
+              {% for v, c in items %}
+                <option value="{{ v }}" {% if filters[facet_name] == v %}selected{% endif %}>{{ v }} ({{ c }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+        {% endfor %}
+        {% if groups %}
+          <div>
+            <label class="block text-[11px] uppercase tracking-wider text-slate-500">Group</label>
+            <select name="group" class="mt-1 w-full rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+              <option value="">— any —</option>
+              {% for g in groups %}
+                <option value="{{ g.name }}" {% if filters.group == g.name %}selected{% endif %}>{{ g.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="flex gap-2">
+          <button class="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-slate-950 hover:bg-emerald-400">Apply</button>
+          <a href="/ui/fabric" class="flex-1 rounded-md border border-slate-700 px-2 py-1 text-center text-xs text-slate-300 hover:bg-slate-800">Reset</a>
+        </div>
+      </form>
+    </aside>
+
+    <!-- ── Centre: device cards ────────────────────────────────── -->
+    <section>
+      <div class="mb-3 text-xs text-slate-400">{{ devices|length }} device(s)</div>
+      {% if devices %}
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {% for d in devices %}
+            <article class="rounded-2xl border border-slate-800 bg-slate-900/40 p-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="rounded-full bg-{{ {'native':'cyan','vendor':'fuchsia','plotter':'amber','plotter-scene':'emerald'}.get(d.kind,'slate') }}-500/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-{{ {'native':'cyan','vendor':'fuchsia','plotter':'amber','plotter-scene':'emerald'}.get(d.kind,'slate') }}-300">{{ d.kind }}</span>
+                    {% if d.provider %}
+                      <span class="text-[10px] uppercase tracking-wider text-slate-500">{{ d.provider }}</span>
+                    {% endif %}
+                  </div>
+                  <div class="mt-1 truncate text-sm font-medium text-slate-100">{{ d.label }}</div>
+                  <div class="text-[11px] text-slate-500 truncate">{{ d.category }} · <a href="{{ d.detail_url }}" class="hover:text-emerald-300">details ↗</a></div>
+                </div>
+                <span class="rounded-full px-1.5 py-0.5 text-[10px]
+                  {% if d.status == 'active' %}bg-emerald-500/15 text-emerald-300
+                  {% elif d.status == 'offline' %}bg-slate-700 text-slate-300
+                  {% else %}bg-red-500/15 text-red-300{% endif %}">{{ d.status }}</span>
+              </div>
+
+              {% if d.capabilities %}
+                <div class="mt-2 flex flex-wrap gap-1">
+                  {% for c in d.capabilities %}
+                    <span class="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300">{{ c }}</span>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <div class="mt-2 border-t border-slate-800 pt-2">
+                <div class="text-[10px] uppercase tracking-wider text-slate-500">Groups</div>
+                <div class="mt-1 flex flex-wrap gap-1">
+                  {% for g_name in d.groups %}
+                    <button onclick="toggleMembership('{{ d.fabric_id }}', '{{ g_name }}', 'remove', this)"
+                            class="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300 hover:bg-emerald-500/30"
+                            title="Remove from {{ g_name }}">{{ g_name }} ✕</button>
+                  {% else %}
+                    <span class="text-[10px] text-slate-600 italic">none</span>
+                  {% endfor %}
+                </div>
+                {% if groups %}
+                  <select onchange="toggleMembership('{{ d.fabric_id }}', this.value, 'add', this); this.value=''"
+                          class="mt-1 w-full rounded bg-slate-800 px-1.5 py-0.5 text-[11px] text-slate-300">
+                    <option value="">+ add to group…</option>
+                    {% for g in groups %}
+                      {% if g.name not in d.groups %}
+                        <option value="{{ g.name }}">{{ g.label }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                {% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-400">
+          No devices match the current filters.
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- ── Right: group manager ────────────────────────────────── -->
+    <aside class="rounded-2xl border border-slate-800 bg-slate-900/40 p-3">
+      <h2 class="text-sm font-semibold text-slate-200">Groups</h2>
+      <ul class="mt-2 space-y-1 text-sm">
+        {% for g in groups %}
+          <li class="flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950/40 px-2 py-1">
+            <span class="flex items-center gap-2 min-w-0">
+              <span class="h-2 w-2 rounded-full" style="background:{{ g.color }}"></span>
+              <span class="truncate text-slate-200">{{ g.label }}</span>
+              <span class="text-[10px] text-slate-500 truncate">{{ g.name }}</span>
+            </span>
+            <form method="post" action="/ui/fabric/groups/{{ g.name }}/delete"
+                  onsubmit="return confirm('Delete group {{ g.label }}?')">
+              <button class="text-[10px] text-red-300 hover:text-red-200">delete</button>
+            </form>
+          </li>
+        {% else %}
+          <li class="text-xs text-slate-500 italic">No groups yet</li>
+        {% endfor %}
+      </ul>
+
+      <form method="post" action="/ui/fabric/groups/new" class="mt-3 space-y-2 border-t border-slate-800 pt-3 text-xs">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500">New group</div>
+        <input name="label" required placeholder="Label (Kitchen)"
+               class="w-full rounded bg-slate-800 px-2 py-1 text-slate-100">
+        <input name="name" required placeholder="slug (kitchen)" pattern="[a-z0-9-]+"
+               class="w-full rounded bg-slate-800 px-2 py-1 text-slate-100 font-mono">
+        <div class="flex gap-2">
+          <input name="color" type="color" value="#10b981" class="h-7 w-12 rounded bg-slate-800">
+          <input name="room" placeholder="Room (optional)" class="flex-1 rounded bg-slate-800 px-2 py-1 text-slate-100">
+        </div>
+        <input name="description" placeholder="Description (optional)" class="w-full rounded bg-slate-800 px-2 py-1 text-slate-100">
+        <button class="w-full rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-slate-950 hover:bg-emerald-400">Add group</button>
+      </form>
+    </aside>
+  </div>
+
+  <script>
+    async function toggleMembership(fabricId, groupName, action, el) {
+      if (!groupName) return;
+      el.disabled = true;
+      const form = new URLSearchParams();
+      form.set('fabric_id', fabricId);
+      form.set('group_name', groupName);
+      form.set('action', action);
+      try {
+        const r = await fetch('/api/fabric/membership', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: form,
+        });
+        if (!r.ok) { alert(await r.text()); el.disabled = false; return; }
+        location.reload();
+      } catch (e) {
+        alert(e); el.disabled = false;
+      }
+    }
+  </script>
+{% endblock %}
