@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Capability picker · assign devices{% endblock %}
+{% block content %}
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Capability picker</h1>
+      <p class="mt-1 max-w-2xl text-sm text-slate-400">
+        Pick a capability → see every device on the platform that has it → multi-select → assign all to a group in one shot. The same picker JSON powers Apps, Recipes, and Scenes — anything that needs "find me all the X devices".
+      </p>
+    </div>
+    <a href="/ui/fabric" class="text-xs text-slate-400 hover:text-emerald-300">← Browse mode</a>
+  </header>
+
+  {% if flash %}
+    <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
+  {% endif %}
+
+  <!-- ── Filter bar ────────────────────────────────────────────── -->
+  <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-3">
+    <form method="get" action="/ui/fabric/assign" class="grid grid-cols-1 gap-2 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+      <label class="flex flex-col text-[11px] uppercase tracking-wider text-slate-500">
+        Capability {% if filters.capability %}<span class="text-emerald-300 normal-case">· filtered</span>{% endif %}
+        <select name="capability" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          <option value="">— any capability —</option>
+          {% for cap, count in capability_facets %}
+            <option value="{{ cap }}" {% if filters.capability == cap %}selected{% endif %}>{{ cap }} ({{ count }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="flex flex-col text-[11px] uppercase tracking-wider text-slate-500">
+        Provider
+        <select name="provider" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          <option value="">— any —</option>
+          {% for p in provider_facets %}
+            <option value="{{ p }}" {% if filters.provider == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="flex flex-col text-[11px] uppercase tracking-wider text-slate-500">
+        In group
+        <select name="group" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          <option value="">— any —</option>
+          {% for g in groups %}
+            <option value="{{ g.name }}" {% if filters.group == g.name %}selected{% endif %}>{{ g.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="flex flex-col text-[11px] uppercase tracking-wider text-slate-500">
+        Status
+        <select name="status" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          <option value="">— any —</option>
+          <option value="active"  {% if filters.status == 'active' %}selected{% endif %}>active</option>
+          <option value="offline" {% if filters.status == 'offline' %}selected{% endif %}>offline</option>
+          <option value="revoked" {% if filters.status == 'revoked' %}selected{% endif %}>revoked</option>
+        </select>
+      </label>
+      <div class="flex items-end gap-1">
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="search…"
+               class="rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 w-32">
+        <button class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Apply</button>
+        <a href="/ui/fabric/assign" class="rounded-md border border-slate-700 px-2 py-1.5 text-xs text-slate-300 hover:bg-slate-800">Reset</a>
+      </div>
+    </form>
+  </section>
+
+  <!-- ── Results + bulk select ─────────────────────────────────── -->
+  <section class="mt-4 rounded-2xl border border-slate-800 bg-slate-900/40">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-2 text-xs">
+      <div>
+        <span id="sel-count" class="font-medium text-emerald-300">0</span> selected
+        <span class="text-slate-500">/ {{ devices|length }} matching</span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="selectAll(true)"  class="rounded-md border border-slate-700 px-2 py-1 text-slate-200 hover:bg-slate-800">Select all</button>
+        <button onclick="selectAll(false)" class="rounded-md border border-slate-700 px-2 py-1 text-slate-200 hover:bg-slate-800">Clear</button>
+      </div>
+    </div>
+    {% if devices %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-900/80 text-left text-[11px] uppercase tracking-wider text-slate-400">
+            <tr>
+              <th class="px-3 py-2 w-8"></th>
+              <th class="px-3 py-2">Device</th>
+              <th class="px-3 py-2">Kind</th>
+              <th class="px-3 py-2">Provider</th>
+              <th class="px-3 py-2">Capabilities</th>
+              <th class="px-3 py-2">Groups</th>
+              <th class="px-3 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/70">
+            {% for d in devices %}
+              <tr class="hover:bg-slate-900/40">
+                <td class="px-3 py-2 align-top">
+                  <input type="checkbox" class="dev-check h-4 w-4 rounded bg-slate-800"
+                         data-fabric-id="{{ d.fabric_id }}" onchange="updateCount()">
+                </td>
+                <td class="px-3 py-2 align-top">
+                  <div class="font-medium text-slate-100">{{ d.label }}</div>
+                  <div class="text-[10px] text-slate-500 font-mono">{{ d.fabric_id }}</div>
+                </td>
+                <td class="px-3 py-2 align-top text-xs">{{ d.kind }}</td>
+                <td class="px-3 py-2 align-top text-xs text-slate-400">{{ d.provider or '—' }}</td>
+                <td class="px-3 py-2 align-top">
+                  <div class="flex flex-wrap gap-1">
+                    {% for c in d.capabilities %}
+                      <span class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] {% if filters.capability == c %}text-emerald-300{% else %}text-slate-300{% endif %}">{{ c }}</span>
+                    {% endfor %}
+                  </div>
+                </td>
+                <td class="px-3 py-2 align-top">
+                  <div class="flex flex-wrap gap-1">
+                    {% for g in d.groups %}
+                      <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-300">{{ g }}</span>
+                    {% else %}
+                      <span class="text-[10px] text-slate-600 italic">none</span>
+                    {% endfor %}
+                  </div>
+                </td>
+                <td class="px-3 py-2 align-top text-xs
+                  {% if d.status == 'active' %}text-emerald-300{% elif d.status == 'offline' %}text-slate-400{% else %}text-red-300{% endif %}">{{ d.status }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="px-3 py-6 text-sm text-slate-500">No devices match these filters.</div>
+    {% endif %}
+  </section>
+
+  <!-- ── Sticky bulk-assign bar ────────────────────────────────── -->
+  <section class="sticky bottom-2 z-20 mt-4 rounded-2xl border border-amber-700/40 bg-amber-500/10 p-3 backdrop-blur">
+    <div class="grid grid-cols-1 gap-2 md:grid-cols-[2fr_2fr_auto_auto]">
+      <label class="flex flex-col text-[11px] uppercase tracking-wider text-slate-300">
+        Existing group
+        <select id="target-group" class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+          <option value="">— pick one or create below —</option>
+          {% for g in groups %}
+            <option value="{{ g.name }}">{{ g.label }} <span class="text-slate-500">({{ g.name }})</span></option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="flex flex-col text-[11px] uppercase tracking-wider text-slate-300">
+        Or create new (label)
+        <input id="create-label" type="text" placeholder="e.g. Living Room Heaters"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100">
+      </label>
+      <div class="flex items-end">
+        <button onclick="bulkAssign('add')"    class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Add selected to group</button>
+      </div>
+      <div class="flex items-end">
+        <button onclick="bulkAssign('remove')" class="rounded-md border border-red-700/40 bg-red-500/10 px-3 py-1.5 text-xs text-red-200 hover:bg-red-500/20">Remove selected from group</button>
+      </div>
+    </div>
+    <div id="bulk-result" class="mt-2 text-xs text-slate-300"></div>
+  </section>
+
+  <script>
+    function updateCount() {
+      const n = document.querySelectorAll('.dev-check:checked').length;
+      document.getElementById('sel-count').textContent = n;
+    }
+    function selectAll(on) {
+      document.querySelectorAll('.dev-check').forEach(c => c.checked = on);
+      updateCount();
+    }
+    async function bulkAssign(action) {
+      const checks = Array.from(document.querySelectorAll('.dev-check:checked'));
+      if (!checks.length) {
+        document.getElementById('bulk-result').innerHTML =
+          '<span class="text-amber-300">Select at least one device first.</span>';
+        return;
+      }
+      const existing = document.getElementById('target-group').value;
+      const createLabel = document.getElementById('create-label').value.trim();
+      let groupName = existing;
+      let body = {
+        fabric_ids: checks.map(c => c.dataset.fabricId),
+        action: action,
+      };
+      if (createLabel && !existing) {
+        body.group_name = createLabel.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+        body.create_label = createLabel;
+      } else if (existing) {
+        body.group_name = existing;
+      } else {
+        document.getElementById('bulk-result').innerHTML =
+          '<span class="text-amber-300">Pick an existing group or enter a new label.</span>';
+        return;
+      }
+      try {
+        const r = await fetch('/api/fabric/bulk-membership', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          document.getElementById('bulk-result').innerHTML =
+            '<span class="text-red-300">Failed: ' + (await r.text()) + '</span>';
+          return;
+        }
+        const j = await r.json();
+        const verb = action === 'add' ? 'added to' : 'removed from';
+        document.getElementById('bulk-result').innerHTML =
+          `<span class="text-emerald-300">${j.added || j.removed} ${verb} '${j.group}' · ${j.skipped} skipped.</span>`;
+        // Refresh to show new chips.
+        setTimeout(() => location.reload(), 800);
+      } catch (e) {
+        document.getElementById('bulk-result').innerHTML =
+          '<span class="text-red-300">' + e + '</span>';
+      }
+    }
+  </script>
+{% endblock %}

@@ -81,6 +81,122 @@ async def ui_fabric(
     )
 
 
+# ── capability-driven picker + bulk assign ─────────────────────────
+@router.get("/ui/fabric/assign", response_class=HTMLResponse)
+async def ui_fabric_assign(
+    request: Request,
+    capability: str = "",
+    provider: str = "",
+    group: str = "",
+    status: str = "",
+    q: str = "",
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    devices = await list_devices(
+        session,
+        provider=provider or None, group=group or None, q=q or None,
+    )
+    if capability:
+        devices = [d for d in devices if capability in d.capabilities]
+    if status:
+        devices = [d for d in devices if d.status == status]
+    # Build the capability facet from the *unfiltered* set so the
+    # operator can switch capabilities without resetting other filters.
+    all_devices = await list_devices(session)
+    caps: dict[str, int] = {}
+    for d in all_devices:
+        for c in d.capabilities:
+            caps[c] = caps.get(c, 0) + 1
+    providers_facet = sorted({d.provider for d in all_devices if d.provider})
+    groups = (await session.execute(
+        select(DeviceGroup).order_by(DeviceGroup.sort_order, DeviceGroup.label)
+    )).scalars().all()
+    flash = request.session.pop("fabric_flash", None)
+    return templates.TemplateResponse(
+        "fabric_assign.html",
+        {
+            "request": request, "signed_in": True,
+            "devices": devices, "groups": groups,
+            "capability_facets": sorted(caps.items(), key=lambda x: (-x[1], x[0])),
+            "provider_facets": providers_facet,
+            "filters": {"capability": capability, "provider": provider,
+                        "group": group, "status": status, "q": q},
+            "flash": flash,
+        },
+    )
+
+
+@router.post("/api/fabric/bulk-membership", response_class=JSONResponse)
+async def api_fabric_bulk_membership(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    """Add/remove a batch of devices to/from a group. Optionally
+    create the group inline if it doesn't exist yet (single-screen
+    flow — pick capability → select devices → name new group → done)."""
+    body = await request.json()
+    fabric_ids = body.get("fabric_ids") or []
+    group_name = (body.get("group_name") or "").strip().lower().replace(" ", "-")
+    action = (body.get("action") or "add").lower()
+    create_label = (body.get("create_label") or "").strip()
+    if not fabric_ids or not group_name:
+        raise HTTPException(400, "fabric_ids[] and group_name required")
+    if action not in ("add", "remove"):
+        raise HTTPException(400, "action must be 'add' or 'remove'")
+
+    # Inline-create the group when caller flagged it.
+    group = await session.get(DeviceGroup, group_name)
+    if group is None:
+        if not create_label:
+            raise HTTPException(404, f"group '{group_name}' not found "
+                                "(pass create_label to make it inline)")
+        group = DeviceGroup(
+            name=group_name, label=create_label,
+            color=body.get("color") or "#10b981",
+        )
+        session.add(group)
+        await record(
+            session, actor=actor.id, actor_kind="ui_session",
+            action="fabric.group.create_inline", target_kind="device_group",
+            target_id=group_name, detail={"label": create_label},
+        )
+
+    added = removed = skipped = 0
+    for fid in fabric_ids:
+        # Verify each fabric_id resolves so we don't accept opaque junk.
+        if await get_device(session, fid) is None:
+            skipped += 1
+            continue
+        existing = await session.get(
+            DeviceGroupMembership, {"fabric_id": fid, "group_name": group_name}
+        )
+        if action == "add":
+            if existing is None:
+                session.add(DeviceGroupMembership(
+                    fabric_id=fid, group_name=group_name))
+                added += 1
+            else:
+                skipped += 1
+        else:
+            if existing is not None:
+                await session.delete(existing)
+                removed += 1
+            else:
+                skipped += 1
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action=f"fabric.bulk_membership.{action}",
+        target_kind="device_group", target_id=group_name,
+        detail={"added": added, "removed": removed, "skipped": skipped,
+                "total": len(fabric_ids)},
+    )
+    await session.commit()
+    return {"ok": True, "group": group_name,
+            "added": added, "removed": removed, "skipped": skipped}
+
+
 # ── JSON device list (for picker + future composition surfaces) ────
 @router.get("/api/fabric/devices", response_class=JSONResponse)
 async def api_fabric_devices(
