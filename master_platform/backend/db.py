@@ -263,6 +263,34 @@ def _apply_lightweight_migrations(sync_conn) -> None:
                 "ALTER TABLE component_instances ADD COLUMN watchdog_ms INTEGER NOT NULL DEFAULT 1000"
             )
 
+    # 2026-06: pull-agent + hardware-anchored identity on plotter_devices.
+    # NAT'd Pis can't be reached from the master directly; the Pi-side
+    # neuron-agent polls /api/agent/{id}/poll using agent_token and
+    # self-reports its CPU serial / MAC on every poll so re-flashing
+    # the Pi doesn't orphan its scenes.
+    if _has_table("plotter_devices"):
+        for col, sql_type in [
+            ("agent_token", "VARCHAR(80)"),
+            ("agent_poll_interval_s", "INTEGER NOT NULL DEFAULT 3"),
+            ("hw_id", "VARCHAR(80)"),
+            ("hw_kind", "VARCHAR(20)"),
+        ]:
+            if not _has_column("plotter_devices", col):
+                sync_conn.exec_driver_sql(
+                    f"ALTER TABLE plotter_devices ADD COLUMN {col} {sql_type}"
+                )
+        # UNIQUE indexes (SQLite ADD COLUMN can't include UNIQUE inline).
+        sync_conn.exec_driver_sql(
+            "CREATE UNIQUE INDEX IF NOT EXISTS "
+            "ix_plotter_devices_agent_token ON plotter_devices(agent_token) "
+            "WHERE agent_token IS NOT NULL"
+        )
+        sync_conn.exec_driver_sql(
+            "CREATE UNIQUE INDEX IF NOT EXISTS "
+            "ix_plotter_devices_hw_id ON plotter_devices(hw_id) "
+            "WHERE hw_id IS NOT NULL"
+        )
+
 
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
