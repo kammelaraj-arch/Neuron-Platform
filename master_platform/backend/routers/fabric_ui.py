@@ -74,23 +74,32 @@ async def ui_fabric(
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_admin),
 ):
-    devices = await list_devices(
-        session,
-        kind=kind or None, provider=provider or None,
-        category=category or None, group=group or None, q=q or None,
-    )
-    groups = (await session.execute(
-        select(DeviceGroup).order_by(DeviceGroup.sort_order, DeviceGroup.label)
-    )).scalars().all()
-    # Aggregate facets so the sidebar can show counts.
+    import traceback as _tb
+    error_panel: str | None = None
+    devices = []
+    groups = []
     facet_providers: dict[str, int] = {}
     facet_kinds: dict[str, int] = {}
     facet_categories: dict[str, int] = {}
-    for d in devices:
-        if d.provider:
-            facet_providers[d.provider] = facet_providers.get(d.provider, 0) + 1
-        facet_kinds[d.kind] = facet_kinds.get(d.kind, 0) + 1
-        facet_categories[d.category] = facet_categories.get(d.category, 0) + 1
+    try:
+        devices = await list_devices(
+            session,
+            kind=kind or None, provider=provider or None,
+            category=category or None, group=group or None, q=q or None,
+        )
+        groups = (await session.execute(
+            select(DeviceGroup).order_by(DeviceGroup.sort_order, DeviceGroup.label)
+        )).scalars().all()
+        # Aggregate facets so the sidebar can show counts.
+        for d in devices:
+            if d.provider:
+                facet_providers[d.provider] = facet_providers.get(d.provider, 0) + 1
+            facet_kinds[d.kind] = facet_kinds.get(d.kind, 0) + 1
+            facet_categories[d.category] = facet_categories.get(d.category, 0) + 1
+    except Exception as e:
+        # Defensive: surface the actual exception inline so the operator
+        # can see what's wrong without needing /api/admin/last-error.
+        error_panel = f"{type(e).__name__}: {e}\n\n{_tb.format_exc()}"
     flash = request.session.pop("fabric_flash", None)
     return templates.TemplateResponse(
         "fabric.html",
@@ -103,6 +112,7 @@ async def ui_fabric(
             "filters": {"kind": kind, "provider": provider,
                         "category": category, "group": group, "q": q},
             "flash": flash,
+            "error_panel": error_panel,
         },
     )
 

@@ -16,6 +16,13 @@
     <div class="mt-4 rounded-lg border border-{{ flash.kind }}-700/40 bg-{{ flash.kind }}-500/10 p-3 text-sm text-{{ flash.kind }}-200">{{ flash.msg }}</div>
   {% endif %}
 
+  {% if error_panel %}
+    <div class="mt-4 rounded-lg border border-red-700/40 bg-red-500/10 p-3 text-xs text-red-200">
+      <div class="font-semibold uppercase tracking-wider text-red-300 mb-1">Fabric adapter raised an exception</div>
+      <pre class="overflow-x-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-red-100">{{ error_panel }}</pre>
+    </div>
+  {% endif %}
+
   <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr_280px]">
 
     <!-- ── Left: filters ────────────────────────────────────────── -->
