@@ -213,9 +213,18 @@ async def list_devices(session: AsyncSession, *,
                        provider: str | None = None,
                        category: str | None = None,
                        group: str | None = None,
-                       q: str | None = None) -> list[FabricDevice]:
+                       q: str | None = None,
+                       org_names: list[str] | None = None) -> list[FabricDevice]:
     """Aggregate every kind into one list, apply filters, attach
-    group memberships from device_group_memberships."""
+    group memberships from device_group_memberships.
+
+    org_names:
+        None     — no multi-tenant filter (admin tooling, cron sweeps).
+        []       — explicitly nothing (caller belongs to no org).
+        [...]    — caller's org memberships; devices in those orgs
+                   AND devices with no assignment (falling through to
+                   the default 'personal' org) are returned.
+    """
     devices: list[FabricDevice] = []
     devices.extend(await _adapt_native(session))
     devices.extend(await _adapt_vendor(session))
@@ -276,6 +285,16 @@ async def list_devices(session: AsyncSession, *,
     org_by_fabric = {r.fabric_id: r.org_name for r in org_rows}
     for d in devices:
         d.org_name = org_by_fabric.get(d.fabric_id)
+
+    # Multi-tenant filter — restrict to devices the caller's org(s)
+    # own. None means no filter; an unassigned device falls through
+    # to 'personal' so callers with the default org still see it.
+    if org_names is not None:
+        allowed = set(org_names)
+        default_visible = "personal" in allowed
+        devices = [d for d in devices
+                   if (d.org_name and d.org_name in allowed)
+                   or (d.org_name is None and default_visible)]
 
     # Filters (simple — substring + exact).
     if kind:

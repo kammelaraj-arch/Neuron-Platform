@@ -34,7 +34,29 @@ from ..models import (
     Organization, RISK_LEVELS, RISK_TYPES, User,
 )
 from ..security.audit import record
-from ..security.ui_auth import ui_require_admin
+from ..security.ui_auth import SESSION_USER_KEY, ui_require_admin
+
+
+async def _actor_org_names(session: AsyncSession, request: Request,
+                            actor: APIKey) -> list[str] | None:
+    """Return the list of org names this caller can see, or None for
+    super-admin / non-user callers (no multi-tenant filtering).
+
+    Rules:
+      - UI session with a user_id → membership lookup.
+      - API key bootstrap admin (no session user) → None (sees all).
+      - User has no memberships → defaults to ['personal'] so the
+        first-boot admin can still see seeded data.
+    """
+    user_id = request.session.get(SESSION_USER_KEY)
+    if not user_id:
+        return None
+    rows = (await session.execute(
+        select(OrgMembership).where(OrgMembership.user_id == user_id)
+    )).scalars().all()
+    if not rows:
+        return ["personal"]
+    return [m.org_name for m in rows]
 
 
 def _parse_date(s: str | None) -> datetime | None:
@@ -82,10 +104,12 @@ async def ui_fabric(
     facet_kinds: dict[str, int] = {}
     facet_categories: dict[str, int] = {}
     try:
+        org_names = await _actor_org_names(session, request, actor)
         devices = await list_devices(
             session,
             kind=kind or None, provider=provider or None,
             category=category or None, group=group or None, q=q or None,
+            org_names=org_names,
         )
         groups = (await session.execute(
             select(DeviceGroup).order_by(DeviceGroup.sort_order, DeviceGroup.label)
@@ -130,6 +154,11 @@ async def ui_fabric_asset_edit(
     device = await get_device(session, fabric_id)
     if device is None:
         raise HTTPException(404, f"device {fabric_id} not found")
+    org_names = await _actor_org_names(session, request, actor)
+    if org_names is not None:
+        owner = device.org_name or "personal"
+        if owner not in org_names:
+            raise HTTPException(404, f"device {fabric_id} not found")
     asset = await session.get(DeviceAsset, fabric_id)
     safety = await session.get(DeviceSafety, fabric_id)
     orgs = (await session.execute(select(Organization).order_by(Organization.label))).scalars().all()
@@ -178,8 +207,14 @@ async def ui_fabric_asset_save(
     actor: APIKey = Depends(ui_require_admin),
 ):
     fabric_id = f"{fabric_id_kind}:{fabric_id_pk}"
-    if await get_device(session, fabric_id) is None:
+    device = await get_device(session, fabric_id)
+    if device is None:
         raise HTTPException(404, f"device {fabric_id} not found")
+    org_names = await _actor_org_names(session, request, actor)
+    if org_names is not None:
+        owner = device.org_name or "personal"
+        if owner not in org_names:
+            raise HTTPException(404, f"device {fabric_id} not found")
     row = await session.get(DeviceAsset, fabric_id)
     if row is None:
         row = DeviceAsset(fabric_id=fabric_id)
@@ -225,6 +260,12 @@ async def ui_fabric_asset_save(
     if org_name.strip():
         if await session.get(Organization, org_name.strip()) is None:
             raise HTTPException(400, f"unknown org '{org_name}'")
+        # Caller can only re-assign devices to orgs they belong to —
+        # otherwise an operator could lift a device into a tenant
+        # they have no read access to and lose it.
+        if org_names is not None and org_name.strip() not in org_names:
+            raise HTTPException(403,
+                f"you are not a member of org '{org_name}'")
         existing = await session.get(DeviceOrgAssignment, fabric_id)
         if existing is None:
             session.add(DeviceOrgAssignment(
@@ -267,9 +308,11 @@ async def ui_fabric_assign(
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_admin),
 ):
+    org_names = await _actor_org_names(session, request, actor)
     devices = await list_devices(
         session,
         provider=provider or None, group=group or None, q=q or None,
+        org_names=org_names,
     )
     if capability:
         devices = [d for d in devices if capability in d.capabilities]
@@ -277,7 +320,8 @@ async def ui_fabric_assign(
         devices = [d for d in devices if d.status == status]
     # Build the capability facet from the *unfiltered* set so the
     # operator can switch capabilities without resetting other filters.
-    all_devices = await list_devices(session)
+    # Same org scope so facet counts match what the caller can see.
+    all_devices = await list_devices(session, org_names=org_names)
     caps: dict[str, int] = {}
     for d in all_devices:
         for c in d.capabilities:
@@ -337,12 +381,20 @@ async def api_fabric_bulk_membership(
             target_id=group_name, detail={"label": create_label},
         )
 
+    org_names = await _actor_org_names(session, request, actor)
     added = removed = skipped = 0
     for fid in fabric_ids:
-        # Verify each fabric_id resolves so we don't accept opaque junk.
-        if await get_device(session, fid) is None:
+        # Verify each fabric_id resolves AND belongs to an org the
+        # caller can see — silently skip cross-tenant attempts.
+        dev = await get_device(session, fid)
+        if dev is None:
             skipped += 1
             continue
+        if org_names is not None:
+            owner = dev.org_name or "personal"
+            if owner not in org_names:
+                skipped += 1
+                continue
         existing = await session.get(
             DeviceGroupMembership, {"fabric_id": fid, "group_name": group_name}
         )
@@ -374,6 +426,7 @@ async def api_fabric_bulk_membership(
 # ── JSON device list (for picker + future composition surfaces) ────
 @router.get("/api/fabric/devices", response_class=JSONResponse)
 async def api_fabric_devices(
+    request: Request,
     kind: str = "",
     provider: str = "",
     category: str = "",
@@ -382,10 +435,12 @@ async def api_fabric_devices(
     session: AsyncSession = Depends(get_session),
     actor: APIKey = Depends(ui_require_admin),
 ):
+    org_names = await _actor_org_names(session, request, actor)
     devices = await list_devices(
         session,
         kind=kind or None, provider=provider or None,
         category=category or None, group=group or None, q=q or None,
+        org_names=org_names,
     )
     return [d.to_json() for d in devices]
 
@@ -448,6 +503,7 @@ async def ui_fabric_delete_group(
 # ── membership toggle ──────────────────────────────────────────────
 @router.post("/api/fabric/membership", response_class=JSONResponse)
 async def api_fabric_toggle_membership(
+    request: Request,
     fabric_id: str = Form(...),
     group_name: str = Form(...),
     action: str = Form("add"),    # "add" | "remove"
@@ -459,8 +515,16 @@ async def api_fabric_toggle_membership(
     # opaque from the form otherwise).
     if await session.get(DeviceGroup, group_name) is None:
         raise HTTPException(404, f"group '{group_name}' not found")
-    if await get_device(session, fabric_id) is None:
+    dev = await get_device(session, fabric_id)
+    if dev is None:
         raise HTTPException(404, f"device '{fabric_id}' not found")
+    # Cross-tenant guard — return 404 (not 403) so an attacker can't
+    # enumerate devices in foreign orgs by varying fabric_id.
+    org_names = await _actor_org_names(session, request, actor)
+    if org_names is not None:
+        owner = dev.org_name or "personal"
+        if owner not in org_names:
+            raise HTTPException(404, f"device '{fabric_id}' not found")
     existing = await session.get(
         DeviceGroupMembership, {"fabric_id": fabric_id, "group_name": group_name}
     )
