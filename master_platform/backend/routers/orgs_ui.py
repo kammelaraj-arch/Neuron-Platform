@@ -23,6 +23,9 @@ from ..models import (
     APIKey, DeviceGrant, DeviceGroup, OrgMembership, Organization, User,
 )
 from ..security.audit import record
+from ..security.ui_auth import (
+    SESSION_CURRENT_ORG_KEY, SESSION_USER_KEY, ui_require_login,
+)
 from ..security.ui_auth import ui_require_admin
 
 _BASE = Path(__file__).resolve().parent.parent
@@ -247,3 +250,36 @@ async def ui_org_revoke_grant(
     await session.commit()
     request.session["orgs_flash"] = {"kind": "red", "msg": "Grant revoked."}
     return RedirectResponse(f"/ui/orgs/{name}", status_code=303)
+
+# ── current-org switcher (any logged-in user, not just admins) ─────
+@router.post("/ui/orgs/switch")
+async def ui_orgs_switch(
+    request: Request,
+    org_name: str = Form(...),
+    next: str = Form("/ui/fabric"),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_login),
+):
+    """Switch the session's current org. Validates the caller is
+    actually a member of the target. Bootstrap admin sessions (no
+    user_id in session) skip the membership check."""
+    user_id = request.session.get(SESSION_USER_KEY)
+    if user_id:
+        membership = await session.get(
+            OrgMembership, {"org_name": org_name, "user_id": user_id},
+        )
+        if membership is None:
+            raise HTTPException(403, f"you are not a member of org '{org_name}'")
+    if await session.get(Organization, org_name) is None:
+        raise HTTPException(404, f"org '{org_name}' not found")
+    request.session[SESSION_CURRENT_ORG_KEY] = org_name
+    await record(
+        session, actor=user_id or actor.id, actor_kind="ui_session",
+        action="org.switch", target_kind="organization", target_id=org_name,
+    )
+    await session.commit()
+    # Honour a 'next' URL but restrict to internal paths to prevent
+    # open-redirect via the form field.
+    target = next if next.startswith("/") else "/ui/fabric"
+    return RedirectResponse(target, status_code=303)
+

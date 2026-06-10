@@ -50,6 +50,23 @@
           {% for href, label in nav %}
             <a href="{{ href }}" class="rounded-md px-2.5 py-1.5 hover:bg-slate-800/70 text-slate-300 hover:text-white transition">{{ label }}</a>
           {% endfor %}
+          {% set memberships = request.state.org_memberships if request.state.org_memberships else [] %}
+          {% set current_org = request.state.current_org_name %}
+          {% if signed_in and memberships|length > 1 %}
+            <form method="post" action="/ui/orgs/switch" class="ml-2 flex items-center gap-1">
+              <input type="hidden" name="next" value="{{ request.url.path }}">
+              <select name="org_name" onchange="this.form.submit()"
+                      class="rounded-md border border-emerald-700/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-500/20"
+                      title="Switch the org you're viewing">
+                {% for o in memberships %}
+                  <option value="{{ o }}" {% if o == current_org %}selected{% endif %}>{{ o }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          {% elif signed_in and current_org %}
+            <span class="ml-2 rounded-md border border-emerald-700/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200"
+                  title="Your current org (you're only a member of one)">{{ current_org }}</span>
+          {% endif %}
           {% if signed_in %}
             <form method="post" action="/logout" class="ml-2">
               <button class="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-red-400 hover:text-red-300">Sign out</button>

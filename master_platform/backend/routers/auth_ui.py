@@ -21,7 +21,7 @@ from ..db import get_session
 from ..models import User
 from ..security.audit import record
 from ..security.keys import find_active_by_secret
-from ..security.ui_auth import SESSION_KEY, SESSION_USER_KEY
+from ..security.ui_auth import SESSION_CURRENT_ORG_KEY, SESSION_KEY, SESSION_USER_KEY
 
 
 _BASE = Path(__file__).resolve().parent.parent
@@ -74,6 +74,17 @@ async def login_submit(
             )
         request.session.clear()
         request.session[SESSION_USER_KEY] = row.id
+        # Seed current_org from the user's first membership so the nav
+        # switcher (base.html) has a value to render on the first
+        # request after login. _actor_org_names is self-healing if this
+        # gets stale.
+        from ..models import OrgMembership as _OrgMembership
+        first_org = (await session.execute(
+            select(_OrgMembership).where(_OrgMembership.user_id == row.id)
+            .order_by(_OrgMembership.org_name).limit(1)
+        )).scalar_one_or_none()
+        if first_org is not None:
+            request.session[SESSION_CURRENT_ORG_KEY] = first_org.org_name
         row.last_login_at = datetime.now(timezone.utc)
         await record(
             session, actor=row.id, actor_kind="ui_session",

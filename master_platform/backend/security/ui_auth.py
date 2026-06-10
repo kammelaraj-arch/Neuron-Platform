@@ -34,6 +34,7 @@ from .auth import SCOPE_HIERARCHY
 
 SESSION_KEY = "neuron_api_key_id"
 SESSION_USER_KEY = "neuron_user_id"
+SESSION_CURRENT_ORG_KEY = "neuron_current_org"
 LAST_SECRET_KEY = "neuron_last_secret"
 
 

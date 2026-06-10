@@ -624,6 +624,40 @@ async def _capture_unhandled_exceptions(request: Request, call_next):
         raise
 
 
+@app.middleware("http")
+async def _attach_org_context(request: Request, call_next):
+    """Load the caller's org memberships + current_org_name onto
+    request.state so base.html's nav can render the org switcher
+    without each individual route having to pass them in."""
+    from .security.ui_auth import SESSION_CURRENT_ORG_KEY, SESSION_USER_KEY
+    from .models import OrgMembership
+    request.state.org_memberships = []
+    request.state.current_org_name = None
+    try:
+        user_id = request.session.get(SESSION_USER_KEY)
+    except (AssertionError, AttributeError):
+        # No SessionMiddleware on this request (rare — static / startup).
+        return await call_next(request)
+    if user_id:
+        try:
+            async with SessionLocal() as db:
+                rows = (await db.execute(
+                    select(OrgMembership)
+                    .where(OrgMembership.user_id == user_id)
+                )).scalars().all()
+            names = sorted({r.org_name for r in rows})
+            request.state.org_memberships = names
+            current = request.session.get(SESSION_CURRENT_ORG_KEY)
+            if current and current in names:
+                request.state.current_org_name = current
+            elif names:
+                request.state.current_org_name = names[0]
+        except Exception:
+            # Org switcher is decorative — never block a request on it.
+            pass
+    return await call_next(request)
+
+
 @app.exception_handler(UILoginRequired)
 async def _ui_login_redirect(request: Request, exc: UILoginRequired):
     return RedirectResponse("/login", status_code=303)

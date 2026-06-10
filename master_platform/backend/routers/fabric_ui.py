@@ -34,29 +34,42 @@ from ..models import (
     Organization, RISK_LEVELS, RISK_TYPES, User,
 )
 from ..security.audit import record
-from ..security.ui_auth import SESSION_USER_KEY, ui_require_admin
+from ..security.ui_auth import (
+    SESSION_CURRENT_ORG_KEY, SESSION_USER_KEY, ui_require_admin,
+)
 
 
 async def _actor_org_names(session: AsyncSession, request: Request,
                             actor: APIKey) -> list[str] | None:
-    """Return the list of org names this caller can see, or None for
-    super-admin / non-user callers (no multi-tenant filtering).
+    """Return the list of org names this caller can see for this
+    request — ONE org when an org-switcher is active, or the full
+    membership list when no switcher value is set (first request after
+    login, before they touch the picker).
 
-    Rules:
-      - UI session with a user_id → membership lookup.
-      - API key bootstrap admin (no session user) → None (sees all).
-      - User has no memberships → defaults to ['personal'] so the
-        first-boot admin can still see seeded data.
+    None for super-admin / non-user callers (no multi-tenant filter).
+
+    Self-healing: if the session points at an org the user no longer
+    belongs to (admin revoked the membership in the meantime), the
+    saved value is dropped and we fall through to their first
+    remaining membership.
     """
     user_id = request.session.get(SESSION_USER_KEY)
     if not user_id:
         return None
-    rows = (await session.execute(
+    memberships = (await session.execute(
         select(OrgMembership).where(OrgMembership.user_id == user_id)
     )).scalars().all()
-    if not rows:
+    if not memberships:
         return ["personal"]
-    return [m.org_name for m in rows]
+    member_names = {m.org_name for m in memberships}
+    current = request.session.get(SESSION_CURRENT_ORG_KEY)
+    if current and current in member_names:
+        return [current]
+    # No valid current → pick the first deterministically (alpha) and
+    # save it back to the session so subsequent requests are stable.
+    chosen = sorted(member_names)[0]
+    request.session[SESSION_CURRENT_ORG_KEY] = chosen
+    return [chosen]
 
 
 def _parse_date(s: str | None) -> datetime | None:
