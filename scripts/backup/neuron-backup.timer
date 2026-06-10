@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Neuron Master backup nightly at 03:17 UTC
+
+[Timer]
+OnCalendar=*-*-* 03:17:00 UTC
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target
