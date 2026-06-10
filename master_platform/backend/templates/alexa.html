@@ -115,4 +115,93 @@ def lambda_handler(event, context):
     </form>
   </section>
   {% endif %}
+
+  <!-- ── Announcer (Notify Me) ───────────────────────────────────── -->
+  <section class="mt-6 rounded-2xl border border-cyan-700/40 bg-cyan-500/5 p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-cyan-300">Announcer · Notify Me</h2>
+      {% if announcer_configured %}
+        <span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">configured</span>
+      {% else %}
+        <span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-300">not configured</span>
+      {% endif %}
+    </div>
+    <p class="mt-2 text-xs text-slate-400 max-w-2xl">
+      Make any Echo say arbitrary text on demand by piggy-backing on the
+      <a class="text-cyan-300 hover:underline"
+         href="https://www.amazon.co.uk/Thomptronics-Notify-Me/dp/B07CDDPYTC" target="_blank">Notify Me</a>
+      skill (free, third-party). One-time operator setup:
+    </p>
+    <ol class="mt-2 list-decimal pl-5 text-xs text-slate-400 space-y-1">
+      <li>In the Alexa app: <strong>Skills &amp; Games → search "Notify Me" → Enable</strong>. Link your Amazon account when prompted.</li>
+      <li>Say "<em>Alexa, notify me</em>" once. The skill emails an access code (one long string) to your account email.</li>
+      <li>Paste the access code below and Save.</li>
+    </ol>
+
+    <form method="post" action="/ui/alexa/announcer/setup" class="mt-3 flex flex-wrap items-end gap-2">
+      <label class="flex flex-col text-xs text-slate-400 flex-1 min-w-[240px]">
+        Notify Me access code
+        <input type="password" name="access_code" autocomplete="off"
+               placeholder="{{ '••••••••••• (already saved — paste a new one to rotate)' if announcer_configured else 'paste the long string Notify Me emailed you' }}"
+               class="mt-1 rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 font-mono">
+      </label>
+      <button class="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400">Save</button>
+      {% if announcer_configured %}
+        <button type="submit" name="clear" value="1"
+                onclick="return confirm('Clear the saved Notify Me access code?')"
+                class="rounded-md border border-red-700/40 bg-red-500/10 px-3 py-1.5 text-xs text-red-200 hover:bg-red-500/20">Clear</button>
+      {% endif %}
+    </form>
+
+    {% if announcer_configured %}
+      <div class="mt-4 border-t border-cyan-700/30 pt-3">
+        <div class="text-[11px] uppercase tracking-wider text-cyan-300">Test it</div>
+        <div class="mt-2 flex flex-wrap items-end gap-2">
+          <input id="announce-test-text" type="text" value="This is Neuron testing the announcer."
+                 class="rounded bg-slate-800 px-2 py-1 text-sm text-slate-100 flex-1 min-w-[240px]">
+          <button onclick="testAnnounce()" class="rounded-md bg-cyan-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-cyan-400">Send test to Alexa</button>
+        </div>
+        <div id="announce-test-result" class="mt-2 text-xs text-slate-300"></div>
+      </div>
+
+      <div class="mt-4 border-t border-cyan-700/30 pt-3">
+        <div class="text-[11px] uppercase tracking-wider text-cyan-300">Call from anywhere</div>
+        <p class="mt-1 text-xs text-slate-400">Mint a Neuron API key on
+          <a href="/ui/secrets" class="text-cyan-300 hover:underline">/ui/secrets</a>
+          with scope <code class="rounded bg-slate-800 px-1">alexa.announce</code>
+          (or use an existing admin key), then POST:</p>
+        <pre class="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-300">curl -X POST {{ public_base }}/api/alexa/announce \
+  -H 'Authorization: Bearer &lt;api-key&gt;' \
+  -H 'Content-Type: application/json' \
+  -d '{"text": "Bedroom is 28 degrees", "urgency": "warn"}'</pre>
+        <p class="mt-2 text-[11px] text-slate-500">
+          <code>urgency</code> ∈ <code>info | warn | alarm</code> — Neuron prefixes the spoken text with <em>"Warning."</em> or <em>"Alarm."</em> so urgency is audible.
+        </p>
+      </div>
+    {% endif %}
+  </section>
+
+  <script>
+    async function testAnnounce() {
+      const text = document.getElementById('announce-test-text').value;
+      const out = document.getElementById('announce-test-result');
+      out.innerHTML = '<span class="text-slate-400">Sending…</span>';
+      try {
+        const form = new URLSearchParams();
+        form.set('text', text);
+        const r = await fetch('/ui/alexa/announcer/test', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: form,
+        });
+        if (!r.ok) {
+          out.innerHTML = '<span class="text-red-300">Failed: ' + (await r.text()) + '</span>';
+          return;
+        }
+        out.innerHTML = '<span class="text-emerald-300">✓ Sent to Notify Me. Echo should announce within a second; check the Alexa app notification bell too.</span>';
+      } catch (e) {
+        out.innerHTML = '<span class="text-red-300">' + e + '</span>';
+      }
+    }
+  </script>
 {% endblock %}

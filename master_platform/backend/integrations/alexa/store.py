@@ -232,3 +232,37 @@ class AlexaStore:
     def _gc_tokens(tokens: dict) -> dict:
         now = time.time()
         return {k: v for k, v in tokens.items() if v.get("expires_at", 0) > now}
+
+    # ── announcer (Notify Me 3rd-party skill access code) ───────────
+    async def set_announcer_code(self, access_code: str) -> None:
+        """Stash the Notify Me access code so /api/alexa/announce can
+        fire announcements. The whole state.json is Fernet-encrypted
+        at rest, so the code sits in plaintext inside the encrypted
+        blob — same model as the client_secret hash next to it."""
+        code = (access_code or "").strip()
+        if not code:
+            raise RuntimeError("access_code is empty")
+        async with self._lock:
+            state = await self._read()
+            # If the skill block wasn't bootstrapped, lazy-create it so
+            # operators who only want announcements (no smart-home skill
+            # yet) can still configure Notify Me.
+            if not state.skill:
+                import time as _t
+                state.skill = {"created_at": _t.time(),
+                               "alexa_account_email": ""}
+            state.skill["notify_me_access_code"] = code
+            await self._write(state)
+
+    async def get_announcer_code(self) -> str | None:
+        state = await self._read()
+        if not state.skill:
+            return None
+        return state.skill.get("notify_me_access_code") or None
+
+    async def clear_announcer_code(self) -> None:
+        async with self._lock:
+            state = await self._read()
+            if state.skill and "notify_me_access_code" in state.skill:
+                del state.skill["notify_me_access_code"]
+                await self._write(state)

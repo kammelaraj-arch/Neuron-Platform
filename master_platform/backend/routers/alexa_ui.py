@@ -23,9 +23,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
 from ..integrations.alexa import AlexaStore
+from ..integrations.alexa.announcer import AnnouncerError, send_via_notify_me
 from ..integrations.alexa.directives import handle_directive
 from ..models import APIKey
 from ..security.audit import record
+from ..security.auth import require_scopes
 from ..security.ui_auth import SESSION_USER_KEY, ui_require_admin
 
 _log = logging.getLogger("neuron.alexa")
@@ -71,6 +73,7 @@ async def ui_alexa(
     skill = state.skill or {}
     flash = request.session.pop("alexa_flash", None)
     one_time_secret = request.session.pop("alexa_one_time_secret", None)
+    announcer_configured = bool(skill.get("notify_me_access_code"))
     return templates.TemplateResponse(
         "alexa.html",
         {
@@ -81,6 +84,7 @@ async def ui_alexa(
             "default_email": skill.get("alexa_account_email") or _DEFAULT_ALEXA_EMAIL,
             "public_base": _public_base(request),
             "one_time_secret": one_time_secret,
+            "announcer_configured": announcer_configured,
             "flash": flash,
         },
     )
@@ -318,3 +322,109 @@ async def alexa_directive(
         )
         await session.commit()
     return response
+
+
+# ── Notify Me announcer ─────────────────────────────────────────────
+@router.post("/ui/alexa/announcer/setup")
+async def ui_alexa_announcer_setup(
+    request: Request,
+    access_code: str = Form(""),
+    clear: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    """Save (or clear) the Notify Me access code so the announce API
+    has somewhere to send. Code is stored Fernet-encrypted alongside
+    the rest of the Alexa state."""
+    if clear:
+        await _store.clear_announcer_code()
+        msg = "Notify Me access code cleared."
+        action = "alexa.announcer.clear"
+    else:
+        if not access_code.strip():
+            raise HTTPException(400, "access_code required")
+        await _store.set_announcer_code(access_code)
+        msg = "Notify Me access code saved."
+        action = "alexa.announcer.setup"
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action=action, target_kind="alexa_announcer", target_id="default",
+    )
+    await session.commit()
+    request.session["alexa_flash"] = {"kind": "emerald", "msg": msg}
+    return RedirectResponse("/ui/alexa", status_code=303)
+
+
+@router.post("/ui/alexa/announcer/test", response_class=JSONResponse)
+async def ui_alexa_announcer_test(
+    request: Request,
+    text: str = Form("Neuron test — your announcer is wired."),
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(ui_require_admin),
+):
+    """Fire a test announcement so the operator can confirm the
+    integration end-to-end without leaving /ui/alexa."""
+    code = await _store.get_announcer_code()
+    if not code:
+        raise HTTPException(400, "Notify Me access code not configured")
+    try:
+        result = await send_via_notify_me(text, code, title="Neuron test")
+    except AnnouncerError as e:
+        raise HTTPException(502, str(e))
+    await record(
+        session, actor=actor.id, actor_kind="ui_session",
+        action="alexa.announcer.test", target_kind="alexa_announcer",
+        target_id="default", detail={"text": text[:120]},
+    )
+    await session.commit()
+    return {"ok": True, "vendor": "notify_me", "result": result}
+
+
+@router.post("/api/alexa/announce", response_class=JSONResponse)
+async def api_alexa_announce(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    actor: APIKey = Depends(require_scopes("alexa.announce")),
+):
+    """Public API for triggering an Alexa announcement from anywhere
+    (rules engine, biometric threshold breach, external monitoring,
+    cron, etc.). Bearer auth — caller's API key must carry either the
+    'alexa.announce' or 'admin' scope.
+
+    Body: JSON {"text": "...", "title": "optional", "urgency": "info|warn|alarm"}
+    Returns: 200 {"ok": true, "vendor": "notify_me", "result": {...}}
+            400 / 502 / 403 with a concrete reason on failure.
+
+    Example:
+      curl -X POST https://neuron.shital.org.uk/api/alexa/announce \\
+        -H 'Authorization: Bearer <api-key>' \\
+        -H 'Content-Type: application/json' \\
+        -d '{"text": "Bedroom is 28 degrees", "urgency": "warn"}'
+    """
+    body = await request.json()
+    text = (body or {}).get("text", "").strip()
+    if not text:
+        raise HTTPException(400, "text is required")
+    title = (body or {}).get("title") or None
+    urgency = (body or {}).get("urgency") or "info"
+    # Light prefix so the operator can hear urgency at a glance.
+    prefix = {"alarm": "Alarm. ", "warn": "Warning. ", "info": ""}.get(urgency, "")
+    payload = (prefix + text)[:255]
+    code = await _store.get_announcer_code()
+    if not code:
+        raise HTTPException(400,
+            "Notify Me access code not configured. Set it at /ui/alexa "
+            "after enabling the Notify Me skill in your Alexa app.")
+    try:
+        result = await send_via_notify_me(payload, code, title=title)
+    except AnnouncerError as e:
+        raise HTTPException(502, str(e))
+    await record(
+        session, actor=actor.id, actor_kind="api_key",
+        action="alexa.announce", target_kind="alexa_announcer",
+        target_id="default",
+        detail={"text": text[:200], "urgency": urgency, "title": title},
+    )
+    await session.commit()
+    return {"ok": True, "vendor": "notify_me", "urgency": urgency,
+            "delivered_text": payload, "result": result}
